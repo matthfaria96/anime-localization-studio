@@ -60,7 +60,9 @@ final class AppModel {
 
     nonisolated static func apiKey(for settings: AppSettings) -> String? {
         guard settings.engine == .openAICompatible else { return nil }
-        return KeychainStore.read(KeychainStore.account(for: settings.openAI.baseURL))
+        let key = KeychainStore.read(KeychainStore.account(for: settings.openAI.baseURL))
+        if let key { LogRedactor.register(secret: key) }
+        return key
     }
 
     func makeEngine() -> any TranslationEngine { settings.makeEngine(apiKey: Self.apiKey(for: settings)) }

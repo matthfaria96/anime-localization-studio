@@ -55,11 +55,16 @@ public struct EpisodeWorkflow: Sendable {
         guard let track = chosen, let ext = track.textSubtitleExtension, let format = SubtitleFormat(fileExtension: ext) else {
             throw info.tracks(.subtitles).contains(where: \.isBitmapSubtitle) ? WorkflowError.bitmapOnly : WorkflowError.noTextSubtitle
         }
-        let changedTrack = project.sourceTrackID != track.id || project.sourceFormat != format
+        let fingerprint = Self.fingerprint(of: project.mediaURL)
+        let mediaReplaced = project.mediaFingerprint != nil && project.mediaFingerprint != fingerprint
+        let changedTrack = project.sourceTrackID != track.id || project.sourceFormat != format || mediaReplaced
+        project.mediaFingerprint = fingerprint
         project.sourceTrackID = track.id
         project.sourceFormat = format
         let url = store.sourceSubtitleURL(for: project)!
         if changedTrack || !FileManager.default.fileExists(atPath: url.path) {
+            // A new release at the same path may have new timing: keep a copy of the old work.
+            if mediaReplaced { try? store.backupTranslation(of: project, language: settings.targetLanguage) }
             _ = try await TrackExtractor(tools: tools).extractSubtitle(track, from: info, to: url)
             if project.translationStatus == .new { project.translationStatus = .extracted }
             try store.save(project)
@@ -121,6 +126,34 @@ public struct EpisodeWorkflow: Sendable {
         return (project, url, report)
     }
 
+    /// For videos without a text subtitle: transcribes the default audio track on the Mac and
+    /// makes the result the project's source subtitle (SRT), ready to translate.
+    public func transcribe(_ project: StudioProject, language: String, allowModelDownload: Bool,
+                           progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> StudioProject {
+        var project = project
+        progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
+        let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
+        guard let audio = info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first else { throw WorkflowError.noAudio }
+        let directory = store.directory(for: project.id)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let wav = directory.appendingPathComponent(".transcription-\(UUID().uuidString.prefix(6)).wav")
+        defer { try? FileManager.default.removeItem(at: wav) }
+        _ = try await TrackExtractor(tools: tools).extractAudioWAV(audio, from: info, to: wav, sampleRate: 16_000, mono: true) { value in
+            progress(WorkflowStep(fraction: value * 0.15, message: "Extraindo o áudio…"))
+        }
+        let lines = try await SpeechTranscription().transcribe(wav, language: language, allowModelDownload: allowModelDownload) { value in
+            progress(WorkflowStep(fraction: 0.15 + value * 0.85, message: "Transcrevendo a fala…"))
+        }
+        let url = directory.appendingPathComponent("source.srt")
+        try SpeechTranscription.document(from: lines).write(to: url)
+        project.externalSubtitlePath = url.path
+        project.sourceFormat = .srt
+        project.sourceTrackID = nil
+        project.translationStatus = .extracted
+        try store.save(project)
+        return project
+    }
+
     /// Voice-over dub: synthesizes the translated lines with the cast, mixes them over the
     /// original audio, and writes a new MKV with the dubbed audio and the translated subtitle
     /// added (all original tracks kept, video not re-encoded).
@@ -136,14 +169,15 @@ public struct EpisodeWorkflow: Sendable {
         let work = store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
         let dubAudio = store.directory(for: project.id).appendingPathComponent("dub.\(settings.targetLanguage).m4a")
         let pipeline = DubbingPipeline(synthesizer: synthesizer, tools: tools, workDirectory: work, cast: cast,
-                                       options: DubbingOptions(maxSpeedup: settings.dubbingMaxSpeedup, defaultVoice: settings.dubbingDefaultVoice))
+                                       options: DubbingOptions(maxSpeedup: settings.dubbingMaxSpeedup, defaultVoice: settings.dubbingDefaultVoice,
+                                                               mode: settings.dubbingMode))
         let report = try await pipeline.run(segments, media: info, audioTrack: audio, output: dubAudio) { value, message in
             progress(WorkflowStep(fraction: value * 0.85, message: message))
         }
         let localized = Locale(identifier: "pt_BR").localizedString(forIdentifier: settings.targetLanguage) ?? settings.targetLanguage
         let languageName = localized.prefix(1).uppercased() + localized.dropFirst()
         let tracks = [
-            NewTrack(file: dubAudio, kind: .audio, language: settings.targetLanguage, name: "\(languageName) · dublagem IA (voice-over)", isDefault: settings.makeDefault),
+            NewTrack(file: dubAudio, kind: .audio, language: settings.targetLanguage, name: "\(languageName) · dublagem IA (\(settings.dubbingMode.trackSuffix))", isDefault: settings.makeDefault),
             NewTrack(file: translationURL, kind: .subtitles, language: settings.targetLanguage, name: settings.trackName, isDefault: settings.makeDefault)
         ]
         let plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "\(settings.targetLanguage.uppercased()) DUB"),
@@ -157,6 +191,11 @@ public struct EpisodeWorkflow: Sendable {
         project.lastVerification = verification
         try store.save(project)
         return (project, url, report, verification)
+    }
+
+    static func fingerprint(of url: URL) -> String? {
+        guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]) else { return nil }
+        return "\(values.fileSize ?? 0)-\(Int(values.contentModificationDate?.timeIntervalSince1970 ?? 0))"
     }
 
     private var preferredSourceLanguages: [String] {

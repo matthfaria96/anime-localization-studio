@@ -56,10 +56,19 @@ public struct SRTDocument: Sendable, Hashable {
     public var preamble: [String]
     public var cues: [SRTCue]
     public var traits: TextFileTraits
+    var pristine: PristineSource?
+
+    public init(preamble: [String], cues: [SRTCue], traits: TextFileTraits) {
+        self.preamble = preamble
+        self.cues = cues
+        self.traits = traits
+    }
 
     public static func parse(_ data: Data) throws -> SRTDocument {
         let (text, traits) = try TextDecoder.decode(data)
-        return parse(text: text, traits: traits)
+        var document = parse(text: text, traits: traits)
+        if !traits.repairedInvalidBytes { document.pristine = PristineSource(serialization: document.serialized(), data: data) }
+        return document
     }
 
     public static func parse(text: String, traits: TextFileTraits = TextFileTraits()) -> SRTDocument {
@@ -113,5 +122,14 @@ public struct SRTDocument: Sendable, Hashable {
         return output
     }
 
-    public func encoded() -> Data { TextDecoder.encode(serialized(), traits: traits) }
+    public func encoded() -> Data {
+        let text = serialized()
+        if let pristine, pristine.serialization == text { return pristine.data }
+        return TextDecoder.encode(text, traits: traits)
+    }
+
+    /// Renumbers cues 1…n (after inserting or removing).
+    mutating func renumber() {
+        for i in cues.indices where cues[i].number != String(i + 1) { cues[i].number = String(i + 1) }
+    }
 }

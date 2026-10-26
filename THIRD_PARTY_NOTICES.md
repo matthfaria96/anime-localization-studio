@@ -11,7 +11,8 @@ VoiceStudio, Subtitle Edit, Aegisub, MKVToolNix, FFmpeg ou OpenDub foi copiado, 
 vinculado ao binário.
 
 O aplicativo depende apenas de frameworks do sistema da Apple (SwiftUI, AppKit, AVFoundation,
-AVKit, Translation, FoundationModels, NaturalLanguage, CryptoKit, Security, Observation), que são
+AVKit, AudioToolbox, Speech, Translation, FoundationModels, NaturalLanguage, CryptoKit, Security,
+Observation) e do utilitário `/usr/bin/say`, que são
 parte do macOS e não são redistribuídos.
 
 ## Programas externos executados (não distribuídos)

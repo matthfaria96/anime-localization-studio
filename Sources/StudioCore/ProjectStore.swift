@@ -38,6 +38,8 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     public var lastOutputPath: String?
     public var lastVerification: VerificationReport?
     public var lastDubReport: DubbingReport?
+    /// Size and date of the media when its subtitle was extracted, to notice a replaced file.
+    public var mediaFingerprint: String?
     /// Voice cast for films and episodes that are not part of a series.
     public var cast: VoiceCast?
     public var createdAt: Date

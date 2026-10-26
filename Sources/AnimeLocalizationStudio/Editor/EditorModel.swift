@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import SubtitleKit
@@ -9,7 +10,7 @@ enum DocumentSide: String, CaseIterable, Identifiable {
 }
 
 enum LineFilter: String, CaseIterable, Identifiable {
-    case all, untranslated, skipped, longLines
+    case all, untranslated, skipped, longLines, spelling
     var id: String { rawValue }
     var label: String {
         switch self {
@@ -17,6 +18,7 @@ enum LineFilter: String, CaseIterable, Identifiable {
         case .untranslated: "Sem tradução"
         case .skipped: "Não traduzíveis"
         case .longLines: "Leitura rápida demais"
+        case .spelling: "Possíveis erros de ortografia"
         }
     }
 }
@@ -93,6 +95,7 @@ final class EditorModel {
         case .untranslated: rows.filter { $0.skipReason == nil && !$0.isTranslated }
         case .skipped: rows.filter { $0.skipReason != nil }
         case .longLines: rows.filter { $0.readingSpeed > 20 }
+        case .spelling: rows.filter { $0.isTranslated && Self.misspelledWords(in: $0.translation, language: spellingLanguage) > 0 }
         }
         guard !searchQuery.isEmpty else { return filtered }
         let options: String.CompareOptions = caseSensitive ? [] : [.caseInsensitive, .diacriticInsensitive]
@@ -101,6 +104,23 @@ final class EditorModel {
 
     var translatedCount: Int { rows.filter(\.isTranslated).count }
     var translatableCount: Int { rows.filter { $0.skipReason == nil }.count }
+
+    /// Language for the spelling filter (`pt_BR` style, as NSSpellChecker names them).
+    var spellingLanguage = "pt_BR"
+
+    static func misspelledWords(in text: String, language: String) -> Int {
+        let checker = NSSpellChecker.shared
+        var count = 0
+        var start = 0
+        let string = text as NSString
+        while start < string.length {
+            let range = checker.checkSpelling(of: text, startingAt: start, language: language, wrap: false, inSpellDocumentWithTag: 0, wordCount: nil)
+            guard range.location != NSNotFound, range.length > 0 else { break }
+            count += 1
+            start = range.location + range.length
+        }
+        return count
+    }
 
     func activeCues(at time: Int, in side: DocumentSide) -> [SubtitleCue] {
         let cues = side == .translation && translation != nil ? translationCues : sourceCues
@@ -146,6 +166,28 @@ final class EditorModel {
             source?.setStyle(style, at: index)
             translation?.setStyle(style, at: index)
         }
+    }
+
+    /// Adds an empty line after `index` in both documents and selects it.
+    func insertLine(after index: Int, undoManager: UndoManager?) {
+        var newIndex = index + 1
+        mutate("Inserir fala", undoManager: undoManager) { source, translation in
+            newIndex = source?.insertLine(after: index) ?? newIndex
+            translation?.insertLine(after: index)
+        }
+        selection = [newIndex]
+    }
+
+    func removeLines(_ indices: Set<Int>, undoManager: UndoManager?) {
+        guard !indices.isEmpty else { return }
+        draftIndex = nil
+        mutate(indices.count == 1 ? "Excluir fala" : "Excluir falas", undoManager: undoManager) { source, translation in
+            for index in indices.sorted(by: >) {
+                source?.removeLine(at: index)
+                translation?.removeLine(at: index)
+            }
+        }
+        selection = []
     }
 
     func shift(by offset: Int, onlySelection: Bool, undoManager: UndoManager?) {

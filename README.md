@@ -27,17 +27,19 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
   compara os pacotes de vídeo com o original.
 - **Temporadas**: biblioteca de pastas e fila persistente para traduzir (e incorporar) vários
   episódios, que continua de onde parou se o app for fechado.
-- **Dublar episódio inteiro (voice-over)**: uma voz por personagem (vozes do macOS ou do
-  VoiceStudio), cada fala ajustada ao seu tempo, mixada sobre o áudio original com o volume
-  dele abaixado sob a voz, e um novo `Nome [PT-BR DUB].mkv` com o áudio dublado e a legenda
-  em português. O elenco fica salvo na série.
+- **Dublar episódio inteiro**: uma voz por personagem (vozes do macOS ou do VoiceStudio), cada
+  fala ajustada ao seu tempo, em dois modos: *voice-over* (por cima do original, que abaixa) ou
+  *substituir falas* (as vozes originais são separadas da trilha no próprio Mac e trocadas). O
+  resultado é um novo `Nome [PT-BR DUB].mkv` com o áudio dublado e a legenda em português. O
+  elenco fica salvo na série.
+- **Transcrever** o áudio de vídeos sem legenda, no próprio Mac, para depois traduzir.
 
 ## O que ainda não está implementado
 
-- Modo "Substituir falas" (exige separar voz e trilha com Demucs/BS-RoFormer). Hoje só existe
-  o voice-over. As vozes do macOS são robóticas; vozes naturais dependem do VoiceStudio, que só
-  foi testado contra um servidor simulado.
-- Transcrição e identificação automática de falantes para vídeos sem legenda.
+- A separação de voz é aproximada: em cenas com música ou efeitos densos ficam restos das falas
+  originais. As vozes do macOS são robóticas; vozes naturais dependem do VoiceStudio, que só foi
+  testado contra um servidor simulado.
+- Identificação automática de quem fala (diarização) na transcrição.
 - Pré-visualização fiel de animações ASS (`\t`, `\move`, `\fad`), karaokê e desenhos — o arquivo
   final os preserva, mas a prévia mostra o texto estático.
 - OCR de legendas em imagem (PGS/VobSub).

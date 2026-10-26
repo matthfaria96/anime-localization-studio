@@ -99,20 +99,32 @@ public struct AudioMixer: Sendable {
     /// both are summed and the result is loudness-normalized (EBU R128, −16 LUFS) to AAC.
     public func mixVoiceOver(media: MediaInfo, audioTrack: MediaTrack, voice: URL, to output: URL,
                              progress: (@Sendable (Double) -> Void)? = nil) async throws {
-        let ffmpeg = try tools.require(.ffmpeg)
         guard let ordinal = media.ordinal(of: audioTrack) else { throw MediaInspectionError.unreadable("Faixa de áudio não encontrada.") }
+        try await mix(inputs: ["-i", media.url.path, "-i", voice.path], base: "[0:a:\(ordinal)]", ratio: 9, threshold: 0.02,
+                      duration: media.durationMilliseconds, to: output, progress: progress)
+    }
+
+    /// Replace mode: the new voice over the background with the original dialogue removed
+    /// (`VoiceSeparator`). A light ducking hides what is left of the original voices.
+    public func mixReplacingDialogue(background: URL, voice: URL, durationMilliseconds: Int?, to output: URL,
+                                     progress: (@Sendable (Double) -> Void)? = nil) async throws {
+        try await mix(inputs: ["-i", background.path, "-i", voice.path], base: "[0:a]", ratio: 3, threshold: 0.03,
+                      duration: durationMilliseconds, to: output, progress: progress)
+    }
+
+    private func mix(inputs: [String], base: String, ratio: Int, threshold: Double, duration: Int?, to output: URL,
+                     progress: (@Sendable (Double) -> Void)?) async throws {
+        let ffmpeg = try tools.require(.ffmpeg)
         let graph = [
-            "[0:a:\(ordinal)]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[bg]",
+            "\(base)aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[bg]",
             "[1:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,asplit=2[vsc][vmix]",
-            "[bg][vsc]sidechaincompress=threshold=0.02:ratio=9:attack=15:release=350[duck]",
+            "[bg][vsc]sidechaincompress=threshold=\(threshold):ratio=\(ratio):attack=15:release=350[duck]",
             "[duck][vmix]amix=inputs=2:normalize=0:duration=first,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[out]"
         ].joined(separator: ";")
         let partial = output.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString.prefix(8)).partial.m4a")
         defer { try? FileManager.default.removeItem(at: partial) }
-        let duration = media.durationMilliseconds
-        try await ProcessRunner.runChecked(ffmpeg, ["-nostdin", "-v", "error", "-y", "-progress", "pipe:1", "-nostats",
-                                                    "-i", media.url.path, "-i", voice.path, "-filter_complex", graph,
-                                                    "-map", "[out]", "-c:a", "aac", "-b:a", "192k", partial.path]) { line in
+        try await ProcessRunner.runChecked(ffmpeg, ["-nostdin", "-v", "error", "-y", "-progress", "pipe:1", "-nostats"] + inputs
+                                           + ["-filter_complex", graph, "-map", "[out]", "-c:a", "aac", "-b:a", "192k", partial.path]) { line in
             if let value = FFmpegProgressLine.fraction(line, durationMilliseconds: duration) { progress?(value) }
         }
         try FileOps.replaceItem(at: output, with: partial)

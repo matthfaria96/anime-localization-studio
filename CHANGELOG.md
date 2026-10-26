@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 — 26/10/2026
+
+### Adicionado
+- Dublagem no modo "Substituir falas": as vozes originais são separadas da música e dos efeitos no próprio Mac (isolamento de voz da Apple, `AUSoundIsolation`) e trocadas pelas novas.
+- Transcrição do áudio no Mac (`SpeechAnalyzer`) para vídeos sem legenda, em 45 idiomas, com confirmação antes de baixar o modelo de um idioma.
+- Inserir e excluir falas no editor (desfazível).
+- Filtro "Possíveis erros de ortografia".
+- Relatório da temporada em Markdown na Fila.
+
+### Corrigido
+- Arquivos não editados com fins de linha mistos voltam idênticos.
+- Arquivos quase todos em UTF-8 com bytes inválidos não viram mais Windows-1252.
+- A legenda é reextraída quando o vídeo é trocado no mesmo caminho.
+- A chave de API configurada nunca aparece nos logs, mesmo sem prefixo conhecido.
+
 ## 0.2.0 — 26/10/2026
 
 ### Adicionado

@@ -162,5 +162,11 @@ separadamente. O que é efetivamente usado em tempo de execução está em
 - **Foundation Models** (`SystemLanguageModel`, macOS 26+; `LanguageModelError` no macOS 27):
   disponível neste Mac, com português entre os idiomas suportados. Usado com saída estruturada
   (`@Generable`) e `guardrails: .permissiveContentTransformations`.
-- **Speech** (`SpeechAnalyzer`, macOS 26+) existe no SDK e será avaliado para transcrição local
-  na Fase 3.
+- **Speech** (`SpeechAnalyzer` + `SpeechTranscriber`, macOS 26+): 45 idiomas suportados neste
+  Mac (inglês e português instalados; japonês exige download do sistema). Usado para transcrever
+  vídeos sem legenda; testado com fala sintética.
+- **AUSoundIsolation** (AudioToolbox, macOS 13+; modo `HighQualityVoice` no macOS 15+): isola a
+  voz no dispositivo. Usado para o modo "Substituir falas" em vez do Demucs, que exigiria
+  instalar Python + PyTorch (o Python 3.15 do Homebrew ainda não tem wheels do PyTorch) e
+  baixar pesos. Medição num teste sintético: diálogo restante ~18 dB abaixo do original.
+- **`say`** (macOS): vozes do sistema para a dublagem básica, executado como processo.

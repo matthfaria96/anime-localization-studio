@@ -23,7 +23,7 @@ AnimeLocalizationStudio (SwiftUI, isolamento padrão MainActor)
 | 5. Translation Engine | `TranslationKit/*Engine.swift`, `TranslationPipeline.swift` | Pronto (3 motores) |
 | 6. Glossary Manager | `TranslationKit/Glossary.swift`, `StudioCore/ProjectStore.swift` (Series), `App/Translation/SeriesView.swift` | Pronto |
 | 7. VoiceStudio Adapter | `DubbingKit/VoiceStudioClient.swift`, `SpeechSynthesizer.swift` | Pronto (testado contra servidor simulado) |
-| 8. Audio Separation and Mixing | `DubbingKit/AudioMixer.swift`, `DubbingPipeline.swift` | Mixagem voice-over pronta; separação não implementada |
+| 8. Audio Separation and Mixing | `DubbingKit/VoiceSeparator.swift`, `AudioMixer.swift`, `DubbingPipeline.swift` | Pronto (separação nativa aproximada, voice-over e substituir falas) |
 | 9. Voice Casting | `DubbingKit/DubbingPlan.swift`, `App/Dubbing/DubbingView.swift` | Pronto (elenco salvo na série/projeto) |
 | 10. MKV Muxing Engine | `MediaKit/MKVMuxer.swift`, `IntegrityVerifier.swift` | Pronto (legendas; áudio usa o mesmo caminho) |
 | 11. Job Queue | `StudioCore/JobQueue.swift` | Pronto (persistente, retomada) |
@@ -109,6 +109,17 @@ voz mono em fluxo (sem carregar o episódio na memória), adiando uma fala que s
 anterior, e mixa com FFmpeg: o áudio original passa por `sidechaincompress` usando a voz como
 sinal de controle, as duas são somadas e normalizadas (`loudnorm`). O MKV final recebe o áudio
 e a legenda pt-BR pelo mesmo `MKVMuxer` verificado.
+
+**Separação de diálogo.** `VoiceSeparator` renderiza offline o áudio original pela Audio Unit
+`AUSoundIsolation` da Apple (modo voz de alta qualidade), descarta a latência da unidade para
+alinhar amostra por amostra e obtém o fundo subtraindo a voz isolada do original com FFmpeg.
+O fundo fica em cache por faixa. No modo "Substituir falas" a nova voz é mixada sobre esse
+fundo com um ducking leve que disfarça restos das vozes originais.
+
+**Transcrição.** `SpeechTranscription` usa `SpeechAnalyzer` + `SpeechTranscriber` com
+`audioTimeRange`, divide frases longas em linhas de legenda e grava um SRT como legenda de
+origem do projeto. O download do modelo de um idioma (gerenciado pelo macOS via
+`AssetInventory`) só acontece depois da confirmação na interface.
 
 **Trava por projeto.** `ProjectActivity` (MainActor) registra qual projeto está em operação
 longa. A fila espera enquanto o episódio aberto traduz/incorpora/dubla o mesmo arquivo, e o

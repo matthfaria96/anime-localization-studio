@@ -33,11 +33,26 @@ struct QueueView: View {
                     .disabled(!queue.jobs.contains { [.interrupted, .failed, .cancelled].contains($0.status) })
                 Button("Cancelar todos", systemImage: "stop.circle") { queue.cancelAll() }
                     .disabled(queue.pendingCount == 0)
+                Button("Exportar relatório…", systemImage: "doc.text") { exportReport() }
+                    .disabled(queue.jobs.isEmpty)
                 Button("Limpar concluídos", systemImage: "trash") { queue.removeFinished() }
                     .disabled(!queue.jobs.contains { $0.status.isFinished })
             }
         }
         .onChange(of: queue.isRunning) { app.library.refreshStatuses(); app.refreshRecents() }
+    }
+
+    private func exportReport() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.init(filenameExtension: "md") ?? .plainText]
+        panel.nameFieldStringValue = "Relatório de localização.md"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try SeasonReport.markdown(jobs: queue.jobs, store: ProjectStore(paths: app.paths)).write(to: url, atomically: true, encoding: .utf8)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            app.report(error, context: "Relatório não exportado")
+        }
     }
 }
 

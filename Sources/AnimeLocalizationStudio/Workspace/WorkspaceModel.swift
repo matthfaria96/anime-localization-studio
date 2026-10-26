@@ -40,6 +40,7 @@ final class WorkspaceModel {
         project = ProjectStore(paths: app.paths).project(for: url)
         lastReport = project.lastReport
         editor.onChange = { [weak self] source, translation in self?.writeWorkingFiles(source: source, translation: translation) }
+        editor.spellingLanguage = app.settings.targetLanguage.replacingOccurrences(of: "-", with: "_")
     }
 
     var title: String { project.title }
@@ -70,7 +71,7 @@ final class WorkspaceModel {
         }
     }
 
-    private func loadSubtitles() async {
+    func loadSubtitles() async {
         do {
             let (prepared, _, sourceURL) = try await workflow().prepareSource(project)
             project = prepared
@@ -215,6 +216,42 @@ final class WorkspaceModel {
                 notice = (.success, "Novo arquivo criado e verificado: \(output.lastPathComponent). O original não foi alterado.")
             } catch is CancellationError {
                 notice = (.info, "Incorporação cancelada. Nenhum arquivo foi criado.")
+            } catch {
+                notice = (.error, LogRedactor.redact(error.localizedDescription))
+            }
+            release()
+            operation = nil
+        }
+    }
+
+    // MARK: Transcription
+
+    /// Set when macOS must download the speech model for a language before transcribing.
+    var pendingModelDownload: String?
+
+    func transcribeAudio(language: String, allowModelDownload: Bool = false) {
+        guard !isBusy, claim("Transcrição no estúdio") else { return }
+        editor.flush()
+        notice = nil
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando transcrição…")
+        let workflow = workflow()
+        let project = project
+        task = Task {
+            do {
+                let updated = try await workflow.transcribe(project, language: language, allowModelDownload: allowModelDownload) { step in
+                    Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
+                }
+                self.project = updated
+                if let old = store.translationURL(for: updated, language: app.settings.targetLanguage) { try? FileManager.default.removeItem(at: old) }
+                operation = nil
+                release()
+                await loadSubtitles()
+                notice = (.success, "Transcrição pronta: \(editor.rows.count) falas. Os personagens não são identificados automaticamente; revise e traduza.")
+                return
+            } catch SpeechTranscription.TranscriptionError.modelDownloadRequired(let language) {
+                pendingModelDownload = language
+            } catch is CancellationError {
+                notice = (.info, "Transcrição cancelada.")
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }

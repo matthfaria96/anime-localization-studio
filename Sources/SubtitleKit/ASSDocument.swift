@@ -19,6 +19,7 @@ public struct ASSDocument: Sendable, Hashable {
 
     public private(set) var lines: [Line]
     public var traits: TextFileTraits
+    var pristine: PristineSource?
     /// `true` for `[V4 Styles]` (SSA), which uses a different alignment numbering.
     public private(set) var isSSA: Bool
     private var eventLineIndices: [Int]
@@ -37,7 +38,9 @@ public struct ASSDocument: Sendable, Hashable {
 
     public static func parse(_ data: Data) throws -> ASSDocument {
         let (text, traits) = try TextDecoder.decode(data)
-        return parse(text: text, traits: traits)
+        var document = parse(text: text, traits: traits)
+        if !traits.repairedInvalidBytes { document.pristine = PristineSource(serialization: document.serialized(), data: data) }
+        return document
     }
 
     public static func parse(text: String, traits: TextFileTraits = TextFileTraits()) -> ASSDocument {
@@ -94,7 +97,9 @@ public struct ASSDocument: Sendable, Hashable {
     }
 
     public func encoded() -> Data {
-        TextDecoder.encode(serialized(), traits: traits)
+        let text = serialized()
+        if let pristine, pristine.serialization == text { return pristine.data }
+        return TextDecoder.encode(text, traits: traits)
     }
 
     // MARK: Access
@@ -137,6 +142,19 @@ public struct ASSDocument: Sendable, Hashable {
     @discardableResult
     public mutating func duplicateEvent(at index: Int) -> Int {
         let record = event(at: index).detachedCopy()
+        lines.insert(.event(record), at: eventLineIndices[index] + 1)
+        reindex()
+        return index + 1
+    }
+
+    /// Inserts an empty `Dialogue` after an event, with the same style and the given timing.
+    @discardableResult
+    public mutating func insertEvent(after index: Int, start: Int, end: Int) -> Int {
+        var record = event(at: index).detachedCopy()
+        record.kind = "Dialogue"
+        record.start = start
+        record.end = end
+        record.text = ""
         lines.insert(.event(record), at: eventLineIndices[index] + 1)
         reindex()
         return index + 1

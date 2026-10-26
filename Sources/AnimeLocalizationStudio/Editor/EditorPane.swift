@@ -30,9 +30,26 @@ struct EditorPane: View {
             }
         } else {
             EmptyStateView(title: "Nenhuma legenda aberta",
-                           message: "Escolha uma faixa de legenda de texto no inspetor ou abra uma legenda externa (ASS, SSA ou SRT).",
+                           message: "Escolha uma faixa de legenda de texto no inspetor, abra uma legenda externa (ASS, SSA ou SRT) ou transcreva o áudio do vídeo no próprio Mac.",
                            systemImage: "captions.bubble") {
                 Button("Abrir legenda externa…") { workspace.openExternalSubtitle() }
+                Menu("Transcrever o áudio") {
+                    ForEach(TranscriptionLanguage.all, id: \.code) { language in
+                        Button(language.name) { workspace.transcribeAudio(language: language.code) }
+                    }
+                }
+                .fixedSize()
+                .disabled(workspace.isBusy || workspace.audioTracks.isEmpty)
+                .help("Reconhecimento de fala da Apple, no dispositivo")
+            }
+            .confirmationDialog("Baixar o modelo de fala?", isPresented: Binding(get: { workspace.pendingModelDownload != nil },
+                                                                                  set: { if !$0 { workspace.pendingModelDownload = nil } })) {
+                Button("Baixar e transcrever") {
+                    if let language = workspace.pendingModelDownload { workspace.transcribeAudio(language: language, allowModelDownload: true) }
+                    workspace.pendingModelDownload = nil
+                }
+            } message: {
+                Text("O macOS precisa baixar o modelo de reconhecimento de fala para este idioma. O download é feito e gerenciado pelo sistema (modelo da Apple, uso no dispositivo) e fica disponível para outros apps.")
             }
         }
     }
@@ -87,6 +104,12 @@ private struct EditorToolbar: View {
             Toggle(isOn: $editor.followPlayback) { Image(systemName: "dot.radiowaves.forward") }
                 .toggleStyle(.button)
                 .help("Acompanhar o vídeo: seleciona a fala que está tocando")
+            Button("Inserir fala", systemImage: "plus") {
+                if let id = editor.selection.max() ?? editor.rows.last?.id { editor.insertLine(after: id, undoManager: undoManager) }
+            }
+            .labelStyle(.iconOnly)
+            .help("Inserir uma fala depois da selecionada (⌫ exclui as selecionadas)")
+            .disabled(editor.rows.isEmpty)
             Button("Deslocar tempos…", systemImage: "clock.arrow.2.circlepath") { showShift = true }
                 .labelStyle(.iconOnly)
                 .help("Sincronizar: mover todas as falas ou as selecionadas")
@@ -108,6 +131,7 @@ private struct EditorToolbar: View {
 
 struct LinesTable: View {
     @Bindable var workspace: WorkspaceModel
+    @Environment(\.undoManager) private var undoManager
     var editor: EditorModel { workspace.editor }
 
     var body: some View {
@@ -139,12 +163,16 @@ struct LinesTable: View {
             .tableStyle(.inset(alternatesRowBackgrounds: true))
             .contextMenu(forSelectionType: Int.self) { ids in
                 Button("Ir para a fala no vídeo") { if let id = ids.first { workspace.select(id, seek: true) } }
+                Button("Inserir fala depois") { if let id = ids.max() { editor.insertLine(after: id, undoManager: undoManager) } }
+                Button(ids.count > 1 ? "Excluir \(ids.count) falas" : "Excluir fala", role: .destructive) { editor.removeLines(ids, undoManager: undoManager) }
+                Divider()
                 Button("Reproduzir só esta fala") {
                     if let id = ids.first, let row = editor.rows.first(where: { $0.id == id }) { workspace.player.play(from: row.start, to: row.end) }
                 }
             } primaryAction: { ids in
                 if let id = ids.first { workspace.select(id, seek: true) }
             }
+            .onDeleteCommand { editor.removeLines(editor.selection, undoManager: undoManager) }
             .onChange(of: editor.selection) { _, selection in
                 if let id = selection.first { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) } }
             }
@@ -173,4 +201,9 @@ private struct TranslationCell: View {
             }
         }
     }
+}
+
+enum TranscriptionLanguage {
+    static let all: [(code: String, name: String)] = [("ja-JP", "Japonês"), ("en-US", "Inglês"), ("ko-KR", "Coreano"), ("zh-CN", "Chinês"),
+                                                      ("es-ES", "Espanhol"), ("fr-FR", "Francês"), ("de-DE", "Alemão"), ("pt-BR", "Português (Brasil)")]
 }

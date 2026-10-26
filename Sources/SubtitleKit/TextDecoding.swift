@@ -1,6 +1,14 @@
 import Foundation
 
 /// How a subtitle file was stored on disk, so it can be written back the same way.
+/// The exact bytes a document was read from and the text it serialized to at that moment.
+/// While the document still serializes to the same text, those bytes are written back, which
+/// keeps files with mixed or CR-only line endings identical.
+public struct PristineSource: Sendable, Hashable {
+    let serialization: String
+    let data: Data
+}
+
 public struct TextFileTraits: Sendable, Hashable, Codable {
     public enum Encoding: String, Sendable, Codable {
         case utf8, utf16LittleEndian, utf16BigEndian, windows1252
@@ -11,6 +19,8 @@ public struct TextFileTraits: Sendable, Hashable, Codable {
     /// `"\r\n"` or `"\n"`: the line ending used by the majority of the file.
     public var newline: String
     public var endsWithNewline: Bool
+    /// The file was UTF-8 with invalid bytes, replaced by U+FFFD when read.
+    public var repairedInvalidBytes = false
 
     public init(encoding: Encoding = .utf8, hasBOM: Bool = false, newline: String = "\n", endsWithNewline: Bool = true) {
         self.encoding = encoding
@@ -48,6 +58,11 @@ enum TextDecoder {
             text = String(data: data.dropFirst(2), encoding: .utf16BigEndian)
         } else if let utf8 = String(data: data, encoding: .utf8) {
             text = utf8
+        } else if looksLikeDamagedUTF8(data) {
+            // Mostly valid UTF-8 with a few broken bytes: reading it as Windows-1252 would turn
+            // every accent into mojibake ("Olá" → "OlÃ¡"). Keep UTF-8 and mark the bad bytes.
+            traits.repairedInvalidBytes = true
+            text = String(decoding: data, as: UTF8.self)
         } else {
             traits.encoding = .windows1252
             text = String(data: data, encoding: .windowsCP1252)
@@ -59,6 +74,25 @@ enum TextDecoder {
         // Compare scalars: as Characters, a CRLF ending is "\r\n", which `hasSuffix("\n")` rejects.
         traits.endsWithNewline = decoded.unicodeScalars.last.map { $0 == "\n" || $0 == "\r" } ?? false
         return (decoded, traits)
+    }
+
+    /// Counts well-formed multi-byte UTF-8 sequences against stray high bytes.
+    static func looksLikeDamagedUTF8(_ data: Data) -> Bool {
+        var valid = 0, invalid = 0
+        var i = data.startIndex
+        while i < data.endIndex {
+            let byte = data[i]
+            let length = byte < 0x80 ? 1 : byte >> 5 == 0b110 ? 2 : byte >> 4 == 0b1110 ? 3 : byte >> 3 == 0b11110 ? 4 : 0
+            if length == 1 { i += 1; continue }
+            if length == 0 || i + length > data.endIndex || !data[(i + 1)..<(i + length)].allSatisfy({ $0 >> 6 == 0b10 }) {
+                invalid += 1
+                i += 1
+                continue
+            }
+            valid += 1
+            i += length
+        }
+        return valid > 0 && valid >= invalid * 4
     }
 
     /// Splits on `\r\n`, `\n` or lone `\r`, without the terminators. A trailing terminator

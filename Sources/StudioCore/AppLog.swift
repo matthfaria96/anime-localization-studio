@@ -9,8 +9,19 @@ public enum LogRedactor {
         (#"(?i)(api[_-]?key|token|password|secret)(["']?\s*[:=]\s*["']?)[^\s"'&,}]+"#, "$1$2‹oculto›")
     ].map { (try! NSRegularExpression(pattern: $0.0), $0.1) }
 
+    private static let secretsLock = NSLock()
+    nonisolated(unsafe) private static var secrets: Set<String> = []
+
+    /// Registers a configured secret (an API key) so its exact value is always hidden, even
+    /// when it has no recognizable prefix.
+    public static func register(secret: String) {
+        guard secret.count >= 8 else { return }
+        secretsLock.withLock { _ = secrets.insert(secret) }
+    }
+
     public static func redact(_ text: String) -> String {
         var output = text
+        for secret in secretsLock.withLock({ secrets }) { output = output.replacingOccurrences(of: secret, with: "‹chave oculta›") }
         for (regex, template) in rules {
             output = regex.stringByReplacingMatches(in: output, range: NSRange(output.startIndex..., in: output), withTemplate: template)
         }

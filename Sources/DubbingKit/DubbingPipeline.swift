@@ -2,15 +2,33 @@ import CryptoKit
 import Foundation
 import MediaKit
 
+public enum DubbingMode: String, Sendable, Hashable, Codable, CaseIterable, Identifiable {
+    /// The new voice talks over the original, which is lowered under it.
+    case voiceOver
+    /// The original dialogue is removed (on-device separation) and the new voice takes its place.
+    case replaceDialogue
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .voiceOver: "Voice-over"
+        case .replaceDialogue: "Substituir falas"
+        }
+    }
+    public var trackSuffix: String { self == .voiceOver ? "voice-over" : "falas substituídas" }
+}
+
 public struct DubbingOptions: Sendable, Hashable, Codable {
     /// Largest speed-up applied to a line that does not fit its slot.
     public var maxSpeedup: Double
     /// Voice used for speakers without a cast member (and for unknown speakers).
     public var defaultVoice: String?
+    public var mode: DubbingMode
 
-    public init(maxSpeedup: Double = 1.3, defaultVoice: String? = nil) {
+    public init(maxSpeedup: Double = 1.3, defaultVoice: String? = nil, mode: DubbingMode = .voiceOver) {
         self.maxSpeedup = maxSpeedup
         self.defaultVoice = defaultVoice
+        self.mode = mode
     }
 }
 
@@ -97,12 +115,41 @@ public struct DubbingPipeline: Sendable {
         let voiceTrack = workDirectory.appendingPathComponent("voice.wav")
         let total = media.durationMilliseconds ?? (placements.map(\.start).max() ?? 0) + 10_000
         report.delayed = try mixer.assembleVoiceTrack(placements, totalDuration: total, to: voiceTrack)
-        progress?(0.85, "Mixando com o áudio original…")
-        try await mixer.mixVoiceOver(media: media, audioTrack: audioTrack, voice: voiceTrack, to: output) { value in
-            progress?(0.85 + value * 0.15, "Mixando com o áudio original…")
+        switch options.mode {
+        case .voiceOver:
+            progress?(0.85, "Mixando com o áudio original…")
+            try await mixer.mixVoiceOver(media: media, audioTrack: audioTrack, voice: voiceTrack, to: output) { value in
+                progress?(0.85 + value * 0.15, "Mixando com o áudio original…")
+            }
+        case .replaceDialogue:
+            let background = try await removeDialogue(media: media, audioTrack: audioTrack, progress: progress)
+            progress?(0.93, "Mixando as novas falas com a trilha…")
+            try await mixer.mixReplacingDialogue(background: background, voice: voiceTrack, durationMilliseconds: media.durationMilliseconds, to: output) { value in
+                progress?(0.93 + value * 0.07, "Mixando as novas falas com a trilha…")
+            }
         }
         report.finishedAt = Date()
         return report
+    }
+
+    /// Original audio without its dialogue, cached in the work folder per source track.
+    private func removeDialogue(media: MediaInfo, audioTrack: MediaTrack, progress: (@Sendable (Double, String) -> Void)?) async throws -> URL {
+        let background = workDirectory.appendingPathComponent("background-\(audioTrack.id).wav")
+        if FileManager.default.fileExists(atPath: background.path) { return background }
+        let original = workDirectory.appendingPathComponent("original-\(audioTrack.id).wav")
+        let isolated = workDirectory.appendingPathComponent("dialogue-\(audioTrack.id).wav")
+        defer {
+            try? FileManager.default.removeItem(at: original)
+            try? FileManager.default.removeItem(at: isolated)
+        }
+        progress?(0.86, "Extraindo o áudio original…")
+        _ = try await TrackExtractor(tools: tools).extractAudioWAV(audioTrack, from: media, to: original)
+        let partial = workDirectory.appendingPathComponent(".background-\(UUID().uuidString.prefix(6)).wav")
+        try await VoiceSeparator(tools: tools).separate(original, voice: isolated, background: partial) { value in
+            progress?(0.87 + value * 0.06, "Separando as falas da música e dos efeitos…")
+        }
+        try FileOps.replaceItem(at: background, with: partial)
+        return background
     }
 
     static func cacheKey(_ text: String, voice: String, style: String?, speed: Double, engine: String) -> String {

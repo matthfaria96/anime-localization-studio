@@ -26,8 +26,9 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Incorporação de nova faixa e verificação do MKV (incluindo prova de não recodificação)
 - ✅ Exportação externa da legenda
 - 🟡 Pré-visualização aproximada (sem `\t`, `\move`, `\fad`, karaokê, desenhos, clipes, tags inline de cor/itálico)
-- ⬜ Inserir/excluir falas na interface (já suportado no `ASSDocument`)
-- ⬜ Verificação ortográfica (NSSpellChecker) e contador de CPS configurável
+- ✅ Inserir e excluir falas (menu de contexto, botão +, ⌫), desfazível, nos dois documentos
+- ✅ Filtro "Possíveis erros de ortografia" (corretor do macOS no idioma de destino)
+- ⬜ Contador de CPS configurável (hoje fixo em 20 caracteres/s)
 - ⬜ Renderização fiel de ASS com libass (via libmpv; avaliar licença LGPL e empacotamento)
 - ⬜ OCR de legendas PGS/VobSub (Vision framework)
 
@@ -38,19 +39,19 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Motores de tradução: Apple Translation, Apple Foundation Models, servidor compatível com OpenAI
 - ✅ Voice casting: personagens a partir do campo Ator do ASS, voz por personagem, velocidade, estilo (VoiceStudio), amostra
 - ✅ Elenco salvo na série (ou no projeto, sem série) e reaproveitado entre episódios e na fila
-- ⬜ Transcrição (VoiceStudio `/v1/audio/transcriptions` ou `SpeechAnalyzer` nativo) para vídeos sem legenda
-- ⬜ Diarização (pyannote via VoiceStudio; exige token do Hugging Face) e correção manual de falantes
+- ✅ Transcrição no Mac (`SpeechAnalyzer`/`SpeechTranscriber`, 45 idiomas) para vídeos sem legenda, com confirmação antes de o macOS baixar o modelo de um idioma
+- ⬜ Diarização (identificar quem fala na transcrição; pyannote via VoiceStudio exige token do Hugging Face). Hoje o personagem vem do campo Ator do ASS e pode ser corrigido à mão
 - ⬜ Clonagem de voz com registro de consentimento (o VoiceStudio já tem `/profiles/{id}/consent`)
 
-## Fase 4 — Dublagem e mixagem 🟡
+## Fase 4 — Dublagem e mixagem ✅ (qualidade de voz depende do motor)
 
-- ⬜ Separação diálogo × acompanhamento (Demucs/BS-RoFormer via VoiceStudio; avaliar licença dos pesos)
+- ✅ Separação diálogo × acompanhamento no Mac com `AUSoundIsolation` (voz de alta qualidade, sem download). Medida num teste sintético: a fala restante fica ~18 dB abaixo da original. Aproximada em trilhas densas; Demucs/BS-RoFormer continuam como alternativa futura de maior qualidade
 - ✅ Síntese por fala com o elenco: vozes do macOS (`say`, básicas) ou VoiceStudio; clipes em cache para retomar
 - ✅ Ajuste de duração: corte de silêncio, aceleração até 30% (`atempo`, sem mudar o tom); falas que não cabem ou que se sobreporiam são listadas
 - ✅ Mixagem voice-over: `sidechaincompress` (original abaixa sob a voz), `amix`, `loudnorm` EBU R128 (−16 LUFS), AAC 192k
 - ✅ "Dublar episódio inteiro" e fila "Traduzir e dublar": novo `Nome [PT-BR DUB].mkv` com áudio dublado + legenda pt-BR, originais preservados, verificado
-- 🟡 Revisão de falas problemáticas (lista clicável; falta regravar uma fala isolada)
-- ⬜ Modo "Substituir falas" (exige a separação acima)
+- ✅ Revisão de falas problemáticas (lista clicável). Para refazer uma fala basta editar a tradução e dublar de novo: só as falas alteradas são sintetizadas (cache)
+- ✅ Modo "Substituir falas": novas vozes sobre a trilha sem o diálogo original (fundo em cache por faixa)
 - ⬜ Teste com o VoiceStudio real (o adaptador só foi testado contra servidor simulado)
 
 ## Fase 5 — Automação 🟡
@@ -59,7 +60,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Fila persistente: ordem, progresso, cancelamento, retomada após fechar o app, registro por trabalho
 - ✅ Glossário por série reaproveitado na fila
 - ⬜ Reprocessar só falas novas/alteradas
-- ⬜ Relatório da temporada (exportável)
+- ✅ Relatório da temporada em Markdown (Fila › Exportar relatório)
 - ⬜ Contexto entre episódios (resumo do episódio anterior enviado como nota)
 
 ## Fase 6 — Acabamento e distribuição ⬜
@@ -72,7 +73,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 
 ## Testes atuais
 
-`swift test`: 68 testes em 5 alvos, todos passando em 26/10/2026.
+`swift test`: 78 testes em 5 alvos, todos passando em 26/10/2026.
 
 | Alvo | O que cobre |
 |---|---|
@@ -98,10 +99,10 @@ cancelamento de processos; troca de faixa só apaga a tradução se o backup deu
 
 Pendente:
 - ✅ Trava por projeto entre a fila e o episódio aberto (`ProjectActivity`).
-- ⬜ Preservar terminadores de linha mistos (CRLF + LF) por linha; hoje usa o da maioria.
-- ⬜ Reextrair a legenda quando o vídeo for substituído no mesmo caminho (guardar tamanho e data).
-- ⬜ Não cair para Windows-1252 quando o arquivo é quase todo UTF-8 com um byte inválido.
-- ⬜ Redigir nos logs também o valor literal da chave configurada (tokens sem prefixo conhecido).
+- ✅ Arquivos não editados com terminadores mistos voltam idênticos (bytes originais guardados); editados usam o terminador da maioria.
+- ✅ Legenda reextraída quando o vídeo é substituído no mesmo caminho (tamanho + data), com cópia da tradução anterior.
+- ✅ Arquivo quase todo UTF-8 com bytes inválidos continua UTF-8 (bytes ruins viram U+FFFD) em vez de virar Windows-1252.
+- ✅ O valor exato da chave configurada também é ocultado nos logs.
 
 ## Bloqueios conhecidos
 

@@ -53,6 +53,7 @@ public struct AppSettings: Sendable, Hashable, Codable {
     public var dubbingEngine: DubbingEngineChoice = .system
     public var dubbingDefaultVoice: String? = "Luciana"
     public var dubbingMaxSpeedup: Double = 1.3
+    public var dubbingMode: DubbingMode = .voiceOver
 
     public init() {}
 
@@ -101,6 +102,7 @@ public struct AppSettings: Sendable, Hashable, Codable {
         dubbingEngine = (try? c.decode(DubbingEngineChoice.self, forKey: .dubbingEngine)) ?? defaults.dubbingEngine
         dubbingDefaultVoice = (try? c.decodeIfPresent(String.self, forKey: .dubbingDefaultVoice)) ?? defaults.dubbingDefaultVoice
         dubbingMaxSpeedup = (try? c.decode(Double.self, forKey: .dubbingMaxSpeedup)) ?? defaults.dubbingMaxSpeedup
+        dubbingMode = (try? c.decode(DubbingMode.self, forKey: .dubbingMode)) ?? defaults.dubbingMode
     }
 }
 

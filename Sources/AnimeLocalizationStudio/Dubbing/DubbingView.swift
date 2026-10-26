@@ -45,7 +45,7 @@ struct DubbingView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text("Dublagem").font(.largeTitle.weight(.semibold))
-                    Text("Escolha uma voz para cada personagem e gere uma faixa de áudio em português sobre o áudio original (voice-over). O elenco fica salvo na série e vale para os próximos episódios.")
+                    Text("Escolha uma voz para cada personagem e gere uma faixa de áudio em português, por cima do original (voice-over) ou no lugar das falas originais. O elenco fica salvo na série e vale para os próximos episódios.")
                         .foregroundStyle(.secondary)
                 }
                 if let operation = workspace.operation {
@@ -186,9 +186,17 @@ struct DubbingView: View {
                 .controlSize(.large)
                 .disabled(segments.isEmpty || !engineReady || workspace.isBusy)
             }
+            Picker("Modo", selection: Bindable(app).settings.dubbingMode) {
+                ForEach(DubbingMode.allCases) { Text($0.label).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .fixedSize()
+            Text(app.settings.dubbingMode == .voiceOver
+                 ? "Voice-over: a voz nova fala por cima e o áudio original abaixa enquanto ela fala."
+                 : "Substituir falas: as vozes originais são separadas da música e dos efeitos no próprio Mac (isolamento de voz da Apple) e trocadas pelas novas. A separação é aproximada: cenas com muita música ou efeitos podem manter restos das falas originais.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Text("Resultado: um novo “Nome [PT-BR DUB].mkv” com o áudio dublado e a legenda em português, mantendo o áudio, as legendas e as fontes originais. O original não é alterado.")
                 .font(.caption).foregroundStyle(.secondary)
-            InlineMessage(kind: .info, text: "Modo disponível: voice-over (a voz nova fala por cima, com o original abaixado). “Substituir falas” precisa separar a voz da trilha (Demucs/BS-RoFormer) e ainda não está implementado.")
         }
     }
 

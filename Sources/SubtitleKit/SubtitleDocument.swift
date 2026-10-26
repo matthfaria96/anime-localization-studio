@@ -160,6 +160,38 @@ public enum SubtitleDocument: Sendable, Hashable {
         }
     }
 
+    /// Adds an empty line right after `index`, filling the gap to the next line (or 2 s).
+    @discardableResult
+    public mutating func insertLine(after index: Int) -> Int {
+        let all = cues
+        let start = all[index].end
+        let next = all.indices.contains(index + 1) ? all[index + 1].start : start + 2_000
+        let end = next > start + 300 ? next : start + 2_000
+        switch self {
+        case .ass(var doc):
+            let new = doc.insertEvent(after: index, start: start, end: end)
+            self = .ass(doc)
+            return new
+        case .srt(var doc):
+            doc.cues.insert(SRTCue(number: "", start: start, end: end, text: ""), at: index + 1)
+            doc.renumber()
+            self = .srt(doc)
+            return index + 1
+        }
+    }
+
+    public mutating func removeLine(at index: Int) {
+        switch self {
+        case .ass(var doc):
+            doc.removeEvent(at: index)
+            self = .ass(doc)
+        case .srt(var doc):
+            doc.cues.remove(at: index)
+            doc.renumber()
+            self = .srt(doc)
+        }
+    }
+
     public mutating func setActor(_ actor: String, at index: Int) {
         guard case .ass(var doc) = self else { return }
         doc.updateEvent(at: index) { $0.actor = actor }

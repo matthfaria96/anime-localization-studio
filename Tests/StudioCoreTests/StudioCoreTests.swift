@@ -112,3 +112,22 @@ struct StorageTests {
         #expect(text.contains("~/Movies/a.mkv"))
     }
 }
+
+@Suite("Season report and redaction")
+struct SeasonReportTests {
+    @Test func reportListsEveryJob() {
+        let store = ProjectStore(paths: AppPaths(root: FileManager.default.temporaryDirectory.appendingPathComponent("ALSRep-\(UUID().uuidString)")))
+        var failed = Job(kind: .translate, mediaURL: URL(fileURLWithPath: "/m/Ep 02.mkv"), seriesID: nil)
+        failed.status = .failed
+        failed.message = "quota | acabou"
+        let markdown = SeasonReport.markdown(jobs: [failed, Job(kind: .dub, mediaURL: URL(fileURLWithPath: "/m/Ep 01.mkv"), seriesID: nil)], store: store)
+        #expect(markdown.contains("| Ep 01 | Dublar (voice-over) | Na fila |"))
+        #expect(markdown.contains("## Falhas"))
+        #expect(markdown.contains("quota | acabou"))
+    }
+
+    @Test func registeredSecretsAreHidden() {
+        LogRedactor.register(secret: "AIzaUnprefixedKey123456")
+        #expect(!LogRedactor.redact("failed with AIzaUnprefixedKey123456").contains("Unprefixed"))
+    }
+}

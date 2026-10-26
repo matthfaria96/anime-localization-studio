@@ -239,6 +239,31 @@ public struct EpisodeJobPerformer: JobPerformer {
     }
 }
 
+/// Markdown summary of a season (or any set of jobs): status, output and the numbers of each
+/// episode's last translation, dub and verification.
+public enum SeasonReport {
+    public static func markdown(jobs: [Job], store: ProjectStore, date: Date = Date()) -> String {
+        var lines = ["# Relatório de localização", "", "Gerado em \(date.formatted(date: .long, time: .shortened)).", "",
+                     "| Episódio | Trabalho | Estado | Traduzidas | Sem tradução | Dublagem | Verificação | Arquivo gerado |",
+                     "|---|---|---|---|---|---|---|---|"]
+        for job in jobs.sorted(by: { $0.title.localizedStandardCompare($1.title) == .orderedAscending }) {
+            let project = store.existingProject(for: URL(fileURLWithPath: job.mediaPath))
+            let report = project?.lastReport
+            let dub = project?.lastDubReport.map { "\($0.synthesized + $0.reusedClips)/\($0.totalSegments) falas" } ?? "—"
+            let verification = project?.lastVerification.map { $0.passed ? "ok" : "falhou" } ?? "—"
+            let output = job.outputPath.map { URL(fileURLWithPath: $0).lastPathComponent } ?? "—"
+            let cells = [job.title, job.kind.label, job.status.label, report.map { "\($0.translatedLines)/\($0.totalLines)" } ?? "—",
+                         report.map { String($0.failedLines.count) } ?? "—", dub, verification, output]
+            lines.append("| " + cells.map { $0.replacingOccurrences(of: "|", with: "\\|") }.joined(separator: " | ") + " |")
+        }
+        let failed = jobs.filter { $0.status == .failed }
+        if !failed.isEmpty {
+            lines += ["", "## Falhas", ""] + failed.map { "- **\($0.title)**: \($0.message)" }
+        }
+        return lines.joined(separator: "\n") + "\n"
+    }
+}
+
 public struct TranslationPipelineIncomplete: Error, LocalizedError {
     public let failed: Int
     public var errorDescription: String? { "\(failed) falas ficaram sem tradução; revise no editor antes de incorporar." }
