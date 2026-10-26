@@ -56,6 +56,8 @@ public struct AppSettings: Sendable, Hashable, Codable {
     public var dubbingMode: DubbingMode = .voiceOver
     /// Reading speed above which a line is flagged (characters per second).
     public var maxReadingSpeed: Double = 20
+    /// Render ASS previews with libass (animations, karaoke, drawings, embedded fonts).
+    public var faithfulPreview = true
 
     public init() {}
 
@@ -106,6 +108,7 @@ public struct AppSettings: Sendable, Hashable, Codable {
         dubbingMaxSpeedup = (try? c.decode(Double.self, forKey: .dubbingMaxSpeedup)) ?? defaults.dubbingMaxSpeedup
         dubbingMode = (try? c.decode(DubbingMode.self, forKey: .dubbingMode)) ?? defaults.dubbingMode
         maxReadingSpeed = (try? c.decode(Double.self, forKey: .maxReadingSpeed)) ?? defaults.maxReadingSpeed
+        faithfulPreview = (try? c.decode(Bool.self, forKey: .faithfulPreview)) ?? defaults.faithfulPreview
     }
 }
 

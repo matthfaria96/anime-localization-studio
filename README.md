@@ -12,7 +12,8 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
 
 - **Abrir e inspecionar** MKV, MP4 e MOV: faixas de vídeo, áudio e legenda, idiomas, flags
   padrão/forçada, fontes anexadas e capítulos.
-- **Assistir** dentro do app com a legenda original, a tradução ou as duas sobre o vídeo. MKVs
+- **Assistir** dentro do app com a legenda original, a tradução ou as duas sobre o vídeo, com
+  renderização fiel de ASS pelo libass (animações, karaokê, desenhos e as fontes do MKV). MKVs
   são reproduzidos por uma cópia de pré-visualização em cache, feita sem recodificar o vídeo.
 - **Editar** falas, tempos, estilos e personagens, com original e tradução lado a lado, busca e
   substituição que nunca altera tags `{\…}`, deslocamento de tempos, filtro de falas sem
@@ -41,8 +42,6 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
   originais. As vozes do macOS são robóticas; vozes naturais dependem do VoiceStudio, que só foi
   testado contra um servidor simulado.
 - Identificação automática de quem fala (diarização) na transcrição.
-- Pré-visualização fiel de animações ASS (`\t`, `\move`, `\fad`), karaokê e desenhos — o arquivo
-  final os preserva, mas a prévia mostra o texto estático.
 - OCR de legendas VobSub (DVD); PGS já é reconhecido.
 
 Detalhes e próximos passos em [ROADMAP.md](ROADMAP.md).
@@ -58,7 +57,8 @@ Detalhes e próximos passos em [ROADMAP.md](ROADMAP.md).
 
   O app encontra os programas no Homebrew, MacPorts ou no `MKVToolNix.app`; outro caminho
   pode ser indicado em Ajustes › Ferramentas. A tela **Diagnóstico** mostra o que falta.
-- Para compilar: Xcode 27 (as macros do SwiftUI e do Foundation Models não funcionam só com as
+- Para compilar: `brew install libass` (o build copia o libass e as dependências para dentro
+  do app) e Xcode 27 (as macros do SwiftUI e do Foundation Models não funcionam só com as
   Command Line Tools).
 
 ## Motores de tradução

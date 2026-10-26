@@ -1,5 +1,6 @@
 import AVFoundation
 import AppKit
+import ASSRendering
 import SubtitleKit
 import SwiftUI
 
@@ -46,6 +47,35 @@ struct PlayerView: View {
 
     @ViewBuilder
     private func overlays(rect: CGRect) -> some View {
+        if workspace.usesFaithfulPreview, let original = workspace.originalRenderer, let translated = workspace.translationRenderer {
+            faithful(rect: rect, original: original, translated: translated)
+                .task(id: workspace.editor.revision) { await workspace.refreshRenderers() }
+        } else {
+            approximate(rect: rect)
+        }
+    }
+
+    @ViewBuilder
+    private func faithful(rect: CGRect, original: ASSRenderer, translated: ASSRenderer) -> some View {
+        let time = player.currentTime
+        let size = player.videoSize
+        switch workspace.overlayMode {
+        case .translation:
+            LibassOverlay(renderer: translated, time: time, revision: workspace.renderRevision, videoRect: rect, videoSize: size)
+        case .original:
+            LibassOverlay(renderer: original, time: time, revision: workspace.renderRevision, videoRect: rect, videoSize: size)
+        case .both:
+            LibassOverlay(renderer: original, time: time, revision: workspace.renderRevision, videoRect: rect, videoSize: size)
+                .opacity(0.6)
+                .offset(y: -rect.height * 0.12)
+            LibassOverlay(renderer: translated, time: time, revision: workspace.renderRevision, videoRect: rect, videoSize: size)
+        case .none:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func approximate(rect: CGRect) -> some View {
         let editor = workspace.editor
         switch workspace.overlayMode {
         case .translation:

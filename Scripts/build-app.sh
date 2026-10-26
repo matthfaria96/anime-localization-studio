@@ -73,9 +73,54 @@ if [[ ! -f "$WORK/AppIcon.icns" || Scripts/make-icon.swift -nt "$WORK/AppIcon.ic
 fi
 cp "$WORK/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
+# libass (ISC) and its dependencies come from Homebrew; copy every non-system dylib the
+# executable needs into Contents/Frameworks and point the load commands there, so the app
+# runs on Macs without Homebrew.
+FW="$APP/Contents/Frameworks"
+mkdir -p "$FW"
+bundle_deps() {
+  # $1: binary to fix, $2: where it came from (to resolve its @rpath/@loader_path references)
+  local target="$1" origin="${2:-$1}" dep name source
+  for dep in $(otool -L "$target" | awk 'NR>1 {print $1}'); do
+    case "$dep" in
+      /opt/homebrew/*|/usr/local/*) source="$dep" ;;
+      @rpath/*|@loader_path/*) source="${origin:A:h}/${dep:t}"; [[ -f "$source" ]] || continue ;;
+      *) continue ;;
+    esac
+    name="${dep:t}"
+    [[ "$name" == "${target:t}" ]] && continue
+    if [[ ! -f "$FW/$name" ]]; then
+      cp -L "$source" "$FW/$name"
+      chmod u+w "$FW/$name"
+      install_name_tool -id "@rpath/$name" "$FW/$name" 2>/dev/null
+      bundle_deps "$FW/$name" "${source:A}"
+    fi
+    [[ "$dep" == "@rpath/$name" ]] || install_name_tool -change "$dep" "@rpath/$name" "$target" 2>/dev/null
+  done
+}
+bundle_deps "$APP/Contents/MacOS/$EXE"
+for lib in "$FW"/*.dylib(N); do
+  otool -l "$lib" | grep -q "@loader_path" || install_name_tool -add_rpath "@loader_path" "$lib" 2>/dev/null || true
+done
+otool -l "$APP/Contents/MacOS/$EXE" | grep -q "@executable_path/../Frameworks" \
+  || install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/$EXE"
+if otool -L "$APP/Contents/MacOS/$EXE" "$FW"/*.dylib(N) | grep -E "^\s+/(opt/homebrew|usr/local)/" ; then
+  fail "a bundled library still points outside the app"
+fi
+
 mkdir -p "$APP/Contents/Resources/Licenses"
 cp THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/Licenses/THIRD_PARTY_NOTICES.md"
+cp LICENSE "$APP/Contents/Resources/Licenses/AnimeLocalizationStudio-GPL-3.0.txt"
+# License texts of the bundled libraries, taken from their Homebrew kegs.
+for pkg in libass freetype fribidi harfbuzz libunibreak gettext pcre2 graphite2 libpng brotli; do
+  keg="$(brew --prefix "$pkg" 2>/dev/null)" || continue
+  for f in "$keg"/(COPYING|LICENSE|LICENCE|LICENSE.TXT|LICENCE.md)(N); do cp "$f" "$APP/Contents/Resources/Licenses/$pkg-${f:t}"; done
+done
+# glib ships no license file in its keg; it is LGPL-2.1-or-later, the same text as FriBidi's COPYING.
+fribidi_copying="$(brew --prefix fribidi 2>/dev/null)/COPYING"
+[[ -f "$fribidi_copying" ]] && cp "$fribidi_copying" "$APP/Contents/Resources/Licenses/glib-LGPL-2.1.txt"
 
+for lib in "$FW"/*.dylib(N); do codesign --force --sign "$SIGN_IDENTITY" "$lib"; done
 if [[ "$SIGN_IDENTITY" == "-" ]]; then
   codesign --force --deep --sign - "$APP"
 else

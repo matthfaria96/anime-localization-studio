@@ -148,8 +148,10 @@ struct LineDetailView: View {
         let features = cue.features
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             if features.hasKaraoke { InlineMessage(kind: .info, text: "Linha de karaokê: por padrão não é traduzida, para não perder a sincronia das sílabas.") }
-            if features.hasDrawing { InlineMessage(kind: .info, text: "Desenho vetorial (\\p): preservado como está e não exibido na pré-visualização.") }
-            if features.hasAnimation { InlineMessage(kind: .info, text: "Usa animação (\\t, \\move ou \\fad): preservada no arquivo, mas a pré-visualização mostra a linha parada.") }
+            if !workspace.usesFaithfulPreview {
+                if features.hasDrawing { InlineMessage(kind: .info, text: "Desenho vetorial (\\p): preservado como está; ative a pré-visualização fiel (libass) em Ajustes para vê-lo.") }
+                if features.hasAnimation { InlineMessage(kind: .info, text: "Usa animação (\\t, \\move ou \\fad): preservada no arquivo; ative a pré-visualização fiel (libass) em Ajustes para vê-la.") }
+            }
         }
     }
 

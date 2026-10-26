@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 — 26/10/2026
+
+### Adicionado
+- Pré-visualização fiel de ASS com libass, o mesmo renderizador de mpv, VLC e Aegisub: animações (`\t`, `\move`, `\fad`), karaokê, desenhos vetoriais, clipes, rotação, desfoque e as fontes anexadas ao MKV, renderizados na densidade de pixels da tela. Pode ser desligada em Ajustes › Geral.
+- O libass e as bibliotecas de que ele depende vão dentro do app (`Contents/Frameworks`), com os textos das licenças em `Contents/Resources/Licenses`.
+
 ## 0.4.0 — 26/10/2026
 
 ### Adicionado

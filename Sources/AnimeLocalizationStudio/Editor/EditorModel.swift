@@ -45,6 +45,8 @@ final class EditorModel {
     private(set) var source: SubtitleDocument?
     private(set) var translation: SubtitleDocument?
     private(set) var rows: [EditorRow] = []
+    /// Increases on every document change (cheap to observe, unlike `rows`).
+    private(set) var revision = 0
     private var sourceCues: [SubtitleCue] = []
     private var translationCues: [SubtitleCue] = []
 
@@ -321,7 +323,7 @@ final class EditorModel {
     }
 
     private func refresh() {
-        defer { reloadDrafts(force: false) }
+        defer { reloadDrafts(force: false); revision += 1 }
         sourceCues = source?.cues ?? []
         translationCues = translation?.cues ?? []
         guard let source else { rows = []; return }

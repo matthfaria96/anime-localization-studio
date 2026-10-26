@@ -14,3 +14,4 @@
 - O app tem `defaultIsolation(MainActor)`; tipos usados fora do MainActor precisam de `nonisolated`.
 - Antes de mudar estado de fases, atualize ROADMAP.md e CHANGELOG.md. Referências e licenças:
   REFERENCES.md e THIRD_PARTY_NOTICES.md (nenhum código de terceiros foi incorporado).
+- libass vem do Homebrew (`brew install libass`); `Scripts/build-app.sh` copia as dylibs para `Contents/Frameworks`, reescreve os caminhos para `@rpath` (inclusive referências `@rpath` internas do Homebrew) e falha se algo ainda apontar para fora do app. Sempre testar abrindo o app compilado: dylib faltando só aparece ao carregar.

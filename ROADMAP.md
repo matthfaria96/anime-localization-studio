@@ -25,11 +25,10 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Tradução em lote com contexto, glossário, retentativas, checkpoints, retomada, cancelamento e relatório
 - ✅ Incorporação de nova faixa e verificação do MKV (incluindo prova de não recodificação)
 - ✅ Exportação externa da legenda
-- 🟡 Pré-visualização aproximada (sem `\t`, `\move`, `\fad`, karaokê, desenhos, clipes, tags inline de cor/itálico)
+- ✅ Pré-visualização fiel de ASS com libass: `\t`, `\move`, `\fad`, karaokê, desenhos, clipes, rotação, desfoque, tags inline e fontes anexadas ao MKV (SRT usa a sobreposição própria)
 - ✅ Inserir e excluir falas (menu de contexto, botão +, ⌫), desfazível, nos dois documentos
 - ✅ Filtro "Possíveis erros de ortografia" (corretor do macOS no idioma de destino)
 - ✅ Limite de caracteres por segundo configurável (Ajustes › Geral › Revisão)
-- ⬜ Renderização fiel de ASS com libass (via libmpv; avaliar licença LGPL e empacotamento)
 - ✅ OCR de legendas PGS (decodificador PGS próprio + reconhecimento de texto do Vision, no Mac)
 - ⬜ OCR de VobSub (DVD, `.idx/.sub`)
 
@@ -41,7 +40,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Voice casting: personagens a partir do campo Ator do ASS, voz por personagem, velocidade, estilo (VoiceStudio), amostra
 - ✅ Elenco salvo na série (ou no projeto, sem série) e reaproveitado entre episódios e na fila
 - ✅ Transcrição no Mac (`SpeechAnalyzer`/`SpeechTranscriber`, 45 idiomas) para vídeos sem legenda, com confirmação antes de o macOS baixar o modelo de um idioma
-- ⬜ Diarização (identificar quem fala na transcrição; pyannote via VoiceStudio exige token do Hugging Face). Hoje o personagem vem do campo Ator do ASS e pode ser corrigido à mão
+- ⬜ Diarização (identificar quem fala na transcrição). Opção escolhida: FluidAudio (Apache-2.0, Core ML no Neural Engine, modelos pyannote Community-1 + WeSpeaker CC-BY-4.0, ~22 MB). **Aguardando aprovação do usuário para adicionar a dependência.** Hoje o personagem vem do campo Ator do ASS e pode ser corrigido à mão
 - ⬜ Clonagem de voz com registro de consentimento (o VoiceStudio já tem `/profiles/{id}/consent`)
 
 ## Fase 4 — Dublagem e mixagem ✅ (qualidade de voz depende do motor)
@@ -75,7 +74,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 
 ## Testes atuais
 
-`swift test`: 85 testes em 5 alvos, todos passando em 26/10/2026.
+`swift test`: 90 testes em 6 alvos, todos passando em 26/10/2026.
 
 | Alvo | O que cobre |
 |---|---|
@@ -83,6 +82,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 | MediaKitTests (11) | MKV real gerado no teste: inspeção, extração, mux pt-BR com verificação, original inalterado (SHA-256), não sobrescrita, detecção de vídeo recodificado, prévia, cancelamento de processo |
 | TranslationKitTests (13) | Contexto e glossário por lote, traduções existentes preservadas, queda do servidor interrompe sem multiplicar pedidos, fallback de marcadores, isolamento de fala com erro, checkpoint/retomada, cancelamento, **tradução real com a Apple Translation** |
 | StudioCoreTests (8) | **Dublagem de ponta a ponta num MKV real** (2 áudios, 2 legendas, verificação, original intacto); Fila em ordem, persistência, interrupção e retomada, cancelamento, redação de segredos, projetos, séries, ajustes tolerantes |
+| ASSRenderingTests (5) | libass real: `\fad` muda a opacidade, `\move` muda a posição, desenho vetorial em escala, karaokê muda a cor das sílabas, nada fora do tempo |
 | DubbingKitTests (9) | Plano de segmentos, elenco, cliente VoiceStudio contra servidor simulado, **dublagem real com voz do sistema + FFmpeg** (aceleração, cache, falas sem voz, sobreposição) |
 
 Validação visual: `Scripts/ui-capture.sh` abre o app compilado com uma pasta pessoal temporária

@@ -6,9 +6,34 @@ distribui de fato**. Referências que serviram só de inspiração estão em
 
 ## Código incorporado ao aplicativo
 
-Nenhum. Todo o código-fonte deste repositório foi escrito para o projeto. Nenhum arquivo de
+Nenhum código-fonte de terceiros foi copiado para este repositório. Nenhum arquivo de
 VoiceStudio, Subtitle Edit, Aegisub, MKVToolNix, FFmpeg ou OpenDub foi copiado, adaptado ou
 vinculado ao binário.
+
+## Bibliotecas distribuídas dentro do aplicativo (desde 0.5.0)
+
+Para a pré-visualização fiel de ASS, o app vincula dinamicamente o **libass** e o
+`Scripts/build-app.sh` copia estas bibliotecas (builds do Homebrew, sem modificação) para
+`Contents/Frameworks`. Os textos das licenças vão em `Contents/Resources/Licenses`. Todas são
+bibliotecas dinâmicas separadas e podem ser substituídas por outras versões compatíveis, como a
+LGPL exige.
+
+| Biblioteca | Versão | Licença | Código-fonte |
+|---|---|---|---|
+| libass | 0.17.5 | ISC | https://github.com/libass/libass |
+| FreeType | 2.15.0 | FreeType License (FTL) | https://freetype.org |
+| HarfBuzz | 15.0.0 | MIT ("Old MIT") | https://github.com/harfbuzz/harfbuzz |
+| FriBidi | 1.0.17 | LGPL-2.1-or-later | https://github.com/fribidi/fribidi |
+| libunibreak | 8.0 | Zlib | https://github.com/adah1972/libunibreak |
+| GLib (dependência do HarfBuzz) | 2.90.1 | LGPL-2.1-or-later | https://gitlab.gnome.org/GNOME/glib |
+| gettext / libintl (dependência do GLib) | — | LGPL-2.1-or-later (libintl) | https://www.gnu.org/software/gettext/ |
+| PCRE2 (dependência do GLib) | 10.49 | BSD-3-Clause (com exceção de biblioteca) | https://github.com/PCRE2Project/pcre2 |
+| Graphite2 (dependência do HarfBuzz) | — | LGPL-2.1-or-later ou MPL-2.0 | https://github.com/silnrsi/graphite |
+| libpng (dependência do FreeType) | — | libpng License | http://www.libpng.org |
+| Brotli (dependência do FreeType) | 1.2.1 | MIT | https://github.com/google/brotli |
+
+Os créditos do FreeType exigidos pela FTL: "Portions of this software are copyright © The
+FreeType Project (www.freetype.org). All rights reserved." 
 
 O aplicativo depende apenas de frameworks do sistema da Apple (SwiftUI, AppKit, AVFoundation,
 AVKit, AudioToolbox, Speech, Vision, Translation, FoundationModels, NaturalLanguage, CryptoKit, Security,

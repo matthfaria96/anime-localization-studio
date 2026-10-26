@@ -80,6 +80,15 @@ margens e resolução de referência; animações, karaokê, desenhos e clipes n
 prévia (avisado no editor). Uma renderização fiel com libass (via libmpv, como no Santo Video
 Player) está no roadmap.
 
+**Pré-visualização fiel (libass).** O alvo de sistema `CLibass` expõe a API C do libass via
+pkg-config; `ASSRendering.ASSRenderer` (um actor, porque o libass não é thread-safe) carrega o
+texto serializado do documento, registra as fontes anexadas ao MKV (extraídas uma vez com
+`mkvextract attachments`) e devolve, para cada instante, as máscaras de alfa do libass compostas
+numa imagem RGBA pré-multiplicada. `LibassOverlay` pede um quadro a cada mudança de tempo,
+tamanho ou revisão do editor, na resolução de pixels da tela limitada à do vídeo. Há dois
+renderizadores (original e tradução) para o modo "Original e tradução". SRT continua com a
+sobreposição desenhada em SwiftUI.
+
 **Ferramentas externas.** `ToolLocator` procura MKVToolNix e FFmpeg nos caminhos do Homebrew,
 MacPorts e no `.app` oficial, porque apps abertos pelo Finder não herdam o `PATH`. Um caminho
 definido em Ajustes tem prioridade. `ProcessRunner` executa sem shell (nomes com espaços, aspas

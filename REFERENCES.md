@@ -154,6 +154,25 @@ separadamente. O que é efetivamente usado em tempo de execução está em
   usados na mixagem da dublagem.
 - **Forma de integração:** processos externos; nenhum binário distribuído.
 
+## libass — renderização de ASS
+
+- **URL:** https://github.com/libass/libass
+- **Licença verificada:** ISC (fórmula do Homebrew 0.17.5 e arquivo `COPYING`).
+- **Compatibilidade com macOS:** bottle arm64 para macOS 27; usa CoreText como provedor de fontes
+  (sem fontconfig).
+- **Uso efetivo:** vinculado dinamicamente para a pré-visualização fiel; distribuído dentro do
+  app com suas dependências (ver THIRD_PARTY_NOTICES.md). Nenhum código do libass foi copiado.
+
+## FluidAudio — diarização (avaliado, ainda não integrado)
+
+- **URL:** https://github.com/FluidInference/FluidAudio (v0.17.7, Apache-2.0)
+- **Modelos:** https://huggingface.co/FluidInference/speaker-diarization-coreml — os artefatos do
+  pipeline offline (Segmentation, FBank, Embedding, PLDA) são conversões Core ML do
+  pyannote Community-1 sob CC-BY-4.0 (uso comercial com atribuição a pyannote, WeSpeaker,
+  BUT Speech@FIT e Fluid Inference); ~22 MB.
+- **Estado:** escolhido para identificar quem fala nas transcrições; aguardando aprovação para
+  adicionar a dependência.
+
 ## Motores nativos da Apple (não são open source, mas foram verificados)
 
 - **Translation framework** (`TranslationSession(installedSource:target:)`, macOS 26+):

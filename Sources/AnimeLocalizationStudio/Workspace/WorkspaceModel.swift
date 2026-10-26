@@ -1,4 +1,5 @@
 import AppKit
+import ASSRendering
 import DubbingKit
 import MediaKit
 import Observation
@@ -32,6 +33,12 @@ final class WorkspaceModel {
     var previewAudioTrackID: Int?
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var editorLoadedSource: SubtitleDocument?
+    /// libass renderers for the faithful preview (nil if libass could not start).
+    @ObservationIgnored let originalRenderer = try? ASSRenderer()
+    @ObservationIgnored let translationRenderer = try? ASSRenderer()
+    /// Bumped after the renderers load new script text, so overlays redraw.
+    var renderRevision = 0
+    @ObservationIgnored private var renderedEditorRevision = -1
     @ObservationIgnored private var previewTask: Task<Void, Never>?
 
     init(url: URL, app: AppModel) {
@@ -65,6 +72,7 @@ final class WorkspaceModel {
             startPreview()
             await loadSubtitles()
             operation = nil
+            Task { await loadEmbeddedFonts(info) }
             applyTestHooks()
         } catch {
             operation = nil
@@ -92,6 +100,44 @@ final class WorkspaceModel {
             editor.load(source: nil, translation: nil)
             notice = (.error, error.localizedDescription)
         }
+    }
+
+    // MARK: Faithful preview (libass)
+
+    var usesFaithfulPreview: Bool {
+        guard app.settings.faithfulPreview, originalRenderer != nil, let source = editor.source else { return false }
+        return !source.usesHTMLMarkup
+    }
+
+    /// Feeds the current documents to libass after an edit.
+    func refreshRenderers() async {
+        guard usesFaithfulPreview, renderedEditorRevision != editor.revision, let source = editor.source else { return }
+        renderedEditorRevision = editor.revision
+        let original = source.encoded()
+        let translated = (editor.translation ?? source).encoded()
+        try? await originalRenderer?.load(script: original)
+        try? await translationRenderer?.load(script: translated)
+        renderRevision += 1
+    }
+
+    /// Extracts the MKV's font attachments once and gives them to libass, so the preview uses
+    /// the fonts the fansub chose.
+    private func loadEmbeddedFonts(_ info: MediaInfo) async {
+        let fonts = info.attachments.filter(\.isFont)
+        guard !fonts.isEmpty, originalRenderer != nil, let mkvextract = app.tools.locate(.mkvextract) else { return }
+        let directory = app.paths.caches.appendingPathComponent("Fonts/\(project.id)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let missing = fonts.filter { !FileManager.default.fileExists(atPath: directory.appendingPathComponent($0.fileName).path) }
+        if !missing.isEmpty {
+            let specs = missing.map { "\($0.id):\(directory.appendingPathComponent($0.fileName).path)" }
+            _ = try? await ProcessRunner.run(mkvextract, [info.url.path, "attachments"] + specs)
+        }
+        for font in fonts {
+            guard let data = try? Data(contentsOf: directory.appendingPathComponent(font.fileName)) else { continue }
+            await originalRenderer?.addFont(named: font.fileName, data: data)
+            await translationRenderer?.addFont(named: font.fileName, data: data)
+        }
+        renderRevision += 1
     }
 
     func startPreview() {
