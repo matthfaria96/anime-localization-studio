@@ -1,0 +1,114 @@
+import Foundation
+import Testing
+@testable import StudioCore
+import TranslationKit
+
+private func tempPaths() -> AppPaths {
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent("ALSCore-\(UUID().uuidString)", isDirectory: true)
+    return AppPaths(root: base.appendingPathComponent("Support"), caches: base.appendingPathComponent("Caches"))
+}
+
+private struct InstantPerformer: JobPerformer {
+    func perform(_ job: Job, progress: @escaping @Sendable (Double, String) -> Void) async throws -> String? {
+        progress(0.5, "meio")
+        if job.title.contains("falha") { throw TranslationEngineError.permanent("api_key=sk-proj-abcdefghijklmnop recusada") }
+        return "/tmp/\(job.title).mkv"
+    }
+}
+
+private struct HangingPerformer: JobPerformer {
+    func perform(_ job: Job, progress: @escaping @Sendable (Double, String) -> Void) async throws -> String? {
+        try await Task.sleep(for: .seconds(30))
+        return nil
+    }
+}
+
+@MainActor
+@Suite("Job queue")
+struct JobQueueTests {
+    @Test func runsJobsInOrderAndPersists() async throws {
+        let paths = tempPaths()
+        let queue = JobQueue(file: paths.jobs, performer: InstantPerformer())
+        queue.enqueue(.translate, mediaURLs: [URL(fileURLWithPath: "/m/ep1.mkv"), URL(fileURLWithPath: "/m/ep2 falha.mkv")], seriesID: nil)
+        try await waitUntil { queue.jobs.allSatisfy(\.status.isFinished) }
+        #expect(queue.jobs[0].status == .done && queue.jobs[0].outputPath == "/tmp/ep1.mkv")
+        #expect(queue.jobs[1].status == .failed)
+        #expect(!queue.jobs[1].message.contains("sk-proj"), "secrets must be redacted")
+        let reloaded = JobQueue(file: paths.jobs, performer: InstantPerformer())
+        #expect(reloaded.jobs.count == 2)
+    }
+
+    @Test func runningJobsComeBackInterruptedAndResume() async throws {
+        let paths = tempPaths()
+        do {
+            let queue = JobQueue(file: paths.jobs, performer: HangingPerformer())
+            queue.enqueue(.translateAndMux, mediaURLs: [URL(fileURLWithPath: "/m/ep1.mkv")], seriesID: nil)
+            #expect(queue.jobs[0].status == .running)
+        }
+        // A new queue reading the same file simulates relaunching after a crash.
+        let relaunched = JobQueue(file: paths.jobs, performer: InstantPerformer())
+        #expect(relaunched.jobs[0].status == .interrupted)
+        #expect(relaunched.interruptedCount == 1)
+        relaunched.resumeInterrupted()
+        try await waitUntil { relaunched.jobs[0].status == .done }
+    }
+
+    @Test func cancelStopsTheRunningJob() async throws {
+        let queue = JobQueue(file: tempPaths().jobs, performer: HangingPerformer())
+        queue.enqueue(.translate, mediaURLs: [URL(fileURLWithPath: "/m/a.mkv"), URL(fileURLWithPath: "/m/b.mkv")], seriesID: nil)
+        queue.cancelAll()
+        try await waitUntil { queue.jobs.allSatisfy(\.status.isFinished) }
+        #expect(queue.jobs.allSatisfy { $0.status == .cancelled })
+    }
+
+    private func waitUntil(timeout: Duration = .seconds(5), _ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now + timeout
+        while !condition() {
+            guard ContinuousClock.now < deadline else { Issue.record("timed out"); return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
+}
+
+@Suite("Storage and settings")
+struct StorageTests {
+    @Test func projectsAreStablePerFile() throws {
+        let store = ProjectStore(paths: tempPaths())
+        let url = URL(fileURLWithPath: "/Volumes/Anime/Show/Episode 01.mkv")
+        var project = store.project(for: url)
+        #expect(project.title == "Episode 01")
+        project.sourceTrackID = 3
+        project.sourceFormat = .ass
+        try store.save(project)
+        #expect(store.project(for: url).sourceTrackID == 3)
+        #expect(store.translationURL(for: project)?.lastPathComponent == "translation.pt-BR.ass")
+        #expect(store.all().count == 1)
+    }
+
+    @Test func seriesKeepTheirGlossary() throws {
+        let store = SeriesStore(paths: tempPaths())
+        let series = Series(name: "Sword Art Online", glossary: Glossary(entries: [GlossaryEntry(source: "Kirito", target: "Kirito", kind: .character)]))
+        try store.save(series)
+        #expect(store.all().first?.glossary.entries.first?.source == "Kirito")
+    }
+
+    @Test func settingsSurviveMissingKeys() throws {
+        let paths = tempPaths()
+        try FileManager.default.createDirectory(at: paths.root, withIntermediateDirectories: true)
+        try Data(#"{"engine":"foundationModels","trackName":"PT-BR"}"#.utf8).write(to: paths.settings)
+        let settings = SettingsStore(paths: paths).load()
+        #expect(settings.engine == .foundationModels)
+        #expect(settings.trackName == "PT-BR")
+        #expect(settings.targetLanguage == "pt-BR")
+        #expect(settings.makeDefault)
+    }
+
+    @Test func redactsSecretsAndHome() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let text = LogRedactor.redact("Authorization: Bearer abc.def-123 key sk-proj-ABCDEFGHIJKLMNOP api_key=\"xyz123\" at \(home)/Movies/a.mkv")
+        #expect(!text.contains("abc.def-123"))
+        #expect(!text.contains("ABCDEFGHIJKLMNOP"))
+        #expect(!text.contains("xyz123"))
+        #expect(text.contains("~/Movies/a.mkv"))
+    }
+}

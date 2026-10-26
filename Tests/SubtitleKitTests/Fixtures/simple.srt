@@ -1,0 +1,12 @@
+1
+00:00:01,500 --> 00:00:04,200
+I won't let you hurt my friends!
+
+2
+00:00:04,300 --> 00:00:07,800 X1:100 X2:200 Y1:50 Y2:80
+Wait, Kirito-kun...
+<i>where</i> are you going?
+
+3
+00:00:08,000 --> 00:00:11,000
+{\an8}We have to reach the 75th floor.
