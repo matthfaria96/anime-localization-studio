@@ -36,6 +36,11 @@ private struct GeneralSettings: View {
                     ForEach(languages, id: \.0) { Text($0.1).tag(Optional($0.0)) }
                 }
             }
+            Section("Revisão") {
+                Stepper(value: $app.settings.maxReadingSpeed, in: 10...40, step: 1) {
+                    Text("Leitura rápida demais acima de \(Int(app.settings.maxReadingSpeed)) caracteres por segundo")
+                }
+            }
             Section("Nova faixa no MKV") {
                 TextField("Nome da faixa", text: $app.settings.trackName)
                 Toggle("Definir como faixa padrão", isOn: $app.settings.makeDefault)

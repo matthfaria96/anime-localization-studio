@@ -9,13 +9,15 @@ public enum WorkflowError: Error, LocalizedError {
     case bitmapOnly
     case notTranslated
     case noAudio
+    case noBitmapSubtitle
 
     public var errorDescription: String? {
         switch self {
         case .noTextSubtitle: "O arquivo não tem legenda de texto (ASS, SSA ou SRT) para traduzir. Abra uma legenda externa no editor."
-        case .bitmapOnly: "As legendas deste arquivo são imagens (PGS/VobSub) e precisam de OCR, que ainda não está implementado."
+        case .bitmapOnly: "As legendas deste arquivo são imagens. Use “Reconhecer texto (OCR)” para legendas PGS; VobSub ainda não é suportado."
         case .notTranslated: "Traduza o episódio antes de dublar: a dublagem usa as falas da tradução e os tempos da legenda."
         case .noAudio: "O arquivo não tem faixa de áudio para servir de base à dublagem."
+        case .noBitmapSubtitle: "O arquivo não tem legenda PGS. Legendas VobSub (DVD) ainda não são reconhecidas."
         }
     }
 }
@@ -84,7 +86,8 @@ public struct EpisodeWorkflow: Sendable {
         try store.save(project)
         let checkpoint = store.checkpointURL(for: project, language: settings.targetLanguage)
         if retranslateAll { try? FileManager.default.removeItem(at: checkpoint) }
-        let pipeline = TranslationPipeline(engine: engine, glossary: glossary, options: settings.translationOptions, checkpointURL: checkpoint)
+        let pipeline = TranslationPipeline(engine: engine, glossary: glossary, options: settings.translationOptions, checkpointURL: checkpoint,
+                                           carriedContext: previousEpisodeContext(for: project))
         let existingURL = store.translationURL(for: project, language: settings.targetLanguage)
         let existing = retranslateAll ? nil : existingURL.flatMap { try? SubtitleDocument.load($0) }
         do {
@@ -154,6 +157,36 @@ public struct EpisodeWorkflow: Sendable {
         return project
     }
 
+    /// For Blu-ray image subtitles (PGS): extracts the track, reads every caption with on-device
+    /// text recognition and makes the result the project's source subtitle (SRT).
+    public func recognizeBitmapSubtitle(_ project: StudioProject, language: String,
+                                        progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> (StudioProject, skipped: Int) {
+        var project = project
+        progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
+        let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
+        let pgs = info.tracks(.subtitles).filter { ["S_HDMV/PGS", "HDMV_PGS_SUBTITLE"].contains($0.codecID.uppercased()) }
+        let languageCodes = [language.lowercased(), IntegrityVerifier.iso6392(for: language), String(language.prefix(2)).lowercased()]
+        guard let track = pgs.first(where: { languageCodes.contains($0.language.lowercased()) || languageCodes.contains(($0.languageIETF ?? "").lowercased()) })
+                ?? pgs.first else { throw WorkflowError.noBitmapSubtitle }
+        let directory = store.directory(for: project.id)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let sup = directory.appendingPathComponent(".ocr-\(UUID().uuidString.prefix(6)).sup")
+        defer { try? FileManager.default.removeItem(at: sup) }
+        progress(WorkflowStep(fraction: 0.05, message: "Extraindo a legenda em imagem…"))
+        _ = try await TrackExtractor(tools: tools).extractRaw(track, from: info, to: sup)
+        let (document, skipped) = try await SubtitleOCR().document(fromPGS: try Data(contentsOf: sup), language: language) { value in
+            progress(WorkflowStep(fraction: 0.1 + value * 0.9, message: "Reconhecendo o texto das legendas…"))
+        }
+        let url = directory.appendingPathComponent("source.srt")
+        try document.write(to: url)
+        project.externalSubtitlePath = url.path
+        project.sourceFormat = .srt
+        project.sourceTrackID = nil
+        project.translationStatus = .extracted
+        try store.save(project)
+        return (project, skipped)
+    }
+
     /// Voice-over dub: synthesizes the translated lines with the cast, mixes them over the
     /// original audio, and writes a new MKV with the dubbed audio and the translated subtitle
     /// added (all original tracks kept, video not re-encoded).
@@ -191,6 +224,26 @@ public struct EpisodeWorkflow: Sendable {
         project.lastVerification = verification
         try store.save(project)
         return (project, url, report, verification)
+    }
+
+    /// The last translated lines of the previous episode in the same folder (by name order),
+    /// when that episode was translated in the app.
+    func previousEpisodeContext(for project: StudioProject, lines: Int = 8) -> [TranslationContext.PreviousLine] {
+        let folder = project.mediaURL.deletingLastPathComponent()
+        let videos = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+            .filter { ["mkv", "mp4", "m4v", "mov", "webm", "avi", "ts", "m2ts"].contains($0.pathExtension.lowercased()) }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        guard let index = videos.firstIndex(where: { $0.standardizedFileURL == project.mediaURL.standardizedFileURL }), index > 0,
+              let previous = store.existingProject(for: videos[index - 1]),
+              let sourceURL = store.sourceSubtitleURL(for: previous), let translationURL = store.translationURL(for: previous, language: settings.targetLanguage),
+              let source = try? SubtitleDocument.load(sourceURL), let translation = try? SubtitleDocument.load(translationURL),
+              source.count == translation.count else { return [] }
+        let pairs = (0..<source.count).compactMap { i -> TranslationContext.PreviousLine? in
+            guard source.skipReason(at: i) == nil, source.rawText(at: i) != translation.rawText(at: i) else { return nil }
+            let actor = source.cues[i].actor
+            return TranslationContext.PreviousLine(speaker: actor.isEmpty ? nil : actor, source: source.plainText(at: i), translation: translation.plainText(at: i))
+        }
+        return Array(pairs.suffix(lines))
     }
 
     static func fingerprint(of url: URL) -> String? {

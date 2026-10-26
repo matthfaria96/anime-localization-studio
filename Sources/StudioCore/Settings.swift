@@ -54,6 +54,8 @@ public struct AppSettings: Sendable, Hashable, Codable {
     public var dubbingDefaultVoice: String? = "Luciana"
     public var dubbingMaxSpeedup: Double = 1.3
     public var dubbingMode: DubbingMode = .voiceOver
+    /// Reading speed above which a line is flagged (characters per second).
+    public var maxReadingSpeed: Double = 20
 
     public init() {}
 
@@ -103,6 +105,7 @@ public struct AppSettings: Sendable, Hashable, Codable {
         dubbingDefaultVoice = (try? c.decodeIfPresent(String.self, forKey: .dubbingDefaultVoice)) ?? defaults.dubbingDefaultVoice
         dubbingMaxSpeedup = (try? c.decode(Double.self, forKey: .dubbingMaxSpeedup)) ?? defaults.dubbingMaxSpeedup
         dubbingMode = (try? c.decode(DubbingMode.self, forKey: .dubbingMode)) ?? defaults.dubbingMode
+        maxReadingSpeed = (try? c.decode(Double.self, forKey: .maxReadingSpeed)) ?? defaults.maxReadingSpeed
     }
 }
 

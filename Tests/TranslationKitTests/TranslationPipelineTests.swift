@@ -223,3 +223,29 @@ struct AppleTranslationIntegrationTests {
         #expect(output.plainText(at: 1).lowercased().contains("amigos"))
     }
 }
+
+@Suite("Scale and continuity")
+struct ScaleTests {
+    @Test func previousEpisodeContextReachesTheFirstBatch() async throws {
+        let engine = ScriptedEngine(batchSize: 3)
+        let carried = [TranslationContext.PreviousLine(speaker: "Kirito", source: "See you tomorrow.", translation: "Até amanhã.")]
+        _ = try await TranslationPipeline(engine: engine, options: .init(sourceLanguage: "en", contextLines: 4), carriedContext: carried).run(try episode())
+        #expect(engine.allContexts[0].previousLines.first?.translation == "Até amanhã.")
+    }
+
+    @Test func handlesFiveThousandLines() async throws {
+        var text = "[Script Info]\nScriptType: v4.00+\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+        for i in 0..<5_000 {
+            text += "Dialogue: 0,\(SubtitleTime.formatASS(i * 2_000)),\(SubtitleTime.formatASS(i * 2_000 + 1_500)),Default,Char\(i % 7),0,0,0,,Line {\\i1}\(i){\\i0}, with a comma\n"
+        }
+        let clock = ContinuousClock()
+        let start = clock.now
+        let source = SubtitleDocument.ass(ASSDocument.parse(text: text))
+        #expect(source.serialized() == text)
+        let (output, report) = try await TranslationPipeline(engine: ScriptedEngine(batchSize: 50), options: .init(sourceLanguage: "en")).run(source)
+        let elapsed = clock.now - start
+        #expect(report.translatedLines == 5_000 && report.isComplete)
+        #expect(output.rawText(at: 4_999).contains(#"{\i1}4999{\i0}"#))
+        #expect(elapsed < .seconds(20), "took \(elapsed)")
+    }
+}

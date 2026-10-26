@@ -169,4 +169,7 @@ separadamente. O que é efetivamente usado em tempo de execução está em
   voz no dispositivo. Usado para o modo "Substituir falas" em vez do Demucs, que exigiria
   instalar Python + PyTorch (o Python 3.15 do Homebrew ainda não tem wheels do PyTorch) e
   baixar pesos. Medição num teste sintético: diálogo restante ~18 dB abaixo do original.
+- **Vision** (`RecognizeTextRequest`): reconhecimento de texto no dispositivo para o OCR de
+  legendas PGS. O formato PGS foi implementado a partir da sua estrutura pública de segmentos
+  (PCS, WDS, PDS, ODS, END); nenhum código de decodificadores existentes foi usado.
 - **`say`** (macOS): vozes do sistema para a dublagem básica, executado como processo.

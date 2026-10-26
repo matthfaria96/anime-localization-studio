@@ -41,6 +41,16 @@ struct EditorPane: View {
                 .fixedSize()
                 .disabled(workspace.isBusy || workspace.audioTracks.isEmpty)
                 .help("Reconhecimento de fala da Apple, no dispositivo")
+                if !workspace.bitmapSubtitleTracks.isEmpty {
+                    Menu("Reconhecer texto (OCR)") {
+                        ForEach(TranscriptionLanguage.all, id: \.code) { language in
+                            Button(language.name) { workspace.recognizeBitmapSubtitle(language: language.code) }
+                        }
+                    }
+                    .fixedSize()
+                    .disabled(workspace.isBusy)
+                    .help("Lê as legendas em imagem (PGS) com o reconhecimento de texto da Apple, no dispositivo")
+                }
             }
             .confirmationDialog("Baixar o modelo de fala?", isPresented: Binding(get: { workspace.pendingModelDownload != nil },
                                                                                   set: { if !$0 { workspace.pendingModelDownload = nil } })) {
@@ -158,7 +168,7 @@ struct LinesTable: View {
                         .foregroundStyle(row.isComment ? .tertiary : .primary)
                         .italic(row.isComment)
                 }
-                TableColumn("Tradução") { row in TranslationCell(row: row) }
+                TableColumn("Tradução") { row in TranslationCell(row: row, maxReadingSpeed: editor.maxReadingSpeed) }
             }
             .tableStyle(.inset(alternatesRowBackgrounds: true))
             .contextMenu(forSelectionType: Int.self) { ids in
@@ -182,6 +192,7 @@ struct LinesTable: View {
 
 private struct TranslationCell: View {
     let row: EditorRow
+    let maxReadingSpeed: Double
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
@@ -191,7 +202,7 @@ private struct TranslationCell: View {
                     .foregroundStyle(.tertiary)
             } else if row.isTranslated {
                 Text(row.translation.replacingOccurrences(of: "\n", with: " ⏎ ")).lineLimit(2)
-                if row.readingSpeed > 20 {
+                if row.readingSpeed > maxReadingSpeed {
                     Image(systemName: "gauge.with.dots.needle.67percent")
                         .foregroundStyle(Theme.warning)
                         .help("Leitura rápida: \(Int(row.readingSpeed)) caracteres por segundo")

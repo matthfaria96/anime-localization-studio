@@ -41,6 +41,7 @@ final class WorkspaceModel {
         lastReport = project.lastReport
         editor.onChange = { [weak self] source, translation in self?.writeWorkingFiles(source: source, translation: translation) }
         editor.spellingLanguage = app.settings.targetLanguage.replacingOccurrences(of: "-", with: "_")
+        editor.maxReadingSpeed = app.settings.maxReadingSpeed
     }
 
     var title: String { project.title }
@@ -252,6 +253,38 @@ final class WorkspaceModel {
                 pendingModelDownload = language
             } catch is CancellationError {
                 notice = (.info, "Transcrição cancelada.")
+            } catch {
+                notice = (.error, LogRedactor.redact(error.localizedDescription))
+            }
+            release()
+            operation = nil
+        }
+    }
+
+    var bitmapSubtitleTracks: [MediaTrack] { subtitleTracks.filter(\.isBitmapSubtitle) }
+
+    func recognizeBitmapSubtitle(language: String) {
+        guard !isBusy, claim("OCR no estúdio") else { return }
+        editor.flush()
+        notice = nil
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando OCR…")
+        let workflow = workflow()
+        let project = project
+        task = Task {
+            do {
+                let (updated, skipped) = try await workflow.recognizeBitmapSubtitle(project, language: language) { step in
+                    Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
+                }
+                self.project = updated
+                if let old = store.translationURL(for: updated, language: app.settings.targetLanguage) { try? FileManager.default.removeItem(at: old) }
+                operation = nil
+                release()
+                await loadSubtitles()
+                notice = (skipped == 0 ? .success : .warning,
+                          "Texto reconhecido em \(editor.rows.count) legendas\(skipped > 0 ? "; \(skipped) imagens sem texto legível foram ignoradas" : ""). Revise a ortografia antes de traduzir.")
+                return
+            } catch is CancellationError {
+                notice = (.info, "OCR cancelado.")
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }

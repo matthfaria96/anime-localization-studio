@@ -28,9 +28,10 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - 🟡 Pré-visualização aproximada (sem `\t`, `\move`, `\fad`, karaokê, desenhos, clipes, tags inline de cor/itálico)
 - ✅ Inserir e excluir falas (menu de contexto, botão +, ⌫), desfazível, nos dois documentos
 - ✅ Filtro "Possíveis erros de ortografia" (corretor do macOS no idioma de destino)
-- ⬜ Contador de CPS configurável (hoje fixo em 20 caracteres/s)
+- ✅ Limite de caracteres por segundo configurável (Ajustes › Geral › Revisão)
 - ⬜ Renderização fiel de ASS com libass (via libmpv; avaliar licença LGPL e empacotamento)
-- ⬜ OCR de legendas PGS/VobSub (Vision framework)
+- ✅ OCR de legendas PGS (decodificador PGS próprio + reconhecimento de texto do Vision, no Mac)
+- ⬜ OCR de VobSub (DVD, `.idx/.sub`)
 
 ## Fase 3 — Integração de IA 🟡
 
@@ -61,19 +62,20 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Glossário por série reaproveitado na fila
 - ⬜ Reprocessar só falas novas/alteradas
 - ✅ Relatório da temporada em Markdown (Fila › Exportar relatório)
-- ⬜ Contexto entre episódios (resumo do episódio anterior enviado como nota)
+- ✅ Contexto entre episódios: as últimas falas traduzidas do episódio anterior (mesma pasta, ordem do nome) entram como contexto do início do próximo
 
 ## Fase 6 — Acabamento e distribuição ⬜
 
 - ⬜ Revisão completa de VoiceOver e navegação por teclado (rótulos básicos já existem)
 - ⬜ Textos extraídos para String Catalog (o código já usa `LocalizedStringKey`)
-- ⬜ Teste de desempenho com legendas de 5 000+ falas
+- ✅ Teste de desempenho do núcleo com 5 000 falas (leitura, regravação idêntica e tradução em lotes)
+- ⬜ Medir a interface (tabela e editor) com 5 000+ falas
 - ⬜ Assinatura com Developer ID, notarização, Sparkle (padrão dos outros apps witchmymac)
 - ⬜ Instalação em ambiente limpo
 
 ## Testes atuais
 
-`swift test`: 78 testes em 5 alvos, todos passando em 26/10/2026.
+`swift test`: 85 testes em 5 alvos, todos passando em 26/10/2026.
 
 | Alvo | O que cobre |
 |---|---|

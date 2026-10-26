@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 26/10/2026
+
+### Adicionado
+- OCR de legendas em imagem PGS (Blu-ray): decodificação própria do formato e reconhecimento de texto do Vision no Mac; o resultado vira a legenda de origem, pronta para traduzir.
+- Contexto entre episódios: o fim do episódio anterior já traduzido orienta o início do próximo.
+- Limite de leitura (caracteres por segundo) configurável.
+- Teste de desempenho com 5 000 falas.
+
 ## 0.3.0 — 26/10/2026
 
 ### Adicionado

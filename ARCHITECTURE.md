@@ -121,6 +121,11 @@ fundo com um ducking leve que disfarça restos das vozes originais.
 origem do projeto. O download do modelo de um idioma (gerenciado pelo macOS via
 `AssetInventory`) só acontece depois da confirmação na interface.
 
+**OCR de PGS.** `PGSDecoder` lê os segmentos do `.sup` (composição, paleta YCbCr+alfa, objetos
+em RLE, fim de conjunto), compõe cada legenda como imagem em tons de cinza (texto escuro sobre
+branco) e calcula início e fim pelos conjuntos que mostram e limpam a tela. `SubtitleOCR` lê cada
+imagem com `RecognizeTextRequest` do Vision no idioma escolhido e monta um SRT.
+
 **Trava por projeto.** `ProjectActivity` (MainActor) registra qual projeto está em operação
 longa. A fila espera enquanto o episódio aberto traduz/incorpora/dubla o mesmo arquivo, e o
 episódio avisa quando a fila está usando o arquivo.

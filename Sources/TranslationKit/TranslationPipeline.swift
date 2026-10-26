@@ -93,12 +93,17 @@ public struct TranslationPipeline: Sendable {
     public let glossary: Glossary
     public let options: TranslationOptions
     public let checkpointURL: URL?
+    /// Last lines of the previous episode (already translated), used as context for the first
+    /// batches so names, tone and forms of address carry over between episodes.
+    public let carriedContext: [TranslationContext.PreviousLine]
 
-    public init(engine: any TranslationEngine, glossary: Glossary = Glossary(), options: TranslationOptions = TranslationOptions(), checkpointURL: URL? = nil) {
+    public init(engine: any TranslationEngine, glossary: Glossary = Glossary(), options: TranslationOptions = TranslationOptions(),
+                checkpointURL: URL? = nil, carriedContext: [TranslationContext.PreviousLine] = []) {
         self.engine = engine
         self.glossary = glossary
         self.options = options
         self.checkpointURL = checkpointURL
+        self.carriedContext = carriedContext
     }
 
     struct Unit: Sendable {
@@ -273,11 +278,12 @@ public struct TranslationPipeline: Sendable {
 
     private func previousLines(before unit: Unit, units: [Unit], state: State) -> [TranslationContext.PreviousLine] {
         guard engine.usesContext, options.contextLines > 0, let position = units.firstIndex(where: { $0.index == unit.index }) else { return [] }
-        return units[..<position].suffix(options.contextLines * 2).compactMap { previous in
+        let own = units[..<position].suffix(options.contextLines * 2).compactMap { previous in
             state.checkpoint.translations[previous.index].map {
-                .init(speaker: previous.speaker, source: previous.template.body, translation: ASSText.plainText($0))
+                TranslationContext.PreviousLine(speaker: previous.speaker, source: previous.template.body, translation: ASSText.plainText($0))
             }
-        }.suffix(options.contextLines)
+        }
+        return Array((carriedContext + own).suffix(options.contextLines))
     }
 
     // MARK: Checkpoints

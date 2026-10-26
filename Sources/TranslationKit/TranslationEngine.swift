@@ -30,6 +30,12 @@ public struct TranslationContext: Sendable, Hashable {
         public var speaker: String?
         public var source: String
         public var translation: String
+
+        public init(speaker: String?, source: String, translation: String) {
+            self.speaker = speaker
+            self.source = source
+            self.translation = translation
+        }
     }
 
     public init(sourceLanguage: String?, targetLanguage: String, previousLines: [PreviousLine] = [], glossary: [GlossaryEntry] = [],

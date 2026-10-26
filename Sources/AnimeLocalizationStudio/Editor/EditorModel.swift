@@ -94,7 +94,7 @@ final class EditorModel {
         case .all: rows
         case .untranslated: rows.filter { $0.skipReason == nil && !$0.isTranslated }
         case .skipped: rows.filter { $0.skipReason != nil }
-        case .longLines: rows.filter { $0.readingSpeed > 20 }
+        case .longLines: rows.filter { $0.readingSpeed > maxReadingSpeed }
         case .spelling: rows.filter { $0.isTranslated && Self.misspelledWords(in: $0.translation, language: spellingLanguage) > 0 }
         }
         guard !searchQuery.isEmpty else { return filtered }
@@ -104,6 +104,9 @@ final class EditorModel {
 
     var translatedCount: Int { rows.filter(\.isTranslated).count }
     var translatableCount: Int { rows.filter { $0.skipReason == nil }.count }
+
+    /// Characters per second above which a line reads too fast (Ajustes › Geral).
+    var maxReadingSpeed = 20.0
 
     /// Language for the spelling filter (`pt_BR` style, as NSSpellChecker names them).
     var spellingLanguage = "pt_BR"

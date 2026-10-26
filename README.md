@@ -32,7 +32,8 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
   *substituir falas* (as vozes originais são separadas da trilha no próprio Mac e trocadas). O
   resultado é um novo `Nome [PT-BR DUB].mkv` com o áudio dublado e a legenda em português. O
   elenco fica salvo na série.
-- **Transcrever** o áudio de vídeos sem legenda, no próprio Mac, para depois traduzir.
+- **Transcrever** o áudio de vídeos sem legenda, ou **reconhecer o texto (OCR)** de legendas em
+  imagem PGS de Blu-ray, no próprio Mac, para depois traduzir.
 
 ## O que ainda não está implementado
 
@@ -42,7 +43,7 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
 - Identificação automática de quem fala (diarização) na transcrição.
 - Pré-visualização fiel de animações ASS (`\t`, `\move`, `\fad`), karaokê e desenhos — o arquivo
   final os preserva, mas a prévia mostra o texto estático.
-- OCR de legendas em imagem (PGS/VobSub).
+- OCR de legendas VobSub (DVD); PGS já é reconhecido.
 
 Detalhes e próximos passos em [ROADMAP.md](ROADMAP.md).
 
