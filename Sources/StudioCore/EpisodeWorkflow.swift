@@ -132,6 +132,7 @@ public struct EpisodeWorkflow: Sendable {
     /// For videos without a text subtitle: transcribes the default audio track on the Mac and
     /// makes the result the project's source subtitle (SRT), ready to translate.
     public func transcribe(_ project: StudioProject, language: String, allowModelDownload: Bool,
+                           identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false,
                            progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> StudioProject {
         var project = project
         progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
@@ -144,17 +145,54 @@ public struct EpisodeWorkflow: Sendable {
         _ = try await TrackExtractor(tools: tools).extractAudioWAV(audio, from: info, to: wav, sampleRate: 16_000, mono: true) { value in
             progress(WorkflowStep(fraction: value * 0.15, message: "Extraindo o áudio…"))
         }
+        let diarizer = SpeakerDiarization(modelsDirectory: paths.diarizationModels)
+        if identifySpeakers, !diarizer.modelsInstalled, !allowDiarizationDownload { throw SpeakerDiarization.DiarizationError.modelsNotInstalled }
+        let share = identifySpeakers ? 0.6 : 0.85
         let lines = try await SpeechTranscription().transcribe(wav, language: language, allowModelDownload: allowModelDownload) { value in
-            progress(WorkflowStep(fraction: 0.15 + value * 0.85, message: "Transcrevendo a fala…"))
+            progress(WorkflowStep(fraction: 0.15 + value * share, message: "Transcrevendo a fala…"))
         }
-        let url = directory.appendingPathComponent("source.srt")
-        try SpeechTranscription.document(from: lines).write(to: url)
+        let document: SubtitleDocument
+        if identifySpeakers {
+            let turns = try await diarizer.diarize(wav, allowModelDownload: allowDiarizationDownload) { value in
+                progress(WorkflowStep(fraction: 0.75 + value * 0.25, message: "Identificando quem fala…"))
+            }
+            document = SpeechTranscription.document(from: lines, speakers: SpeakerDiarization.assign(turns, to: lines.map { ($0.start, $0.end) }))
+        } else {
+            document = SpeechTranscription.document(from: lines)
+        }
+        let url = directory.appendingPathComponent("source.\(document.format.fileExtension)")
+        try document.write(to: url)
         project.externalSubtitlePath = url.path
-        project.sourceFormat = .srt
+        project.sourceFormat = document.format
         project.sourceTrackID = nil
         project.translationStatus = .extracted
         try store.save(project)
         return project
+    }
+
+    /// Speaker of each spoken line of an existing subtitle, from the episode's default audio
+    /// track. Comments, signs, drawings and karaoke are left alone.
+    public func identifySpeakers(in document: SubtitleDocument, of project: StudioProject, allowModelDownload: Bool,
+                                 progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> [Int: String] {
+        let diarizer = SpeakerDiarization(modelsDirectory: paths.diarizationModels)
+        guard diarizer.modelsInstalled || allowModelDownload else { throw SpeakerDiarization.DiarizationError.modelsNotInstalled }
+        let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
+        guard let audio = info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first else { throw WorkflowError.noAudio }
+        let directory = store.directory(for: project.id)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let wav = directory.appendingPathComponent(".diarization-\(UUID().uuidString.prefix(6)).wav")
+        defer { try? FileManager.default.removeItem(at: wav) }
+        _ = try await TrackExtractor(tools: tools).extractAudioWAV(audio, from: info, to: wav, sampleRate: 16_000, mono: true) { value in
+            progress(WorkflowStep(fraction: value * 0.2, message: "Extraindo o áudio…"))
+        }
+        let turns = try await diarizer.diarize(wav, allowModelDownload: allowModelDownload) { value in
+            progress(WorkflowStep(fraction: 0.2 + value * 0.8, message: "Identificando quem fala…"))
+        }
+        let spoken = DubbingPlan.segments(from: document)
+        let speakers = SpeakerDiarization.assign(turns, to: spoken.map { ($0.start, $0.end) })
+        var result: [Int: String] = [:]
+        for (segment, speaker) in zip(spoken, speakers) { if let speaker { result[segment.id] = speaker } }
+        return result
     }
 
     /// For Blu-ray image subtitles (PGS): extracts the track, reads every caption with on-device

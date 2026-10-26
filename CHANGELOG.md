@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0 — 26/10/2026
+
+### Adicionado
+- Identificar quem fala, no Mac (FluidAudio, Neural Engine): ao transcrever ("Transcrever e identificar quem fala") ou numa legenda já existente sem personagens ("Identificar falantes no áudio", na aba Dublagem). As falas recebem "Falante 1", "Falante 2"…; renomear um falante no elenco muda todas as falas dele. Os modelos (~22 MB, CC-BY-4.0) só são baixados com confirmação.
+- O elenco pode ser montado antes de traduzir.
+
 ## 0.5.0 — 26/10/2026
 
 ### Adicionado

@@ -40,6 +40,21 @@ AVKit, AudioToolbox, Speech, Vision, Translation, FoundationModels, NaturalLangu
 Observation) e do utilitário `/usr/bin/say`, que são
 parte do macOS e não são redistribuídos.
 
+## Pacotes Swift vinculados ao aplicativo (desde 0.6.0)
+
+| Pacote | Versão | Licença | Uso |
+|---|---|---|---|
+| FluidAudio — Fluid Inference | 0.17.x | Apache-2.0 | Diarização (quem fala) no Neural Engine. Só o pipeline offline é usado; o binário opcional NemoTextProcessing está desligado (`traits: []`). O texto da licença e os avisos do código que ele porta de outros projetos (fastcluster, BSD-2-Clause; VBx, Apache-2.0; e os demais da pasta `ThirdPartyLicenses` do FluidAudio) vão em `Contents/Resources/Licenses` |
+
+## Modelos baixados pelo aplicativo (com confirmação)
+
+| Modelo | Origem | Licença | Atribuição |
+|---|---|---|---|
+| Segmentation, FBank, Embedding, PLDA (`FluidInference/speaker-diarization-coreml`, ~22 MB) | Conversões Core ML modificadas do pyannote/speaker-diarization-community-1, WeSpeaker e parâmetros PLDA da BUT Speech@FIT | CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/) | pyannote, WeSpeaker, BUT Speech@FIT e Fluid Inference; arquivos convertidos para Core ML pela Fluid Inference |
+
+Os modelos são baixados do Hugging Face só depois que o usuário confirma, e ficam em
+`~/Library/Application Support/Anime Localization Studio/Models/Diarization`. O áudio nunca sai do Mac.
+
 ## Programas externos executados (não distribuídos)
 
 O aplicativo **não inclui** estes programas. Ele os localiza no Mac (Homebrew, MacPorts ou o

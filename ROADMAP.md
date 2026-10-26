@@ -40,7 +40,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Voice casting: personagens a partir do campo Ator do ASS, voz por personagem, velocidade, estilo (VoiceStudio), amostra
 - ✅ Elenco salvo na série (ou no projeto, sem série) e reaproveitado entre episódios e na fila
 - ✅ Transcrição no Mac (`SpeechAnalyzer`/`SpeechTranscriber`, 45 idiomas) para vídeos sem legenda, com confirmação antes de o macOS baixar o modelo de um idioma
-- ⬜ Diarização (identificar quem fala na transcrição). Opção escolhida: FluidAudio (Apache-2.0, Core ML no Neural Engine, modelos pyannote Community-1 + WeSpeaker CC-BY-4.0, ~22 MB). **Aguardando aprovação do usuário para adicionar a dependência.** Hoje o personagem vem do campo Ator do ASS e pode ser corrigido à mão
+- ✅ Identificação de falantes (FluidAudio: pyannote Community-1 + WeSpeaker + PLDA/VBx em Core ML, ~22 MB baixados com confirmação): na transcrição ou numa legenda existente sem personagens; renomear "Falante N" aplica o nome a todas as falas
 - ⬜ Clonagem de voz com registro de consentimento (o VoiceStudio já tem `/profiles/{id}/consent`)
 
 ## Fase 4 — Dublagem e mixagem ✅ (qualidade de voz depende do motor)
@@ -74,7 +74,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 
 ## Testes atuais
 
-`swift test`: 90 testes em 6 alvos, todos passando em 26/10/2026.
+`swift test`: 93 testes em 6 alvos, todos passando em 26/10/2026 (os de diarização rodam quando os modelos estão em cache ou com `ALS_DIARIZATION=1`).
 
 | Alvo | O que cobre |
 |---|---|

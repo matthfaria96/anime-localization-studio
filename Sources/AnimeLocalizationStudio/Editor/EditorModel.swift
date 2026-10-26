@@ -166,6 +166,30 @@ final class EditorModel {
         }
     }
 
+    /// Sets the character of many lines at once (speaker identification), in both documents.
+    func setActors(_ actors: [Int: String], undoManager: UndoManager?) {
+        guard !actors.isEmpty else { return }
+        mutate("Identificar falantes", undoManager: undoManager) { source, translation in
+            for (index, actor) in actors {
+                source?.setActor(actor, at: index)
+                translation?.setActor(actor, at: index)
+            }
+        }
+    }
+
+    /// Renames a character in every line ("Falante 1" → "Kirito").
+    func renameActor(_ old: String, to new: String, undoManager: UndoManager?) {
+        let name = new.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, name != old else { return }
+        let indices = rows.filter { $0.actor == old }.map(\.id)
+        mutate("Renomear personagem", undoManager: undoManager) { source, translation in
+            for index in indices {
+                source?.setActor(name, at: index)
+                translation?.setActor(name, at: index)
+            }
+        }
+    }
+
     func setStyle(_ style: String, index: Int, undoManager: UndoManager?) {
         mutate("Alterar estilo", undoManager: undoManager) { source, translation in
             source?.setStyle(style, at: index)

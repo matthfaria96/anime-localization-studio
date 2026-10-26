@@ -135,6 +135,13 @@ em RLE, fim de conjunto), compõe cada legenda como imagem em tons de cinza (tex
 branco) e calcula início e fim pelos conjuntos que mostram e limpam a tela. `SubtitleOCR` lê cada
 imagem com `RecognizeTextRequest` do Vision no idioma escolhido e monta um SRT.
 
+**Quem fala.** `SpeakerDiarization` usa o `OfflineDiarizerManager` do FluidAudio (segmentação
+pyannote Community-1, embeddings WeSpeaker, agrupamento PLDA/VBx em Core ML) sobre um WAV de
+16 kHz da faixa de áudio padrão, numera os falantes pela ordem em que aparecem e atribui a cada
+fala o falante com maior sobreposição de tempo. Os modelos ficam em
+`Application Support/…/Models/Diarization`; sem eles, o fluxo para e a interface pede
+confirmação do download.
+
 **Trava por projeto.** `ProjectActivity` (MainActor) registra qual projeto está em operação
 longa. A fila espera enquanto o episódio aberto traduz/incorpora/dubla o mesmo arquivo, e o
 episódio avisa quando a fila está usando o arquivo.

@@ -15,6 +15,7 @@ struct DubbingView: View {
     @State private var cast = VoiceCast()
     @State private var sampleState: [UUID: String] = [:]
     @State private var audioPlayer: AVAudioPlayer?
+    @Environment(\.undoManager) private var undoManager
 
     enum Connection: Equatable { case checking, connected, offline(String) }
 
@@ -34,10 +35,14 @@ struct DubbingView: View {
 
     private var engineReady: Bool { app.settings.dubbingEngine == .system || connection == .connected }
 
+    /// Lines to dub (from the translation) or, before translating, the original lines, so the
+    /// cast can be prepared early.
     private var segments: [DubSegment] {
-        guard let document = workspace.editor.translation else { return [] }
+        guard let document = workspace.editor.translation ?? workspace.editor.source else { return [] }
         return DubbingPlan.segments(from: document)
     }
+
+    private var isTranslated: Bool { workspace.editor.translation != nil }
 
     var body: some View {
         @Bindable var app = app
@@ -68,8 +73,9 @@ struct DubbingView: View {
             await connect()
         }
         .onChange(of: app.settings.dubbingEngine) { Task { await connect() } }
-        .onChange(of: workspace.editor.rows.count) { rebuildCast() }
+        .onChange(of: workspace.editor.revision) { rebuildCast() }
         .onChange(of: cast) { _, new in workspace.saveCast(new) }
+        .modifier(SpeakerModelConsent(workspace: workspace))
     }
 
     // MARK: Panels
@@ -126,10 +132,17 @@ struct DubbingView: View {
                 .fixedSize()
                 .controlSize(.small)
             }
+            HStack {
+                Button("Identificar falantes no áudio", systemImage: "person.wave.2") { workspace.identifySpeakers(undoManager: undoManager) }
+                    .disabled(workspace.isBusy || !workspace.editor.hasDocument || workspace.audioTracks.isEmpty)
+                    .help("Descobre quem fala em cada linha sem personagem, no próprio Mac, e preenche o campo Personagem")
+                Text(workspace.speakerModelsInstalled ? "Modelos instalados" : "Na primeira vez baixa \(SpeakerDiarization.downloadSize) de modelos (com confirmação)")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if cast.members.isEmpty {
-                Text(workspace.editor.translation == nil
-                     ? "Traduza o episódio primeiro: o elenco vem dos personagens (campo Ator/Name do ASS) das falas traduzidas."
-                     : "A legenda não indica personagens. As falas usarão a voz padrão acima.")
+                Text(workspace.editor.hasDocument
+                     ? "A legenda não indica personagens. Use “Identificar falantes no áudio” ou as falas usarão a voz padrão acima."
+                     : "Abra uma legenda para montar o elenco.")
                     .foregroundStyle(.secondary)
             }
             ForEach($cast.members) { $member in castRow($member) }
@@ -141,7 +154,11 @@ struct DubbingView: View {
         return HStack(spacing: Theme.Spacing.m) {
             Image(systemName: "person.crop.circle.fill").font(.title2).foregroundStyle(.tint.opacity(0.8))
             VStack(alignment: .leading, spacing: 2) {
-                Text(member.wrappedValue.name).font(.headline)
+                CastNameField(name: member.wrappedValue.name) { newName in
+                    let old = member.wrappedValue.name
+                    workspace.editor.renameActor(old, to: newName, undoManager: undoManager)
+                    member.wrappedValue.name = newName
+                }
                 Text("\(lines.count) falas").font(.caption).foregroundStyle(.secondary)
             }
             .frame(width: 150, alignment: .leading)
@@ -184,7 +201,8 @@ struct DubbingView: View {
                 }
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
-                .disabled(segments.isEmpty || !engineReady || workspace.isBusy)
+                .disabled(segments.isEmpty || !engineReady || workspace.isBusy || !isTranslated)
+                .help(isTranslated ? "Gera a faixa dublada e o novo MKV" : "Traduza o episódio antes de dublar")
             }
             Picker("Modo", selection: Bindable(app).settings.dubbingMode) {
                 ForEach(DubbingMode.allCases) { Text($0.label).tag($0) }
@@ -261,5 +279,22 @@ struct DubbingView: View {
         } catch {
             sampleState[member.id] = error.localizedDescription
         }
+    }
+}
+
+/// Character name that renames every line of that character when edited (Return to apply).
+private struct CastNameField: View {
+    let name: String
+    let rename: (String) -> Void
+    @State private var draft = ""
+
+    var body: some View {
+        TextField("Personagem", text: $draft)
+            .textFieldStyle(.plain)
+            .font(.headline)
+            .onAppear { draft = name }
+            .onChange(of: name) { draft = name }
+            .onSubmit { if draft != name { rename(draft) } }
+            .help("Renomeie o falante (ex.: Falante 1 → Kirito); todas as falas dele mudam")
     }
 }

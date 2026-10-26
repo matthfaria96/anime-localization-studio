@@ -1,3 +1,4 @@
+import DubbingKit
 import SubtitleKit
 import SwiftUI
 
@@ -22,6 +23,7 @@ struct EditorPane: View {
                         .frame(minWidth: 300, idealWidth: 380, maxWidth: 520)
                 }
             }
+            .modifier(SpeakerModelConsent(workspace: workspace))
             .sheet(isPresented: $showStyles) { StyleEditorSheet(editor: editor) }
             .sheet(isPresented: $showShift) { ShiftTimingSheet(editor: editor) }
             .onChange(of: workspace.player.currentTime) { _, time in
@@ -34,8 +36,15 @@ struct EditorPane: View {
                            systemImage: "captions.bubble") {
                 Button("Abrir legenda externa…") { workspace.openExternalSubtitle() }
                 Menu("Transcrever o áudio") {
-                    ForEach(TranscriptionLanguage.all, id: \.code) { language in
-                        Button(language.name) { workspace.transcribeAudio(language: language.code) }
+                    Section("Transcrever e identificar quem fala") {
+                        ForEach(TranscriptionLanguage.all, id: \.code) { language in
+                            Button(language.name) { workspace.transcribeAudio(language: language.code, identifySpeakers: true) }
+                        }
+                    }
+                    Section("Só transcrever") {
+                        ForEach(TranscriptionLanguage.all, id: \.code) { language in
+                            Button(language.name) { workspace.transcribeAudio(language: language.code) }
+                        }
                     }
                 }
                 .fixedSize()
@@ -52,6 +61,7 @@ struct EditorPane: View {
                     .help("Lê as legendas em imagem (PGS) com o reconhecimento de texto da Apple, no dispositivo")
                 }
             }
+            .modifier(SpeakerModelConsent(workspace: workspace))
             .confirmationDialog("Baixar o modelo de fala?", isPresented: Binding(get: { workspace.pendingModelDownload != nil },
                                                                                   set: { if !$0 { workspace.pendingModelDownload = nil } })) {
                 Button("Baixar e transcrever") {
@@ -217,4 +227,23 @@ private struct TranslationCell: View {
 enum TranscriptionLanguage {
     static let all: [(code: String, name: String)] = [("ja-JP", "Japonês"), ("en-US", "Inglês"), ("ko-KR", "Coreano"), ("zh-CN", "Chinês"),
                                                       ("es-ES", "Espanhol"), ("fr-FR", "Francês"), ("de-DE", "Alemão"), ("pt-BR", "Português (Brasil)")]
+}
+
+/// Asks before downloading the speaker-identification models, with size, license and credits.
+struct SpeakerModelConsent: ViewModifier {
+    @Bindable var workspace: WorkspaceModel
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog("Baixar os modelos de identificação de falantes?",
+                                   isPresented: Binding(get: { workspace.pendingDiarizationDownload != nil },
+                                                        set: { if !$0 { workspace.pendingDiarizationDownload = nil } })) {
+            Button("Baixar (\(SpeakerDiarization.downloadSize)) e continuar") {
+                let retry = workspace.pendingDiarizationDownload
+                workspace.pendingDiarizationDownload = nil
+                retry?()
+            }
+        } message: {
+            Text("Para saber quem fala, o app usa modelos que rodam no próprio Mac (Neural Engine): \(SpeakerDiarization.modelCredits). Licença CC-BY-4.0. O download vem do Hugging Face uma única vez e fica guardado no app; o áudio nunca sai do Mac.")
+        }
+    }
 }

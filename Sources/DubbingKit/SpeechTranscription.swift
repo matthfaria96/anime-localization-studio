@@ -108,6 +108,13 @@ public struct SpeechTranscription: Sendable {
         }
     }
 
+    /// An ASS document whose Name (character) field holds each line's speaker.
+    public static func document(from lines: [Line], speakers: [String?]) -> SubtitleDocument {
+        .ass(ASSDocument.make(events: lines.enumerated().map { n, line in
+            (line.start, line.end, line.text, speakers.indices.contains(n) ? speakers[n] ?? "" : "")
+        }))
+    }
+
     /// A SubRip document with the lines (two-line wrap left to the player).
     public static func document(from lines: [Line]) -> SubtitleDocument {
         let cues = lines.enumerated().map { SRTCue(number: String($0.offset + 1), start: $0.element.start, end: $0.element.end, text: $0.element.text) }

@@ -275,8 +275,12 @@ final class WorkspaceModel {
 
     /// Set when macOS must download the speech model for a language before transcribing.
     var pendingModelDownload: String?
+    /// Set when the speaker-identification models must be downloaded first: the action to retry.
+    var pendingDiarizationDownload: (() -> Void)?
 
-    func transcribeAudio(language: String, allowModelDownload: Bool = false) {
+    var speakerModelsInstalled: Bool { SpeakerDiarization(modelsDirectory: app.paths.diarizationModels).modelsInstalled }
+
+    func transcribeAudio(language: String, allowModelDownload: Bool = false, identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false) {
         guard !isBusy, claim("Transcrição no estúdio") else { return }
         editor.flush()
         notice = nil
@@ -285,7 +289,8 @@ final class WorkspaceModel {
         let project = project
         task = Task {
             do {
-                let updated = try await workflow.transcribe(project, language: language, allowModelDownload: allowModelDownload) { step in
+                let updated = try await workflow.transcribe(project, language: language, allowModelDownload: allowModelDownload,
+                                                            identifySpeakers: identifySpeakers, allowDiarizationDownload: allowDiarizationDownload) { step in
                     Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
                 }
                 self.project = updated
@@ -293,12 +298,57 @@ final class WorkspaceModel {
                 operation = nil
                 release()
                 await loadSubtitles()
-                notice = (.success, "Transcrição pronta: \(editor.rows.count) falas. Os personagens não são identificados automaticamente; revise e traduza.")
+                notice = (.success, identifySpeakers
+                          ? "Transcrição pronta: \(editor.rows.count) falas de \(Set(editor.rows.map(\.actor)).filter { !$0.isEmpty }.count) falantes. Renomeie os falantes na aba Dublagem."
+                          : "Transcrição pronta: \(editor.rows.count) falas. Revise e traduza.")
                 return
             } catch SpeechTranscription.TranscriptionError.modelDownloadRequired(let language) {
                 pendingModelDownload = language
+            } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
+                // Cleared when the consent dialog is answered or dismissed.
+                pendingDiarizationDownload = {
+                    self.transcribeAudio(language: language, allowModelDownload: allowModelDownload, identifySpeakers: true, allowDiarizationDownload: true)
+                }
             } catch is CancellationError {
                 notice = (.info, "Transcrição cancelada.")
+            } catch {
+                notice = (.error, LogRedactor.redact(error.localizedDescription))
+            }
+            release()
+            operation = nil
+        }
+    }
+
+    /// Fills the character field of the spoken lines from the audio, keeping characters that
+    /// are already set unless `replaceExisting`.
+    func identifySpeakers(allowModelDownload: Bool = false, replaceExisting: Bool = false, undoManager: UndoManager?) {
+        guard !isBusy, let document = editor.translation ?? editor.source, claim("Identificação de falantes") else { return }
+        editor.flush()
+        notice = nil
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando a identificação de falantes…")
+        let workflow = workflow()
+        let project = project
+        task = Task {
+            do {
+                var speakers = try await workflow.identifySpeakers(in: document, of: project, allowModelDownload: allowModelDownload) { step in
+                    Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
+                }
+                if !replaceExisting {
+                    let named = Set(editor.rows.filter { !$0.actor.isEmpty }.map(\.id))
+                    speakers = speakers.filter { !named.contains($0.key) }
+                }
+                editor.setActors(speakers, undoManager: undoManager)
+                editor.flush()
+                let count = Set(speakers.values).count
+                notice = speakers.isEmpty
+                    ? (.info, "Nenhuma fala sem personagem para identificar.")
+                    : (.success, "\(speakers.count) falas atribuídas a \(count) falantes. Renomeie cada falante com o nome do personagem (⌘Z desfaz).")
+            } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
+                pendingDiarizationDownload = {
+                    self.identifySpeakers(allowModelDownload: true, replaceExisting: replaceExisting, undoManager: undoManager)
+                }
+            } catch is CancellationError {
+                notice = (.info, "Identificação de falantes cancelada.")
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }
@@ -452,7 +502,7 @@ final class WorkspaceModel {
         }
     }
 
-    /// UI test hooks, inert unless set: `ALS_SELECT=<line>`, `ALS_SEEK=<ms>`, `ALS_TRANSLATE=1`, `ALS_DUB=1`.
+    /// UI test hooks, inert unless set: `ALS_SELECT=<line>`, `ALS_SEEK=<ms>`, `ALS_TRANSLATE=1`, `ALS_DUB=1`, `ALS_IDENTIFY=1`.
     /// Used to capture the real window without driving the mouse or keyboard.
     private func applyTestHooks() {
         let env = ProcessInfo.processInfo.environment
@@ -465,6 +515,7 @@ final class WorkspaceModel {
         }
         if env["ALS_TRANSLATE"] == "1" { translateEpisode(undoManager: nil) }
         if env["ALS_DUB"] == "1" { dubEpisode(cast: loadCast()) }
+        if env["ALS_IDENTIFY"] == "1" { identifySpeakers(undoManager: nil) }
     }
 
     func close() {

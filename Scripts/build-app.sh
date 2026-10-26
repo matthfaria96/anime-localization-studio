@@ -116,6 +116,10 @@ for pkg in libass freetype fribidi harfbuzz libunibreak gettext pcre2 graphite2 
   keg="$(brew --prefix "$pkg" 2>/dev/null)" || continue
   for f in "$keg"/(COPYING|LICENSE|LICENCE|LICENSE.TXT|LICENCE.md)(N); do cp "$f" "$APP/Contents/Resources/Licenses/$pkg-${f:t}"; done
 done
+# Swift packages linked into the executable (FluidAudio, Apache-2.0).
+for f in .build/checkouts/FluidAudio/(LICENSE|NOTICE)*(N); do cp "$f" "$APP/Contents/Resources/Licenses/FluidAudio-${f:t}"; done
+# Code FluidAudio ports from other projects (fastcluster, VBx clustering used by diarization, …).
+[[ -d .build/checkouts/FluidAudio/ThirdPartyLicenses ]] && cp -R .build/checkouts/FluidAudio/ThirdPartyLicenses "$APP/Contents/Resources/Licenses/FluidAudio-ThirdPartyLicenses"
 # glib ships no license file in its keg; it is LGPL-2.1-or-later, the same text as FriBidi's COPYING.
 fribidi_copying="$(brew --prefix fribidi 2>/dev/null)/COPYING"
 [[ -f "$fribidi_copying" ]] && cp "$fribidi_copying" "$APP/Contents/Resources/Licenses/glib-LGPL-2.1.txt"

@@ -157,7 +157,7 @@ private struct AboutSettings: View {
             Text("Tradução, edição, dublagem e incorporação de faixas para animes, séries e filmes.")
                 .multilineTextAlignment(.center)
             Link("witchmymac.com", destination: URL(string: "https://witchmymac.com")!)
-            Text("Usa MKVToolNix (GPL-2.0) e FFmpeg (LGPL/GPL) como programas externos, e o VoiceStudio (AGPL-3.0) como serviço local separado. Veja THIRD_PARTY_NOTICES.md.")
+            Text("Usa libass (ISC) e suas bibliotecas, FluidAudio (Apache-2.0) e modelos de identificação de falantes de pyannote, WeSpeaker e BUT Speech@FIT (CC-BY-4.0, conversão da Fluid Inference). MKVToolNix (GPL-2.0) e FFmpeg são programas externos, e o VoiceStudio (AGPL-3.0) é um serviço local separado. Licenças completas em Contents/Resources/Licenses e THIRD_PARTY_NOTICES.md.")
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 460)
         }
         .padding(Theme.Spacing.xl)

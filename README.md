@@ -33,6 +33,8 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
   *substituir falas* (as vozes originais são separadas da trilha no próprio Mac e trocadas). O
   resultado é um novo `Nome [PT-BR DUB].mkv` com o áudio dublado e a legenda em português. O
   elenco fica salvo na série.
+- **Identificar quem fala** no áudio (no Mac), na transcrição ou numa legenda sem personagens,
+  para montar o elenco da dublagem.
 - **Transcrever** o áudio de vídeos sem legenda, ou **reconhecer o texto (OCR)** de legendas em
   imagem PGS de Blu-ray, no próprio Mac, para depois traduzir.
 
@@ -41,7 +43,6 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
 - A separação de voz é aproximada: em cenas com música ou efeitos densos ficam restos das falas
   originais. As vozes do macOS são robóticas; vozes naturais dependem do VoiceStudio, que só foi
   testado contra um servidor simulado.
-- Identificação automática de quem fala (diarização) na transcrição.
 - OCR de legendas VobSub (DVD); PGS já é reconhecido.
 
 Detalhes e próximos passos em [ROADMAP.md](ROADMAP.md).

@@ -163,15 +163,16 @@ separadamente. O que é efetivamente usado em tempo de execução está em
 - **Uso efetivo:** vinculado dinamicamente para a pré-visualização fiel; distribuído dentro do
   app com suas dependências (ver THIRD_PARTY_NOTICES.md). Nenhum código do libass foi copiado.
 
-## FluidAudio — diarização (avaliado, ainda não integrado)
+## FluidAudio — diarização
 
 - **URL:** https://github.com/FluidInference/FluidAudio (v0.17.7, Apache-2.0)
 - **Modelos:** https://huggingface.co/FluidInference/speaker-diarization-coreml — os artefatos do
   pipeline offline (Segmentation, FBank, Embedding, PLDA) são conversões Core ML do
   pyannote Community-1 sob CC-BY-4.0 (uso comercial com atribuição a pyannote, WeSpeaker,
   BUT Speech@FIT e Fluid Inference); ~22 MB.
-- **Estado:** escolhido para identificar quem fala nas transcrições; aguardando aprovação para
-  adicionar a dependência.
+- **Estado:** integrado na 0.6.0 com aprovação do usuário (pacote Swift, Apache-2.0). Testado com
+  um diálogo sintético de duas vozes: dois falantes encontrados e todas as falas atribuídas
+  corretamente; download medido de 22 MB.
 
 ## Motores nativos da Apple (não são open source, mas foram verificados)
 
