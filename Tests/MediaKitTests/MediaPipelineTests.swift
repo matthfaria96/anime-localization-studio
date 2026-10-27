@@ -156,6 +156,14 @@ struct MediaHelperTests {
         #expect(info.tracks(.subtitles)[2].isBitmapSubtitle)
     }
 
+    @Test func freeSpaceIgnoresVolumesThatReportZero() {
+        // exFAT: "important usage" says 0 while the volume has 1 TB free.
+        #expect(FileOps.bestCapacity(importantUsage: 0, available: 1_082_454_000_000, fileSystem: 1_082_454_000_000) == 1_082_454_000_000)
+        #expect(FileOps.bestCapacity(importantUsage: 48_000_000_000, available: 43_000_000_000, fileSystem: 43_000_000_000) == 48_000_000_000)
+        #expect(FileOps.bestCapacity(importantUsage: 0, available: 0, fileSystem: nil) == nil)
+        #expect(FileOps.availableCapacity(at: FileManager.default.temporaryDirectory).map { $0 > 0 } == true)
+    }
+
     @Test func uniqueNamesNeverOverwrite() throws {
         let dir = MediaFixtures.temporaryDirectory()
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -179,4 +187,26 @@ final class ProgressBox: @unchecked Sendable {
     private var current = 0.0
     var value: Double { lock.withLock { current } }
     func set(_ v: Double) { lock.withLock { current = v } }
+}
+
+/// Muxes onto another volume (e.g. an exFAT drive): `ALS_MUX_TEST_DIR=/Volumes/Drive swift test --filter OtherVolume`.
+@Suite("Mux on another volume", .enabled(if: hasMediaTools && ProcessInfo.processInfo.environment["ALS_MUX_TEST_DIR"] != nil))
+struct OtherVolumeMuxTests {
+    @Test func muxesAndVerifiesOnTheGivenVolume() async throws {
+        let base = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ALS_MUX_TEST_DIR"]!)
+            .appendingPathComponent(".als-mux-test-\(UUID().uuidString.prefix(8))", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let episode = try await MediaFixtures.makeEpisode(in: base)
+        let info = try await MediaInspector(tools: testTools).inspect(episode)
+        let subtitle = base.appendingPathComponent("pt.ass")
+        try MediaFixtures.ass.replacingOccurrences(of: "my friends", with: "meus amigos").write(to: subtitle, atomically: true, encoding: .utf8)
+        #expect((FileOps.availableCapacity(at: base) ?? 0) > 0)
+        let plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: episode),
+                           newTracks: [NewTrack(file: subtitle, kind: .subtitles, language: "pt-BR", name: "Português (Brasil)")])
+        let (output, report) = try await MKVMuxer(tools: testTools).mux(plan)
+        #expect(report.passed, "\(report.failures)")
+        #expect(FileManager.default.fileExists(atPath: output.path))
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: base.path).filter { $0.contains(".partial") }
+        #expect(leftovers.isEmpty)
+    }
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1 — 26/10/2026
+
+### Corrigido
+- "Espaço insuficiente… há Zero KB" ao incorporar em discos exFAT, FAT32, NTFS ou de rede: o macOS informa 0 de espaço "para uso importante" nesses volumes mesmo com terabytes livres. O app agora usa a maior medida disponível (espaço livre do volume e `statfs`) e não bloqueia quando nenhuma informa.
+
 ## 0.6.0 — 26/10/2026
 
 ### Adicionado

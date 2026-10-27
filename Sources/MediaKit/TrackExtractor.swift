@@ -95,8 +95,20 @@ public enum FileOps {
         }
     }
 
+    /// Free space on the volume, or `nil` when no source can tell.
+    ///
+    /// The "important usage" figure is 0 on exFAT, FAT32, NTFS and many network volumes even
+    /// when they have terabytes free, so the largest of the three sources wins.
     public static func availableCapacity(at directory: URL) -> Int64? {
         let values = try? directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
-        return values?.volumeAvailableCapacityForImportantUsage ?? values?.volumeAvailableCapacity.map(Int64.init)
+        var info = statfs()
+        let fileSystem = statfs(directory.path, &info) == 0 ? Int64(info.f_bavail) * Int64(info.f_bsize) : nil
+        return bestCapacity(importantUsage: values?.volumeAvailableCapacityForImportantUsage,
+                            available: values?.volumeAvailableCapacity.map(Int64.init), fileSystem: fileSystem)
+    }
+
+    static func bestCapacity(importantUsage: Int64?, available: Int64?, fileSystem: Int64?) -> Int64? {
+        let known = [importantUsage, available, fileSystem].compactMap { $0 }.filter { $0 > 0 }
+        return known.max()
     }
 }
