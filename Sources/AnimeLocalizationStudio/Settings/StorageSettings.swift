@@ -65,7 +65,6 @@ struct StorageSettings: View {
             try inventory.clear(kind, except: busy)
             message = "\(kind.title) apagados."
             if kind == .dubs { app.workspace?.voiceSamples = [:]; app.workspace?.refreshDubStorage() }
-            if kind == .projects { app.refreshRecents() }
         } catch {
             message = "Não foi possível apagar tudo: \(error.localizedDescription)"
         }

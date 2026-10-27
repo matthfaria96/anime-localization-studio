@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.0 — 27/10/2026
+
+### Mudou
+- Sem menu lateral. A tela inicial explica o app e recebe um vídeo por vez (arrastar ou "Escolher vídeo…"; pastas e vários arquivos são recusados com aviso).
+- Com o vídeo aberto, o topo da janela tem só o seletor **Visão geral | Legendar | Dublar**; cada troca de página carrega os dados do vídeo de novo. "Fechar vídeo" fica na Visão geral (e no menu Arquivo).
+- Legendar não tem mais botões na barra superior: depois da escolha entre editar uma legenda existente e criar uma tradução, uma barra própria tem **Voltar** (volta à escolha e recarrega tudo), o aviso de alterações não salvas, **Descartar** e **Salvar** (⌘S). Traduzir (⇧⌘T), incorporar, salvar no MKV e exportar ficam no painel da direita, que agora está sempre visível.
+- Sair de Legendar com alterações (trocar de página, Voltar, fechar ou abrir outro vídeo) pergunta: Salvar, Descartar alterações ou Continuar editando. Descartar volta a legenda para como estava quando a tela carregou.
+
+### Adicionado
+- Histórico de dublagens em Dublar: arquivo, data, vozes, modo, áudio de base, falas e se passou na verificação, com "Mostrar no Finder" e apagar. Apagar sempre confirma e oferece tirar só do histórico ou também mandar o arquivo dublado para a Lixeira (nunca o vídeo aberto nem um arquivo gravado sobre o original).
+- Apagar os arquivos guardados da dublagem agora pede confirmação.
+
+### Removido
+- Biblioteca, Fila e Recentes da interface.
+
 ## 0.10.0 — 27/10/2026
 
 ### Mudou

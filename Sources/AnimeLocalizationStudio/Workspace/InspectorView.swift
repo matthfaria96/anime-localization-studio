@@ -24,7 +24,6 @@ struct InspectorView: View {
                     InlineMessage(kind: notice.kind, text: notice.text)
                     if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
                 }
-                taskHeader
                 baseSection
                 if isEditing {
                     saveEditedSection
@@ -37,20 +36,6 @@ struct InspectorView: View {
             .animation(.smooth(duration: 0.25), value: workspace.operation)
         }
         .scrollContentBackground(.hidden)
-    }
-
-    // MARK: Task
-
-    private var taskHeader: some View {
-        HStack(alignment: .top) {
-            Label(isEditing ? "Editando uma legenda" : "Criando uma tradução", systemImage: isEditing ? "pencil.line" : "translate")
-                .font(.headline)
-            Spacer()
-            Button("Trocar") { workspace.chooseSubtitleTask(nil) }
-                .controlSize(.small)
-                .disabled(workspace.isBusy)
-                .hint("Trocar de tarefa", "Volta à escolha entre editar uma legenda existente e criar uma tradução. Nada do que você fez é perdido.")
-        }
     }
 
     // MARK: Which subtitle
@@ -160,7 +145,8 @@ struct InspectorView: View {
             .buttonStyle(.glassProminent)
             .controlSize(.large)
             .disabled(!workspace.editor.hasDocument || workspace.isBusy)
-            .hint("Traduzir episódio inteiro", "Traduz todas as falas mantendo estilos, tempos e tags. Se já houver tradução, você escolhe entre completar o que falta ou refazer tudo.")
+            .keyboardShortcut("t", modifiers: [.command, .shift])
+            .hint("Traduzir episódio inteiro (⇧⌘T)", "Traduz todas as falas mantendo estilos, tempos e tags. Se já houver tradução, você escolhe entre completar o que falta ou refazer tudo.")
             if let report = workspace.lastReport { ReportSummary(report: report) }
         }
     }
@@ -192,6 +178,10 @@ struct InspectorView: View {
             .controlSize(.large)
             .disabled(workspace.editor.translation == nil || workspace.isBusy)
             .hint("Incorporar ao MKV", "Grava a tradução como nova faixa e confere o resultado. Antes você escolhe entre um novo arquivo e o próprio arquivo. O vídeo não é recodificado.")
+            Button("Salvar a tradução como arquivo de legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
+                .buttonStyle(.link)
+                .disabled(workspace.editor.translation == nil)
+                .hint("Salvar como arquivo", "Salva a tradução como um arquivo ASS/SRT separado, sem mexer no vídeo.")
             if let mux = workspace.lastMux {
                 VerificationList(report: mux.report)
                 Button("Mostrar no Finder", systemImage: "folder") { workspace.revealOutput() }

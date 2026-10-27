@@ -62,7 +62,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 
 ## Fase 5 — Automação 🟡
 
-- ✅ Biblioteca de pastas, status de tradução/dublagem por arquivo
+- 🚫 Biblioteca de pastas (removida da interface na 0.11.0)
 - ✅ Fila persistente: ordem, progresso, cancelamento, retomada após fechar o app, registro por trabalho
 - ✅ Glossário por série reaproveitado na fila
 - ⬜ Reprocessar só falas novas/alteradas
@@ -80,7 +80,10 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 
 ## Interface (0.10.0)
 
-- ✅ Menu lateral: Visão geral, Legendar e Dublar sob o episódio; Abrir episódio, Biblioteca, Fila, Recentes
+- ✅ (0.11.0) Sem menu lateral: tela inicial para um vídeo; Visão geral, Legendar e Dublar num seletor no topo, cada troca recarrega os dados
+- ✅ (0.11.0) Legendar: "Voltar" à escolha da tarefa; sair com alterações pergunta salvar ou descartar
+- ✅ (0.11.0) Dublar: histórico de dublagens, apagar com confirmação (só do histórico ou com o arquivo)
+- 🚫 (0.11.0) Biblioteca, Fila e Recentes saíram da interface (um vídeo por vez)
 - ✅ Visão geral com dados do arquivo, faixas, faixas padrão e extração de faixas
 - ✅ Legendar pergunta "editar existente" ou "criar tradução"; edição salva no lugar da faixa original
 - ✅ Dublar mostra áudio de base, origem do texto e idioma do resultado; "gerar tudo do zero"

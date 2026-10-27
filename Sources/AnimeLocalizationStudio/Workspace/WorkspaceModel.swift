@@ -86,6 +86,8 @@ final class WorkspaceModel {
     }
 
     func loadSubtitles() async {
+        // Whatever is loaded now is the starting point that “Descartar” goes back to.
+        defer { beginSubtitleSession() }
         do {
             let (prepared, _, sourceURL) = try await workflow().prepareSource(project)
             project = prepared
@@ -97,7 +99,6 @@ final class WorkspaceModel {
             let translation = translationURL.flatMap { FileManager.default.fileExists(atPath: $0.path) ? try? SubtitleDocument.load($0) : nil }
             editor.load(source: source, translation: translation.flatMap { $0.count == source.count ? $0 : nil })
             try? store.save(project)
-            app.refreshRecents()
             // A file muxed before already carries the translation as a track: use it.
             if editor.translation == nil, project.subtitleTask != .edit, let info, let existing = workflow().existingTranslationTrack(in: info, project: project),
                let (linked, result) = try? await workflow().linkTranslation(project, track: existing) {
@@ -218,6 +219,12 @@ final class WorkspaceModel {
     var askSaveEditedDestination = false
     /// Glossaries and series notes, opened from Legendar.
     var showSeries = false
+    /// Where the person wanted to go when Legendar had unsaved changes (asks save or discard).
+    var pendingLeave: LeaveTarget?
+    /// The subtitles as they were when Legendar loaded them.
+    @ObservationIgnored var sessionSource: SubtitleDocument?
+    @ObservationIgnored var sessionTranslation: SubtitleDocument?
+    var sessionRevision = 0
     /// Asks “this file or a copy?” before writing default-track changes.
     var askDefaultsDestination = false
     /// Optional button shown with the notice (e.g. open the file just created).
@@ -372,7 +379,6 @@ final class WorkspaceModel {
             }
             release()
             operation = nil
-            app.refreshRecents()
         }
     }
 

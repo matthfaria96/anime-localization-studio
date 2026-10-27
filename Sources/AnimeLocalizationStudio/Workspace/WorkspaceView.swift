@@ -1,18 +1,9 @@
 import SwiftUI
 
-enum WorkspaceMode: String, CaseIterable, Identifiable {
-    case overview, subtitles, dubbing
-    var id: String { rawValue }
-}
-
 struct WorkspaceView: View {
     @Bindable var workspace: WorkspaceModel
-    let mode: WorkspaceMode
+    let screen: EpisodeScreen
     @State private var confirmRetranslate = false
-    @AppStorage("inspectorShown") private var showInspector = true
-    @AppStorage("inspectorChosen") private var inspectorChosen = false
-    @State private var isDocked = true
-    @State private var drawerOpen = false
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -22,7 +13,7 @@ struct WorkspaceView: View {
                     Button("Tentar de novo") { workspace.loadError = nil; Task { await workspace.load() } }
                 }
             } else {
-                switch mode {
+                switch screen {
                 case .overview: OverviewView(workspace: workspace)
                 case .subtitles:
                     if workspace.project.subtitleTask == nil { SubtitleTaskChooser(workspace: workspace) } else { subtitles }
@@ -30,9 +21,17 @@ struct WorkspaceView: View {
                 }
             }
         }
-        .navigationTitle(navigationTitle)
+        .navigationTitle(workspace.title)
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
+        .confirmationDialog("Salvar as alterações da legenda?", isPresented: Binding(get: { workspace.pendingLeave != nil },
+                                                                                    set: { if !$0 { workspace.pendingLeave = nil } })) {
+            Button("Salvar") { workspace.resolveLeave(save: true) }
+            Button("Descartar alterações", role: .destructive) { workspace.resolveLeave(save: false) }
+            Button("Continuar editando", role: .cancel) { workspace.pendingLeave = nil }
+        } message: {
+            Text("Você alterou a legenda nesta tela. Salvar guarda as alterações no projeto; descartar volta a legenda para como estava quando a tela carregou.")
+        }
         .confirmationDialog("Onde gravar a legenda traduzida?", isPresented: $workspace.askEmbedDestination) {
             Button("Criar um novo arquivo") { workspace.embedTranslation(replaceOriginal: false) }
             Button("Incorporar no próprio arquivo", role: .destructive) { workspace.embedTranslation(replaceOriginal: true) }
@@ -70,14 +69,6 @@ struct WorkspaceView: View {
     @Environment(AppModel.self) private var app
     private var appTarget: String { app.settings.targetLanguage.uppercased() }
 
-    private var navigationTitle: String {
-        switch mode {
-        case .overview: workspace.title
-        case .subtitles: "Legendar · \(workspace.title)"
-        case .dubbing: "Dublar · \(workspace.title)"
-        }
-    }
-
     private var subtitle: String {
         guard let info = workspace.info else { return "" }
         var parts = [info.container]
@@ -86,103 +77,91 @@ struct WorkspaceView: View {
         return parts.joined(separator: " · ")
     }
 
-    /// The inspector sits beside the editor when both fit (editor ≥ 600 pt); in narrower windows
-    /// it opens as a drawer over the trailing edge instead of squeezing everything.
     private static let inspectorWidth: CGFloat = 320
-    private static let editorMinimum: CGFloat = 540
 
+    /// Legendar after the task was chosen: a bar to go back or keep/discard changes, the video
+    /// and the lines, and the panel with everything the task needs.
     private var subtitles: some View {
-        GeometryReader { proxy in
-            let docked = proxy.size.width >= Self.editorMinimum + Self.inspectorWidth
-            let _ = updateDocked(docked)
+        VStack(spacing: 0) {
+            SubtitleSessionBar(workspace: workspace)
+            Divider()
             HStack(spacing: 0) {
-                editorArea
-                    .frame(maxWidth: .infinity)
-                if showInspector && docked {
-                    Divider()
-                    inspector.frame(width: Self.inspectorWidth)
-                }
+                editorArea.frame(maxWidth: .infinity)
+                Divider()
+                InspectorView(workspace: workspace, requestTranslate: requestTranslate)
+                    .frame(width: Self.inspectorWidth)
             }
-            .overlay(alignment: .trailing) {
-                if drawerOpen && !docked {
-                    inspector
-                        .frame(width: min(Self.inspectorWidth, proxy.size.width - 40))
-                        .background(.regularMaterial)
-                        .shadow(color: .black.opacity(0.25), radius: 12, x: -2)
-                        .transition(.move(edge: .trailing))
-                }
-            }
-            .animation(.smooth(duration: 0.2), value: docked)
         }
         .paneBackground()
-        .onAppear { if !inspectorChosen { showInspector = true } }
-    }
-
-    /// Narrow windows collapse the inspector automatically; the toolbar button opens it as a drawer.
-    private func updateDocked(_ docked: Bool) {
-        guard docked != isDocked else { return }
-        Task { @MainActor in
-            isDocked = docked
-            drawerOpen = false
-        }
     }
 
     private var editorArea: some View {
         VSplitView {
             PlayerView(workspace: workspace)
                 .padding(Theme.Spacing.l)
-                .frame(minHeight: 220, idealHeight: 460, maxHeight: .infinity)
+                .frame(minHeight: 200, idealHeight: 420, maxHeight: .infinity)
             EditorPane(workspace: workspace)
-                .frame(minHeight: 220, idealHeight: 360)
+                .frame(minHeight: 200, idealHeight: 360)
         }
-    }
-
-    private var inspector: some View {
-        InspectorView(workspace: workspace, requestTranslate: requestTranslate)
     }
 
     private func requestTranslate() {
         if workspace.editor.translatedCount > 0 { confirmRetranslate = true } else { workspace.translateEpisode(undoManager: undoManager) }
     }
 
+    /// The only thing at the top of the window: the three pages of the video.
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        if mode == .subtitles && workspace.isEditingOriginal {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Salvar no MKV…", systemImage: "square.and.arrow.down.on.square") { workspace.requestSaveEdited() }
-                    .buttonStyle(.glassProminent)
-                    .disabled(!workspace.editor.hasDocument || workspace.isBusy)
-                    .hint("Salvar no MKV", "Grava a legenda corrigida no lugar da faixa original. Antes você escolhe entre um novo arquivo e o próprio arquivo.")
-                Button("Inspetor", systemImage: "sidebar.trailing") { toggleInspector() }
-                    .keyboardShortcut("i", modifiers: [.command, .option])
-                    .hint("Mostrar ou esconder o painel (⌥⌘I)", "O painel da direita com a legenda escolhida e como salvá-la. Em janelas estreitas ele se recolhe sozinho e este botão o abre por cima.")
+        ToolbarItem(placement: .principal) {
+            Picker("Página", selection: Binding(get: { app.screen }, set: { app.show($0) })) {
+                ForEach(EpisodeScreen.allCases) { Text($0.label).tag($0) }
             }
-        } else if mode == .subtitles && workspace.project.subtitleTask == .translate {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Traduzir episódio inteiro", systemImage: "translate") { requestTranslate() }
-                    .buttonStyle(.glassProminent)
-                    .disabled(!workspace.editor.hasDocument || workspace.isBusy)
-                    .keyboardShortcut("t", modifiers: [.command, .shift])
-                    .hint("Traduzir episódio inteiro (⇧⌘T)", "Traduz todas as falas com o motor escolhido, mantendo estilos, tempos e tags. Falas já traduzidas são mantidas.")
-                Menu {
-                    Button("Abrir legenda externa…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
-                    Button("Exportar legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
-                        .disabled(workspace.editor.translation == nil)
-                    Divider()
-                    Button("Incorporar ao MKV…", systemImage: "film.stack") { workspace.requestEmbed() }
-                        .disabled(workspace.editor.translation == nil || workspace.isBusy)
-                } label: {
-                    Label("Arquivo", systemImage: "ellipsis.circle")
-                }
-                .hint("Arquivo", "Abrir uma legenda externa, exportar a tradução como arquivo ou incorporá-la ao MKV.")
-                Button("Inspetor", systemImage: "sidebar.trailing") { toggleInspector() }
-                    .keyboardShortcut("i", modifiers: [.command, .option])
-                    .hint("Mostrar ou esconder o painel (⌥⌘I)", "O painel da direita com a legenda base, a tradução e o novo MKV. Em janelas estreitas ele se recolhe sozinho e este botão o abre por cima.")
-            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 330)
+            .disabled(workspace.isBusy)
+            .hint("Páginas do vídeo", "Visão geral: dados e faixas do arquivo. Legendar: corrigir ou traduzir uma legenda. Dublar: criar o áudio dublado. Cada página carrega os dados do vídeo de novo.")
         }
     }
+}
 
-    private func toggleInspector() {
-        if isDocked { showInspector.toggle(); inspectorChosen = true } else { drawerOpen.toggle() }
+/// Top of Legendar: back to the choice of task, what is being done, and keep/discard changes.
+private struct SubtitleSessionBar: View {
+    @Bindable var workspace: WorkspaceModel
+    @State private var confirmDiscard = false
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.m) {
+            Button { workspace.requestBackToChooser() } label: { Label("Voltar", systemImage: "chevron.left") }
+                .disabled(workspace.isBusy)
+                .hint("Voltar", "Volta à escolha entre editar uma legenda existente e criar uma tradução, e recarrega tudo. Se houver alterações, o app pergunta se quer salvá-las ou descartá-las.")
+            Label(workspace.isEditingOriginal ? "Editando uma legenda existente" : "Criando uma tradução",
+                  systemImage: workspace.isEditingOriginal ? "pencil.line" : "translate")
+                .font(.headline)
+            Spacer(minLength: Theme.Spacing.s)
+            if workspace.showsUnsavedChanges {
+                Label("Alterações não salvas", systemImage: "circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(Theme.warning)
+                    .labelStyle(.titleAndIcon)
+                    .imageScale(.small)
+                Button("Descartar") { confirmDiscard = true }
+                    .disabled(workspace.isBusy)
+                    .hint("Descartar alterações", "Volta a legenda para como estava quando esta tela carregou.")
+                Button("Salvar") { workspace.saveSubtitleSession() }
+                    .buttonStyle(.glassProminent)
+                    .keyboardShortcut("s", modifiers: .command)
+                    .disabled(workspace.isBusy)
+                    .hint("Salvar alterações (⌘S)", "Guarda as alterações no projeto. O vídeo só muda quando você usar “Salvar no MKV…” ou “Incorporar ao MKV…”, no painel da direita.")
+            }
+        }
+        .controlSize(.regular)
+        .padding(.horizontal, Theme.Spacing.l)
+        .padding(.vertical, Theme.Spacing.s)
+        .confirmationDialog("Descartar as alterações?", isPresented: $confirmDiscard) {
+            Button("Descartar alterações", role: .destructive) { workspace.discardSubtitleChanges() }
+        } message: {
+            Text("A legenda volta a ser como estava quando esta tela carregou.")
+        }
     }
 }

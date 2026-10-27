@@ -13,6 +13,40 @@ public enum SubtitleTask: String, Sendable, Codable {
     case translate
 }
 
+/// One finished dub of an episode, for the history in Dublar.
+public struct DubRecord: Sendable, Hashable, Codable, Identifiable {
+    public var id: UUID
+    public var date: Date
+    /// The file the dub was written to.
+    public var outputPath: String
+    /// Written into the opened file itself (its previous version went to the Trash).
+    public var replacedOriginal: Bool
+    public var engine: String
+    public var mode: String
+    public var baseAudio: String
+    public var language: String
+    public var lines: Int
+    public var failedLines: Int
+    public var verified: Bool
+
+    public init(id: UUID = UUID(), date: Date = Date(), outputPath: String, replacedOriginal: Bool, engine: String, mode: String,
+                baseAudio: String, language: String, lines: Int, failedLines: Int, verified: Bool) {
+        self.id = id
+        self.date = date
+        self.outputPath = outputPath
+        self.replacedOriginal = replacedOriginal
+        self.engine = engine
+        self.mode = mode
+        self.baseAudio = baseAudio
+        self.language = language
+        self.lines = lines
+        self.failedLines = failedLines
+        self.verified = verified
+    }
+
+    public var outputURL: URL { URL(fileURLWithPath: outputPath) }
+}
+
 public enum WorkStatus: String, Sendable, Codable, CaseIterable {
     case new, extracted, translating, translated, reviewed, muxed, failed
 
@@ -53,6 +87,8 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     public var subtitleTask: SubtitleTask?
     /// Audio track the dub is based on (voices and background); nil = the default one.
     public var dubAudioTrackID: Int?
+    /// Finished dubs, newest first (optional so projects saved before it still load).
+    public var dubHistory: [DubRecord]?
     public var createdAt: Date
     public var updatedAt: Date
 

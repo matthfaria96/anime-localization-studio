@@ -2,8 +2,8 @@ import MediaKit
 import StudioCore
 import SwiftUI
 
-/// First page of an episode: what the file is (size, codecs, tracks), which tracks open by
-/// default, extracting tracks, and the way into Legendar and Dublar.
+/// First page of a video: what the file is (size, codecs, tracks), which tracks open by
+/// default, and extracting tracks.
 struct OverviewView: View {
     @Bindable var workspace: WorkspaceModel
     @Environment(AppModel.self) private var app
@@ -23,7 +23,6 @@ struct OverviewView: View {
                     }
                 }
                 if let info = workspace.info {
-                    actions
                     FileFacts(info: info)
                     tracks(info)
                 } else if workspace.operation == nil {
@@ -47,40 +46,12 @@ struct OverviewView: View {
                 Button("Mostrar no Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([workspace.url]) }
                     .buttonStyle(.link)
                     .hint("Mostrar no Finder", "Abre a pasta do arquivo com ele selecionado.")
+                Spacer(minLength: Theme.Spacing.s)
+                Button("Fechar vídeo", systemImage: "xmark.circle") { app.closeVideo() }
+                    .disabled(workspace.isBusy)
+                    .hint("Fechar vídeo", "Volta à tela inicial para abrir outro vídeo. O app trabalha com um vídeo por vez.")
             }
         }
-    }
-
-    // MARK: Legendar / Dublar
-
-    private var actions: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.l) {
-            ActionCard(title: "Legendar", systemImage: "captions.bubble",
-                       detail: "Corrija uma legenda do arquivo ou crie uma tradução a partir dela.",
-                       status: subtitleStatus) { app.selection = .subtitles }
-                .hint("Legendar", "Você escolhe entre editar uma legenda existente ou criar uma tradução nova com base nela.")
-            ActionCard(title: "Dublar", systemImage: "waveform.and.person.filled",
-                       detail: "Transforme a legenda traduzida numa faixa de áudio com as vozes dos personagens.",
-                       status: dubStatus) { app.selection = .dubbing }
-                .hint("Dublar", "A dublagem lê o texto da legenda traduzida. O áudio original serve de base para as vozes e para a música e os efeitos.")
-        }
-    }
-
-    private var subtitleStatus: String {
-        switch workspace.project.subtitleTask {
-        case .edit: "Em andamento: editando a legenda “\(baseName)”."
-        case .translate: "Em andamento: tradução com \(workspace.editor.translatedCount) de \(workspace.editor.translatableCount) falas."
-        case nil: workspace.subtitleTracks.isEmpty ? "Sem legendas no arquivo: abra uma ou transcreva o áudio." : workspace.subtitleTracks.count == 1 ? "1 legenda no arquivo." : "\(workspace.subtitleTracks.count) legendas no arquivo."
-        }
-    }
-
-    private var dubStatus: String {
-        guard workspace.editor.translation != nil else { return "Precisa de uma legenda traduzida: crie em Legendar." }
-        return "Pronto para dublar: \(workspace.editor.translatedCount) falas traduzidas."
-    }
-
-    private var baseName: String {
-        workspace.subtitleTracks.first { $0.id == workspace.project.sourceTrackID }.map(WorkspaceModel.describe) ?? "arquivo externo"
     }
 
     // MARK: Tracks
@@ -265,35 +236,5 @@ private struct FileFacts: View {
             Text(title).font(.caption).foregroundStyle(.secondary)
             Text(value).font(.callout.weight(.medium)).lineLimit(2).textSelection(.enabled)
         }
-    }
-}
-
-/// Big button that leads to one of the episode's pages.
-private struct ActionCard: View {
-    let title: String
-    let systemImage: String
-    let detail: String
-    let status: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: Theme.Spacing.m) {
-                Image(systemName: systemImage).font(.system(size: 26)).foregroundStyle(.tint).frame(width: 34)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(title).font(.title3.weight(.semibold))
-                    Text(detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
-                    Text(status).font(.caption).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
-            }
-            .padding(Theme.Spacing.l)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.background.secondary, in: .rect(cornerRadius: Theme.Radius.large))
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.large).strokeBorder(.separator))
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
     }
 }

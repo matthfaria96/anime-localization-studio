@@ -162,3 +162,27 @@ struct StorageInventoryTests {
         #expect(StorageInventory.size(of: paths.previews) == 0)
     }
 }
+
+@Suite("Dub history")
+struct DubHistoryTests {
+    @Test func historyIsSavedAndOldProjectsStillLoad() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("ALSHistory-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let store = ProjectStore(paths: AppPaths(root: base, caches: base.appendingPathComponent("Caches")))
+        let media = URL(fileURLWithPath: "/tmp/Show - 01.mkv")
+        var project = store.project(for: media)
+        #expect(project.dubHistory == nil)
+        project.dubHistory = [DubRecord(outputPath: "/tmp/Show - 01 [PT-BR DUB].mkv", replacedOriginal: false, engine: "Voz original",
+                                        mode: "Substituir falas", baseAudio: "JA · AAC", language: "pt-BR", lines: 12, failedLines: 0, verified: true)]
+        try store.save(project)
+        #expect(store.project(for: media).dubHistory?.first?.lines == 12)
+
+        // A project.json written before the history existed.
+        let file = store.directory(for: project.id).appendingPathComponent("project.json")
+        var json = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as! [String: Any]
+        json.removeValue(forKey: "dubHistory")
+        try JSONSerialization.data(withJSONObject: json).write(to: file)
+        #expect(store.project(for: media).dubHistory == nil)
+        #expect(store.project(for: media).id == project.id)
+    }
+}

@@ -164,6 +164,9 @@ extension WorkspaceModel {
                 lastDub = (output, report, verification)
                 lastMux = (output, verification)
                 dubSession?.phase = .done(url: output, report: report, verification: verification, replaced: replaceOriginal)
+                recordDub(DubRecord(outputPath: output.path, replacedOriginal: replaceOriginal, engine: engine, mode: mode,
+                                    baseAudio: dubAudioTrack.map(Self.describe) ?? "—", language: app.settings.targetLanguage,
+                                    lines: report.synthesized + report.reusedClips, failedLines: report.failed.count, verified: verification.passed))
                 AppLog.shared.info("Dublagem concluída: \(output.path)")
                 release()
                 operation = nil
@@ -183,6 +186,33 @@ extension WorkspaceModel {
             release()
             operation = nil
             refreshDubStorage()
+        }
+    }
+
+    // MARK: History
+
+    var dubHistory: [DubRecord] { project.dubHistory ?? [] }
+
+    private func recordDub(_ record: DubRecord) {
+        project.dubHistory = [record] + dubHistory
+        try? store.save(project)
+    }
+
+    /// A separate file the app created, still on disk, that is not the video open now.
+    func canTrashOutput(of record: DubRecord) -> Bool {
+        !record.replacedOriginal && FileManager.default.fileExists(atPath: record.outputPath)
+            && record.outputURL.standardizedFileURL.path != url.standardizedFileURL.path
+    }
+
+    /// Removes a dub from the history and, when asked, moves its file to the Trash.
+    func deleteDubRecord(_ record: DubRecord, trashFile: Bool) {
+        do {
+            if trashFile && canTrashOutput(of: record) { try FileOps.trash(record.outputURL) }
+            project.dubHistory = dubHistory.filter { $0.id != record.id }
+            try store.save(project)
+            notice = (.success, trashFile ? "Dublagem apagada: “\(record.outputURL.lastPathComponent)” foi para a Lixeira." : "Dublagem tirada do histórico. O arquivo continua no disco.")
+        } catch {
+            notice = (.error, "Não foi possível apagar: \(LogRedactor.redact(error.localizedDescription))")
         }
     }
 

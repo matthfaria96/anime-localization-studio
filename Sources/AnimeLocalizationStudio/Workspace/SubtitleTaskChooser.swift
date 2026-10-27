@@ -16,7 +16,7 @@ struct SubtitleTaskChooser: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text("O que você quer fazer com a legenda?").font(.largeTitle.weight(.semibold))
-                    Text("A tela de edição se ajusta à escolha. Você pode trocar depois, no painel da direita.")
+                    Text("A tela de edição se ajusta à escolha. Para trocar depois, use “Voltar”.")
                         .foregroundStyle(.secondary)
                 }
                 HStack(alignment: .top, spacing: Theme.Spacing.l) {
@@ -37,7 +37,10 @@ struct SubtitleTaskChooser: View {
     }
 
     private func choice(_ task: SubtitleTask, title: String, systemImage: String, detail: String) -> some View {
-        Button { workspace.chooseSubtitleTask(task) } label: {
+        Button {
+            workspace.chooseSubtitleTask(task)
+            Task { await workspace.reload() }
+        } label: {
             VStack(alignment: .leading, spacing: Theme.Spacing.m) {
                 Image(systemName: systemImage).font(.system(size: 30)).foregroundStyle(.tint).frame(height: 40, alignment: .leading)
                 Text(title).font(.title3.weight(.semibold))
@@ -78,7 +81,7 @@ struct SubtitleTaskChooser: View {
                 }
             }
             if !textTracks.isEmpty {
-                Text("A legenda base pode ser trocada no painel da direita.").font(.caption).foregroundStyle(.secondary)
+                Text("A legenda base pode ser trocada depois, no painel da direita da edição.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }

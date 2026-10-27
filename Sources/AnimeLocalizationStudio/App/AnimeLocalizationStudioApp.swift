@@ -34,6 +34,7 @@ struct AnimeLocalizationStudioApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Abrir vídeo…") { app.presentOpenPanel() }.keyboardShortcut("o")
+                Button("Fechar vídeo") { app.closeVideo() }.disabled(app.workspace == nil)
                 Button("Abrir legenda externa…") { app.workspace?.openExternalSubtitle() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
                     .disabled(app.workspace == nil)
@@ -68,8 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var app: AppModel?
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        guard let url = urls.first else { return }
-        if url.hasDirectoryPath { app?.library.add(url); app?.selection = .library } else { app?.open(url) }
+        _ = app?.openDropped(urls)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

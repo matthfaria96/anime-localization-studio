@@ -18,6 +18,8 @@ struct DubbingView: View {
     @State private var sampleState: [UUID: String] = [:]
     @State private var audioPlayer: AVAudioPlayer?
     @State private var showManualVoices = false
+    @State private var recordToDelete: DubRecord?
+    @State private var confirmClearFiles = false
 
     private var segments: [DubSegment] {
         guard let document = workspace.editor.translation ?? workspace.editor.source else { return [] }
@@ -46,8 +48,9 @@ struct DubbingView: View {
                 sourcePanel
                 howPanel
                 castPanel
-                storagePanel
                 if let dub = workspace.lastDub { resultPanel(dub) }
+                historyPanel
+                storagePanel
             }
             .padding(Theme.Spacing.xl)
             .frame(maxWidth: 980)
@@ -63,6 +66,24 @@ struct DubbingView: View {
         .onChange(of: workspace.editor.revision) { rebuildCast() }
         .onChange(of: cast) { _, new in workspace.saveCast(new) }
         .modifier(SpeakerModelConsent(workspace: workspace))
+        .confirmationDialog("Apagar os arquivos guardados desta dublagem?", isPresented: $confirmClearFiles) {
+            Button("Apagar", role: .destructive) { workspace.clearDubFiles() }
+        } message: {
+            Text("As falas geradas, as vozes separadas e a música de fundo deste episódio são apagadas (\(ByteCountFormatter.string(fromByteCount: workspace.dubStorageBytes, countStyle: .file))). A próxima dublagem gera tudo do zero. Os vídeos já dublados não são apagados.")
+        }
+        .confirmationDialog("Apagar esta dublagem?", isPresented: Binding(get: { recordToDelete != nil }, set: { if !$0 { recordToDelete = nil } }),
+                            presenting: recordToDelete) { record in
+            if workspace.canTrashOutput(of: record) {
+                Button("Apagar o arquivo e tirar do histórico", role: .destructive) { workspace.deleteDubRecord(record, trashFile: true) }
+            }
+            Button("Só tirar do histórico") { workspace.deleteDubRecord(record, trashFile: false) }
+        } message: { record in
+            Text(workspace.canTrashOutput(of: record)
+                 ? "“\(record.outputURL.lastPathComponent)” vai para a Lixeira (dá para recuperar de lá). Ou tire só do histórico e mantenha o arquivo."
+                 : record.replacedOriginal
+                    ? "Esta dublagem foi gravada no próprio arquivo, que não é apagado aqui. Ela sai só do histórico."
+                    : "O arquivo não está mais no disco ou é o vídeo aberto agora. A dublagem sai só do histórico.")
+        }
         .sheet(isPresented: Binding(get: { workspace.dubSession != nil }, set: { if !$0 && !isDubRunning { workspace.dubSession = nil } })) {
             DubSessionSheet(workspace: workspace, cast: $cast, studioConnected: studioConnected, segmentCount: segments.count)
         }
@@ -106,7 +127,7 @@ struct DubbingView: View {
                         } else {
                             HStack {
                                 Text("Ainda não há legenda traduzida.")
-                                Button("Ir para Legendar") { app.selection = .subtitles }
+                                Button("Ir para Legendar") { app.show(.subtitles) }
                                     .buttonStyle(.link)
                                     .hint("Ir para Legendar", "Crie a tradução lá; ela é o texto que a dublagem fala.")
                             }
@@ -127,6 +148,50 @@ struct DubbingView: View {
         }
     }
 
+    // MARK: History
+
+    private var historyPanel: some View {
+        Panel {
+            SectionLabel("Histórico de dublagens", systemImage: "clock.arrow.circlepath")
+            if workspace.dubHistory.isEmpty {
+                Text("Nenhuma dublagem feita deste vídeo ainda. Cada dublagem terminada aparece aqui, com o arquivo onde foi gravada.")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+            ForEach(workspace.dubHistory) { record in historyRow(record) }
+        }
+    }
+
+    private func historyRow(_ record: DubRecord) -> some View {
+        let exists = FileManager.default.fileExists(atPath: record.outputPath)
+        return HStack(alignment: .top, spacing: Theme.Spacing.m) {
+            Image(systemName: record.verified && record.failedLines == 0 ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(record.verified && record.failedLines == 0 ? Theme.translated : Theme.warning)
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Text(record.outputURL.lastPathComponent).font(.callout.weight(.semibold)).lineLimit(1).truncationMode(.middle)
+                    if record.replacedOriginal { Tag(text: "Próprio arquivo") }
+                    if !exists { Tag(text: "Arquivo não encontrado", tint: Theme.warning) }
+                }
+                Text(record.date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
+                Text("\(record.engine) · \(record.mode) · áudio \(record.baseAudio) · \(record.lines) falas\(record.failedLines > 0 ? " (\(record.failedLines) sem voz)" : "") · \(record.language)")
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            }
+            Spacer(minLength: Theme.Spacing.s)
+            if exists {
+                Button("Mostrar no Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([record.outputURL]) }
+                    .labelStyle(.iconOnly)
+                    .hint("Mostrar no Finder", "Abre a pasta do arquivo dublado com ele selecionado.")
+            }
+            Button("Apagar…", systemImage: "trash") { recordToDelete = record }
+                .labelStyle(.iconOnly)
+                .disabled(workspace.isBusy)
+                .hint("Apagar esta dublagem", "Pergunta antes: tirar só do histórico ou também mandar o arquivo dublado para a Lixeira.")
+        }
+        .padding(Theme.Spacing.s)
+        .background(.background.secondary, in: .rect(cornerRadius: Theme.Radius.medium))
+    }
+
     // MARK: Stored files
 
     private var storagePanel: some View {
@@ -140,9 +205,9 @@ struct DubbingView: View {
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                Button("Apagar", systemImage: "trash") { workspace.clearDubFiles() }
+                Button("Apagar…", systemImage: "trash") { confirmClearFiles = true }
                     .disabled(workspace.dubStorageBytes == 0 || workspace.isBusy)
-                    .hint("Apagar os arquivos desta dublagem", "Libera o espaço. A próxima dublagem gera tudo do zero. O arquivo de vídeo já dublado não é apagado. Para ver tudo o que o app guarda, abra Ajustes › Armazenamento.")
+                    .hint("Apagar os arquivos desta dublagem", "Pergunta antes de apagar. Libera o espaço; a próxima dublagem gera tudo do zero. Os vídeos já dublados não são apagados. Para ver tudo o que o app guarda, abra Ajustes › Armazenamento.")
             }
         }
     }

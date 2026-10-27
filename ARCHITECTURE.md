@@ -33,13 +33,20 @@ AnimeLocalizationStudio (SwiftUI, isolamento padrão MainActor)
 
 ## Navegação
 
-O menu lateral (`App/RootView.swift`) tem, sob o episódio aberto, três páginas de
-`Workspace/WorkspaceView.swift`: **Visão geral** (`Overview/OverviewView.swift`: dados do arquivo,
+Não há menu lateral. `App/RootView.swift` mostra a tela inicial (explicação e área para soltar
+**um** vídeo) até um vídeo ser aberto; depois, um seletor segmentado no topo da janela
+(`AppModel.screen`) troca entre três páginas de `Workspace/WorkspaceView.swift`, e cada troca
+recarrega os dados do vídeo (`WorkspaceModel.reload()`): **Visão geral** (`Overview/OverviewView.swift`: dados do arquivo,
 faixas, faixas padrão via `TrackFlagEditor`, extração), **Legendar** (primeiro
 `SubtitleTaskChooser`, depois o editor; `StudioProject.subtitleTask` guarda a escolha:
 `.edit` mostra uma coluna e salva com `EpisodeWorkflow.saveEditedSubtitle`, que usa
 `MuxPlan.excludedTrackIDs` para tirar a faixa antiga; `.translate` mostra original e tradução) e
 **Dublar** (`Dubbing/DubbingView.swift`; `StudioProject.dubAudioTrackID` escolhe o áudio de base).
+Legendar trata cada visita como uma sessão (`WorkspaceModel+Session.swift`): o que foi carregado
+é o ponto de partida; sair (trocar de página, "Voltar" à escolha, fechar ou abrir outro vídeo) com
+alterações pergunta se salva ou descarta, e descartar regrava a legenda como estava. Dublar
+guarda um histórico (`StudioProject.dubHistory`, `DubRecord`) que pode ser apagado com
+confirmação, só do histórico ou também mandando o arquivo dublado para a Lixeira.
 Diagnóstico e Armazenamento ficam em Ajustes; Séries e glossários abre como folha a partir de Legendar.
 
 ## Decisões principais
@@ -166,9 +173,8 @@ preferido, evitando "Signs/Songs" e forçadas) → `mkvextract` para `source.ass
 **Incorporar ao MKV:** salva edições pendentes → `MuxPlan` (nova faixa pt-BR, nome, padrão,
 ordem) → mkvmerge → verificação → renomeação → relatório na tela.
 
-**Temporada:** Biblioteca (pastas) → seleção → `JobQueue` (persistida a cada mudança) →
-`EpisodeJobPerformer` usa o mesmo `EpisodeWorkflow`. Trabalhos em andamento quando o app fecha
-voltam como "Interrompido" e retomam do checkpoint.
+**Temporada (só no núcleo):** `JobQueue` e `EpisodeJobPerformer` continuam em StudioCore, com
+testes, mas a interface trabalha com um vídeo por vez e não os usa desde a 0.11.0.
 
 ## Tratamento de falhas
 

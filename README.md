@@ -30,8 +30,9 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
   faixa adicional (idioma, nome, padrão e ordem configuráveis). Todas as faixas, fontes e
   capítulos originais são mantidos. Antes de dizer que deu certo, o app confere o arquivo e
   compara os pacotes de vídeo com o original.
-- **Temporadas**: biblioteca de pastas e fila persistente para traduzir (e incorporar) vários
-  episódios, que continua de onde parou se o app for fechado.
+- **Um vídeo por vez**: a tela inicial explica o app e recebe um vídeo (arrastar ou escolher).
+  Com ele aberto, três páginas no topo da janela: Visão geral, Legendar e Dublar. Não há menu
+  lateral.
 - **Dublar episódio inteiro** a partir da legenda traduzida, com o áudio de base escolhido: uma voz por personagem (clone da voz original no Mac, vozes do macOS ou do VoiceStudio), cada
   fala ajustada ao seu tempo, em dois modos: *voice-over* (por cima do original, que abaixa) ou
   *substituir falas* (as vozes originais são separadas da trilha no próprio Mac e trocadas). O
@@ -118,7 +119,7 @@ ALS_SELECT=3 ALS_SEEK=5000 APPEARANCE=light ./Scripts/ui-capture.sh caminho/do/e
 ## Onde ficam os dados
 
 `~/Library/Application Support/Anime Localization Studio/`: projetos (legenda de origem,
-tradução, checkpoint e cópias de segurança por arquivo), séries, fila, ajustes e registros.
+tradução, checkpoint, histórico de dublagens e cópias de segurança por arquivo), séries, ajustes e registros.
 Pré-visualizações ficam em `~/Library/Caches/Anime Localization Studio/` e podem ser apagadas a
 qualquer momento. Os vídeos originais nunca são modificados.
 

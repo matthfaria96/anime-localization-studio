@@ -5,33 +5,33 @@ import SwiftUI
 import TranslationKit
 import UniformTypeIdentifiers
 
-enum SidebarItem: Hashable {
-    /// The open episode: its file and tracks, then the two things to do with it.
+/// The three pages of the open video, switched at the top of the window.
+enum EpisodeScreen: String, CaseIterable, Identifiable {
     case overview, subtitles, dubbing
-    case library, queue
-    /// Rows that act instead of showing a page (selecting them opens something).
-    case openEpisode
-    case recent(String)
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .overview: "Visão geral"
+        case .subtitles: "Legendar"
+        case .dubbing: "Dublar"
+        }
+    }
 }
 
-/// App-wide state: settings, stores, the job queue and the episode currently open.
+/// App-wide state: settings, series and the one video currently open.
 @Observable
 final class AppModel {
     let paths = AppPaths()
-    var selection: SidebarItem? = .overview
+    var screen: EpisodeScreen = .overview
     var workspace: WorkspaceModel?
     var series: [Series] = []
     var toolStatuses: [ToolStatus] = []
-    var recentProjects: [StudioProject] = []
     var alert: AppAlert?
-    let library: LibraryModel
-    let queue: JobQueue
-    let activity: ProjectActivity
+    let activity = ProjectActivity()
 
     var settings: AppSettings {
         didSet {
             guard settings != oldValue else { return }
-            settingsBox.value = settings
             do { try SettingsStore(paths: paths).save(settings) } catch { report(error, context: "Ajustes não salvos") }
         }
     }
@@ -44,22 +44,8 @@ final class AppModel {
         let paths = AppPaths()
         let loaded = SettingsStore(paths: paths).load()
         settings = loaded
-        library = LibraryModel(paths: paths)
-        let settingsBox = SettingsBox(loaded)
-        let activity = ProjectActivity()
-        self.activity = activity
-        queue = JobQueue(file: paths.jobs, performer: EpisodeJobPerformer(
-            paths: paths,
-            settings: { settingsBox.value },
-            apiKey: { AppModel.apiKey(for: $0) }), activity: activity)
-        self.settingsBox = settingsBox
         series = SeriesStore(paths: paths).all()
-        recentProjects = ProjectStore(paths: paths).all()
-        library.attach(to: self)
     }
-
-    /// Mirrors `settings` for the queue, which runs outside the main actor.
-    private let settingsBox: SettingsBox
 
     var tools: ToolLocator { settings.toolLocator }
 
@@ -74,28 +60,73 @@ final class AppModel {
 
     // MARK: Opening media
 
+    /// Opens a video in place of the current one (asking first about unsaved subtitle edits).
     func open(_ url: URL) {
-        let workspace = WorkspaceModel(url: url, app: self)
-        self.workspace?.close()
-        self.workspace = workspace
-        switch ProcessInfo.processInfo.environment["ALS_MODE"] {
-        case "dubbing": selection = .dubbing
-        case "subtitles": selection = .subtitles
-        default: selection = .overview
+        if let workspace, workspace.hasUnsavedSubtitleChanges(on: screen) {
+            workspace.pendingLeave = .open(url)
+            return
         }
+        openNow(url)
+    }
+
+    func openNow(_ url: URL) {
+        workspace?.close()
+        let workspace = WorkspaceModel(url: url, app: self)
+        self.workspace = workspace
+        screen = EpisodeScreen(rawValue: ProcessInfo.processInfo.environment["ALS_MODE"] ?? "") ?? .overview
         Task { await workspace.load() }
+    }
+
+    /// Back to the start screen.
+    func closeVideo() {
+        if let workspace, workspace.hasUnsavedSubtitleChanges(on: screen) {
+            workspace.pendingLeave = .close
+            return
+        }
+        closeVideoNow()
+    }
+
+    func closeVideoNow() {
+        workspace?.close()
+        workspace = nil
+        screen = .overview
+    }
+
+    /// Switches page; every page loads the video's data again.
+    func show(_ target: EpisodeScreen) {
+        guard target != screen, let workspace else { return }
+        if workspace.hasUnsavedSubtitleChanges(on: screen) {
+            workspace.pendingLeave = .screen(target)
+            return
+        }
+        showNow(target)
+    }
+
+    func showNow(_ target: EpisodeScreen) {
+        screen = target
+        guard let workspace else { return }
+        Task { await workspace.reload() }
     }
 
     func presentOpenPanel() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = Self.videoTypes
         panel.allowsMultipleSelection = false
-        panel.message = "Escolha um filme, episódio ou arquivo MKV"
+        panel.canChooseDirectories = false
+        panel.message = "Escolha um vídeo (MKV, MP4 ou MOV)"
         panel.prompt = "Abrir"
         if panel.runModal() == .OK, let url = panel.url { open(url) }
     }
 
-    func refreshRecents() { recentProjects = ProjectStore(paths: paths).all() }
+    /// Accepts exactly one video file dropped on the window.
+    func openDropped(_ urls: [URL]) -> Bool {
+        guard urls.count == 1, let url = urls.first, !url.hasDirectoryPath else {
+            alert = AppAlert(title: "Um vídeo por vez", message: "Solte um único arquivo de vídeo (MKV, MP4 ou MOV). Pastas e vários arquivos não são aceitos.")
+            return false
+        }
+        open(url)
+        return true
+    }
 
     // MARK: Diagnostics
 
@@ -136,14 +167,4 @@ struct AppAlert: Identifiable {
     let id = UUID()
     let title: String
     let message: String
-}
-
-nonisolated final class SettingsBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var stored: AppSettings
-    init(_ value: AppSettings) { stored = value }
-    var value: AppSettings {
-        get { lock.withLock { stored } }
-        set { lock.withLock { stored = newValue } }
-    }
 }
