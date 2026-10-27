@@ -73,4 +73,36 @@ struct EditSubtitleWorkflowTests {
         #expect(tracks.contains { $0.name == "Português (Brasil)" && ($0.languageIETF == "pt-BR" || $0.language == "por") })
         #expect(withNew != output)
     }
+
+    @Test func choosingAnotherTrackReallyLoadsIt() async throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("ALSSwitch-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let paths = AppPaths(root: base.appendingPathComponent("Support"), caches: base.appendingPathComponent("Caches"))
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        let raw = base.appendingPathComponent("raw.mkv")
+        try await ProcessRunner.runChecked(try tools.require(.ffmpeg), ["-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=160x90:rate=24:duration=3",
+                                                                       "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", raw.path])
+        func ass(_ text: String) -> String {
+            "[Script Info]\nScriptType: v4.00+\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.50,0:00:02.00,Default,,0,0,0,,\(text)\n"
+        }
+        let en = base.appendingPathComponent("en.ass"), pt = base.appendingPathComponent("pt.ass")
+        try ass("Hello").write(to: en, atomically: true, encoding: .utf8)
+        try ass("Olá").write(to: pt, atomically: true, encoding: .utf8)
+        let episode = base.appendingPathComponent("Show - 09.mkv")
+        try await ProcessRunner.runChecked(try tools.require(.mkvmerge), ["-o", episode.path, raw.path, "--language", "0:en", en.path, "--language", "0:pt-BR", pt.path],
+                                           acceptedExitCodes: [0, 1])
+        let info = try await MediaInspector(tools: tools).inspect(episode)
+        let tracks = info.tracks(.subtitles)
+        let workflow = EpisodeWorkflow(paths: paths, settings: AppSettings(), engine: AppleTranslationEngine(), glossary: Glossary())
+        let store = ProjectStore(paths: paths)
+        var project = store.project(for: episode)
+        project.sourceTrackID = tracks[0].id
+        var (prepared, _, url) = try await workflow.prepareSource(project)
+        #expect(try SubtitleDocument.load(url).plainText(at: 0) == "Hello")
+        // What the Legendar picker does: the choice changes before the file is prepared.
+        prepared.sourceTrackID = tracks[1].id
+        (prepared, _, url) = try await workflow.prepareSource(prepared)
+        #expect(try SubtitleDocument.load(url).plainText(at: 0) == "Olá", "the chosen track is loaded, not the old file")
+        #expect(prepared.sourceFileTrackID == tracks[1].id)
+    }
 }

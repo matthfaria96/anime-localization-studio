@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.1 — 27/10/2026
+
+### Corrigido
+- Escolher outra legenda em "Editando" (por exemplo Português) mostrava o seletor certo mas continuava carregando o texto da faixa anterior (Inglês): o app comparava a faixa escolhida com a própria escolha, não com a faixa de onde o arquivo tinha sido extraído. Agora ele guarda de qual faixa o arquivo veio e extrai de novo quando é outra. Projetos antigos sem rascunho pendente são extraídos de novo uma vez.
+
 ## 0.18.0 — 27/10/2026
 
 ### Corrigido

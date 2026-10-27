@@ -59,7 +59,11 @@ public struct EpisodeWorkflow: Sendable {
         }
         let fingerprint = Self.fingerprint(of: project.mediaURL)
         let mediaReplaced = project.mediaFingerprint != nil && project.mediaFingerprint != fingerprint
-        let changedTrack = project.sourceTrackID != track.id || project.sourceFormat != format || mediaReplaced
+        // Compare with the track the file came from, not with the choice (which already changed).
+        // Projects from before this field: an unsaved draft is assumed to match; otherwise the
+        // file is extracted again once, to be sure.
+        let fileTrack = project.sourceFileTrackID ?? (project.draftPending == true ? project.sourceTrackID : nil)
+        let changedTrack = fileTrack != track.id || project.sourceFormat != format || mediaReplaced
         project.mediaFingerprint = fingerprint
         project.sourceTrackID = track.id
         project.sourceFormat = format
@@ -68,7 +72,11 @@ public struct EpisodeWorkflow: Sendable {
             // A new release at the same path may have new timing: keep a copy of the old work.
             if mediaReplaced { try? store.backupTranslation(of: project, language: settings.targetLanguage) }
             _ = try await TrackExtractor(tools: tools).extractSubtitle(track, from: info, to: url)
+            project.sourceFileTrackID = track.id
             if project.translationStatus == .new { project.translationStatus = .extracted }
+            try store.save(project)
+        } else if project.sourceFileTrackID == nil {
+            project.sourceFileTrackID = track.id
             try store.save(project)
         }
         return (project, info, url)

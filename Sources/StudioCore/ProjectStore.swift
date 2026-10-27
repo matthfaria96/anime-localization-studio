@@ -116,6 +116,9 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     /// Language of a subtitle that did not come from the video (blank, imported, transcribed),
     /// written as its track language.
     public var newTrackLanguage: String?
+    /// The track the working subtitle file was really extracted from. `sourceTrackID` is what
+    /// the person chose; when they differ, the file is extracted again.
+    public var sourceFileTrackID: Int?
     /// Track shown beside the subtitle being edited (read only).
     public var referenceTrackID: Int?
     /// The subtitle was changed in the app and not yet written into the video.
