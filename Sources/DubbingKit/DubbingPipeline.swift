@@ -24,11 +24,15 @@ public struct DubbingOptions: Sendable, Hashable, Codable {
     /// Voice used for speakers without a cast member (and for unknown speakers).
     public var defaultVoice: String?
     public var mode: DubbingMode
+    /// A voice for single lines (by segment id), used before the character's voice: the
+    /// original audio of that line, so the clone keeps its emotion.
+    public var lineVoices: [Int: String] = [:]
 
-    public init(maxSpeedup: Double = 1.3, defaultVoice: String? = nil, mode: DubbingMode = .voiceOver) {
+    public init(maxSpeedup: Double = 1.3, defaultVoice: String? = nil, mode: DubbingMode = .voiceOver, lineVoices: [Int: String] = [:]) {
         self.maxSpeedup = maxSpeedup
         self.defaultVoice = defaultVoice
         self.mode = mode
+        self.lineVoices = lineVoices
     }
 }
 
@@ -83,7 +87,7 @@ public struct DubbingPipeline: Sendable {
             try Task.checkCancellation()
             progress?(Double(n) / Double(max(1, segments.count)) * 0.8, "Gerando voz \(n + 1) de \(segments.count)…")
             let member = cast.member(for: segment.speaker)
-            guard let voice = member?.voiceID ?? options.defaultVoice else {
+            guard let voice = options.lineVoices[segment.id] ?? member?.voiceID ?? options.defaultVoice else {
                 report.failed[segment.id] = "\(segment.speaker) não tem voz no elenco"
                 continue
             }

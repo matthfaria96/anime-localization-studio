@@ -187,6 +187,18 @@ public struct ASSDocument: Sendable, Hashable {
         return index + 1
     }
 
+    var styleLineIndicesSnapshot: [Int] { styleLineIndices }
+
+    mutating func insertLine(_ line: Line, at position: Int) {
+        lines.insert(line, at: position)
+        reindex()
+    }
+
+    mutating func removeLine(at position: Int) {
+        lines.remove(at: position)
+        reindex()
+    }
+
     public mutating func removeEvent(at index: Int) {
         lines.remove(at: eventLineIndices[index])
         reindex()

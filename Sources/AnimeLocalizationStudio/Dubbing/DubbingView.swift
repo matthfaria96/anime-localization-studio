@@ -120,14 +120,20 @@ struct DubbingView: View {
                 GridRow {
                     rowTitle("Vozes", "person.wave.2")
                     HStack {
-                        Text("\(app.settings.dubbingEngine.label) · \(app.settings.dubbingMode.label)")
+                        Text(voicesSummary)
+                            .hint("Vozes", app.settings.dubbingEngine == .original
+                                  ? "Cada personagem fala com a própria voz, recriada do áudio original deste vídeo. Quem fala cada linha vem do campo Personagem da legenda (ou é identificado pelo áudio)."
+                                  : "Vozes escolhidas pelo tom de cada personagem.")
                         Button(voicesExpanded ? "Fechar ajustes" : "Ajustar") { withAnimation { voicesExpanded.toggle() } }.buttonStyle(.link)
                     }
                 }
             }
             Divider().padding(.vertical, Theme.Spacing.xs)
             HStack {
-                if usesClones && studioConnected == false {
+                if app.settings.dubbingEngine == .original && !ClonedVoiceSynthesizer.supports(app.settings.targetLanguage) {
+                    Label("A voz original ainda não fala \(language). Use as vozes do macOS ou o VoiceStudio.", systemImage: "exclamationmark.triangle")
+                        .font(.callout).foregroundStyle(Theme.warning)
+                } else if usesClones && studioConnected == false {
                     Label("O VoiceStudio não está aberto.", systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(Theme.warning)
                 }
                 Spacer()
@@ -135,11 +141,23 @@ struct DubbingView: View {
                     .buttonStyle(.glassProminent)
                     .tint(.accentColor)
                     .controlSize(.large)
-                    .disabled(!isTranslated || segments.isEmpty || workspace.isBusy)
+                    .disabled(!isTranslated || segments.isEmpty || workspace.isBusy || unsupportedLanguage)
                     .hintVerbatim("Dublar…", isTranslated
                         ? "Mostra o resumo, pergunta onde gravar e então dubla o vídeo inteiro, mostrando cada etapa."
                         : "Primeiro crie a legenda traduzida em Legendar.")
             }
+        }
+    }
+
+    private var unsupportedLanguage: Bool {
+        app.settings.dubbingEngine == .original && !ClonedVoiceSynthesizer.supports(app.settings.targetLanguage)
+    }
+
+    private var voicesSummary: String {
+        switch app.settings.dubbingEngine {
+        case .original:
+            "A própria voz de cada personagem\(app.settings.dubbingPerLineVoice ? ", com a emoção de cada fala" : "") · \(app.settings.dubbingMode.label)"
+        default: "\(app.settings.dubbingEngine.label) · \(app.settings.dubbingMode.label)"
         }
     }
 

@@ -108,7 +108,7 @@ public enum SubtitleDocument: Sendable, Hashable {
             }
         case .srt(let doc):
             return doc.cues.enumerated().map { i, c in
-                SubtitleCue(id: i, start: c.start, end: c.end, style: "", actor: "", effect: "", layer: 0,
+                SubtitleCue(id: i, start: c.start, end: c.end, style: "", actor: c.speaker, effect: "", layer: 0,
                             rawText: c.text, isComment: false, features: ASSText.features(of: c.text), usesHTMLMarkup: true)
             }
         }
@@ -193,9 +193,31 @@ public enum SubtitleDocument: Sendable, Hashable {
     }
 
     public mutating func setActor(_ actor: String, at index: Int) {
-        guard case .ass(var doc) = self else { return }
-        doc.updateEvent(at: index) { $0.actor = actor }
-        self = .ass(doc)
+        switch self {
+        case .ass(var doc):
+            doc.updateEvent(at: index) { $0.actor = actor }
+            self = .ass(doc)
+        case .srt(var doc):
+            guard doc.cues.indices.contains(index) else { return }
+            doc.cues[index].speaker = actor
+            self = .srt(doc)
+        }
+    }
+
+    /// Whether the character of each line is stored in the file (ASS `Name`) or only in the app (SRT).
+    public var storesActorsInFile: Bool { if case .ass = self { true } else { false } }
+
+    /// Characters of a SubRip document by line, to keep outside the file.
+    public var sideSpeakers: [Int: String] {
+        guard case .srt(let doc) = self else { return [:] }
+        return Dictionary(uniqueKeysWithValues: doc.cues.enumerated().compactMap { $1.speaker.isEmpty ? nil : ($0, $1.speaker) })
+    }
+
+    /// The same document with the characters kept outside the file put back (SubRip only).
+    public func withSideSpeakers(_ speakers: [Int: String]) -> SubtitleDocument {
+        guard case .srt(var doc) = self, !speakers.isEmpty else { return self }
+        for (index, name) in speakers where doc.cues.indices.contains(index) { doc.cues[index].speaker = name }
+        return .srt(doc)
     }
 
     public mutating func setStyle(_ style: String, at index: Int) {

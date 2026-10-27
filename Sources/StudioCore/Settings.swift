@@ -57,6 +57,9 @@ public struct AppSettings: Sendable, Hashable, Codable {
     public var dubbingDefaultVoice: String? = "Luciana"
     public var dubbingMaxSpeedup: Double = 1.3
     public var dubbingMode: DubbingMode = .replaceDialogue
+    /// With the original voice, each line is cloned from its own original audio (voice and
+    /// emotion of that line) instead of one sample per character.
+    public var dubbingPerLineVoice = true
     /// Reading speed above which a line is flagged (characters per second).
     public var maxReadingSpeed: Double = 20
     /// Render ASS previews with libass (animations, karaoke, drawings, embedded fonts).
@@ -78,7 +81,7 @@ public struct AppSettings: Sendable, Hashable, Codable {
 
     public func makeSynthesizer(paths: AppPaths = AppPaths()) -> any SpeechSynthesizer {
         switch dubbingEngine {
-        case .original: ClonedVoiceSynthesizer(modelsDirectory: paths.voiceModels)
+        case .original: ClonedVoiceSynthesizer(modelsDirectory: paths.voiceModels, language: targetLanguage)
         case .system: SystemVoiceSynthesizer()
         case .voiceStudio: VoiceStudioSynthesizer(client: VoiceStudioClient(baseURL: voiceStudioURL))
         }
@@ -111,6 +114,7 @@ public struct AppSettings: Sendable, Hashable, Codable {
         dubbingDefaultVoice = (try? c.decodeIfPresent(String.self, forKey: .dubbingDefaultVoice)) ?? defaults.dubbingDefaultVoice
         dubbingMaxSpeedup = (try? c.decode(Double.self, forKey: .dubbingMaxSpeedup)) ?? defaults.dubbingMaxSpeedup
         dubbingMode = (try? c.decode(DubbingMode.self, forKey: .dubbingMode)) ?? defaults.dubbingMode
+        dubbingPerLineVoice = (try? c.decode(Bool.self, forKey: .dubbingPerLineVoice)) ?? defaults.dubbingPerLineVoice
         maxReadingSpeed = (try? c.decode(Double.self, forKey: .maxReadingSpeed)) ?? defaults.maxReadingSpeed
         faithfulPreview = (try? c.decode(Bool.self, forKey: .faithfulPreview)) ?? defaults.faithfulPreview
     }

@@ -33,10 +33,12 @@ struct DubVoicesSection: View {
             SectionLabel("Vozes", systemImage: "waveform.badge.mic")
             HStack(alignment: .top, spacing: Theme.Spacing.m) {
                 OptionCard(title: "Voz original (no Mac)", systemImage: "person.wave.2.fill",
-                           detail: workspace.voiceModelsInstalled ? "Recomendado. Cada personagem fala português com a própria voz do episódio. Modelos instalados."
-                                                                  : "Recomendado. Cada personagem fala português com a própria voz. Na primeira vez baixa \(ClonedVoiceSynthesizer.downloadSize).",
+                           detail: !ClonedVoiceSynthesizer.supports(app.settings.targetLanguage)
+                               ? "Ainda não fala \(Languages.name(for: app.settings.targetLanguage)). Fala português, espanhol, inglês, francês, alemão e italiano."
+                               : workspace.voiceModelsInstalled ? "Recomendado. Cada personagem fala \(Languages.name(for: app.settings.targetLanguage)) com a própria voz do vídeo."
+                                                                : "Recomendado. Cada personagem fala com a própria voz do vídeo. Na primeira vez baixa \(ClonedVoiceSynthesizer.downloadSize) para o idioma.",
                            selected: app.settings.dubbingEngine == .original) { app.settings.dubbingEngine = .original }
-                    .hint("Voz original (no Mac)", "O app tira um trecho da voz de cada personagem no episódio e a recria falando português, tudo no próprio Mac (Pocket TTS da Kyutai, licença CC-BY-4.0). Não precisa instalar outro programa. Clone apenas vozes que você tem permissão de usar.")
+                    .hint("Voz original (no Mac)", "O app separa a voz de cada personagem do áudio original e a recria falando o idioma da legenda, tudo no próprio Mac (Pocket TTS da Kyutai, licença CC-BY-4.0). Não é tradução de fala para fala e a boca não acompanha. Clone apenas vozes que você tem permissão de usar.")
                 OptionCard(title: "Vozes do macOS", systemImage: "desktopcomputer",
                            detail: "Rascunho rápido: vozes prontas do sistema, robóticas.", selected: app.settings.dubbingEngine == .system) {
                     app.settings.dubbingEngine = .system
@@ -52,6 +54,20 @@ struct DubVoicesSection: View {
                         .hint("Procurar o VoiceStudio", "Verifica de novo se o VoiceStudio está aberto neste Mac.")
                 }
                 .hint("VoiceStudio", "Usa o VoiceStudio (app gratuito instalado à parte) para clonar as vozes. Útil se você já tem vozes prontas nele.")
+            }
+            if app.settings.dubbingEngine == .original {
+                @Bindable var app = app
+                Toggle(isOn: $app.settings.dubbingPerLineVoice) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Voz e emoção de cada fala")
+                        Text(app.settings.dubbingPerLineVoice
+                             ? "Cada fala é recriada a partir do próprio trecho original: mesma voz e mesma emoção (grito, sussurro…). Falas com menos de 1,5 s usam a amostra do personagem."
+                             : "Uma amostra de ~12 s por personagem: voz estável, mas sem a emoção de cada fala.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .toggleStyle(.switch)
+                .hint("Voz e emoção de cada fala", "Ligado (recomendado): o trecho japonês de cada fala, sem a música, serve de referência para a mesma fala dublada. Desligado: uma amostra fixa por personagem.")
             }
             SectionLabel("Modo", systemImage: "slider.horizontal.3")
             HStack(spacing: Theme.Spacing.m) {

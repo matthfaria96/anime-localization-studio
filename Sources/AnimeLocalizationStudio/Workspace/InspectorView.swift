@@ -26,9 +26,7 @@ struct InspectorView: View {
                     InlineMessage(kind: notice.kind, text: notice.text)
                     if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
                 }
-                if isEditing {
-                    referenceSection
-                } else {
+                if !isEditing {
                     translationSection
                     trackSection
                 }
@@ -46,27 +44,6 @@ struct InspectorView: View {
             .animation(.smooth(duration: 0.25), value: workspace.operation)
         }
         .scrollContentBackground(.hidden)
-    }
-
-    // MARK: Correcting
-
-    private var referenceSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel("Mostrar ao lado", systemImage: "rectangle.split.2x1")
-            Picker("Mostrar ao lado", selection: Binding(get: { workspace.project.referenceTrackID }, set: { workspace.setReference($0) })) {
-                Text("Nenhuma").tag(Int?.none)
-                ForEach(workspace.linkableTracks) { track in
-                    Text("\(track.name ?? track.codec) · \(Languages.display(track.displayLanguage))").tag(Optional(track.id))
-                }
-            }
-            .labelsHidden()
-            .disabled(workspace.isBusy)
-            .hint("Mostrar ao lado", "Outra legenda do vídeo exibida ao lado de cada fala, só para consulta. As falas são casadas pelo tempo.")
-            if workspace.project.referenceTrackID != nil {
-                Text("\(Plural.count(editor.reference.count, "fala tem", "falas têm")) correspondência na referência.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-        }
     }
 
     // MARK: New subtitle

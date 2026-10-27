@@ -7,6 +7,7 @@ struct EditorPane: View {
     @Bindable var workspace: WorkspaceModel
     @State private var showStyles = false
     @State private var showShift = false
+    @State private var showCharacter = false
     @Environment(\.undoManager) private var undoManager
 
     var editor: EditorModel { workspace.editor }
@@ -14,7 +15,10 @@ struct EditorPane: View {
     var body: some View {
         if editor.hasDocument {
             VStack(spacing: 0) {
-                EditorToolbar(editor: editor, showStyles: $showStyles, showShift: $showShift)
+                EditorToolbar(editor: editor, showStyles: $showStyles, showShift: $showShift, showCharacter: $showCharacter,
+                              canIdentify: !workspace.isBusy && !workspace.audioTracks.isEmpty) {
+                    workspace.identifySpeakers(undoManager: undoManager)
+                }
                 Divider()
                 // A plain stack honors the width it is given; split views size by content and overflow.
                 GeometryReader { proxy in
@@ -28,7 +32,10 @@ struct EditorPane: View {
                 }
             }
             .modifier(SpeakerModelConsent(workspace: workspace))
-            .sheet(isPresented: $showStyles) { StyleEditorSheet(editor: editor) }
+            .sheet(isPresented: $showStyles) { StylesAndFontsSheet(workspace: workspace) }
+            // Test hook for captures: ALS_STYLES=1 opens Estilos e fontes.
+            .onAppear { if ProcessInfo.processInfo.environment["ALS_STYLES"] == "1" { showStyles = true } }
+            .sheet(isPresented: $showCharacter) { CharacterSheet(editor: editor) }
             .sheet(isPresented: $showShift) { ShiftTimingSheet(editor: editor) }
             // Observing the playback time here would rebuild the whole table 30 times a second.
             .background { PlaybackFollower(workspace: workspace) }
@@ -81,6 +88,9 @@ private struct EditorToolbar: View {
     @Bindable var editor: EditorModel
     @Binding var showStyles: Bool
     @Binding var showShift: Bool
+    @Binding var showCharacter: Bool
+    let canIdentify: Bool
+    let identify: () -> Void
     @Environment(\.undoManager) private var undoManager
     @State private var lastReplaceCount: Int?
     @FocusState private var searchFocused: Bool
@@ -204,11 +214,19 @@ private struct EditorToolbar: View {
         Button("Deslocar tempos…", systemImage: "clock.arrow.2.circlepath") { showShift = true }
             .labelStyle(.iconOnly)
             .hint("Deslocar tempos", "Adianta ou atrasa todas as falas (ou só as selecionadas) por alguns milissegundos, para sincronizar a legenda com o vídeo.")
-        if !editor.styleNames.isEmpty {
-            Button("Estilos…", systemImage: "paintpalette") { showStyles = true }
-                .labelStyle(.iconOnly)
-                .hint("Estilos", "Edita os estilos da legenda ASS: fonte, tamanho, cores, contorno, sombra, alinhamento e margem. Vale para todas as falas daquele estilo.")
+        Menu {
+            Button("Definir personagem das falas selecionadas…") { showCharacter = true }
+                .disabled(editor.selection.isEmpty)
+            Button("Identificar quem fala pelo áudio") { identify() }
+                .disabled(!canIdentify)
+        } label: {
+            Label("Personagens", systemImage: "person.2")
         }
+        .menuStyle(.button)
+        .fixedSize()
+        .hint("Personagens", "Diga quem fala em cada linha (é o que a dublagem usa para escolher a voz). No ASS o nome vai no campo Name, que não aparece na tela; no SRT fica guardado no app, fora do arquivo.")
+        Button("Estilos e fontes…", systemImage: "paintpalette") { showStyles = true }
+            .hint("Estilos e fontes", "Criar, duplicar, renomear, apagar e editar estilos; ver de onde vem cada fonte, adicionar fontes ao vídeo e extrair as que ele tem.")
     }
 }
 

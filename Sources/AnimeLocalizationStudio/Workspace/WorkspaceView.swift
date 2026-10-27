@@ -1,3 +1,4 @@
+import MediaKit
 import SwiftUI
 
 struct WorkspaceView: View {
@@ -27,11 +28,17 @@ struct WorkspaceView: View {
         .confirmationDialog("Você alterou a legenda", isPresented: Binding(get: { workspace.pendingLeave != nil },
                                                                           set: { if !$0 { workspace.pendingLeave = nil } })) {
             Button("Gravar no vídeo…") { workspace.resolveLeave(.writeToVideo) }
-            Button("Manter como rascunho") { workspace.resolveLeave(.keepDraft) }
-            Button("Descartar alterações", role: .destructive) { workspace.resolveLeave(.discard) }
+            if workspace.pendingLeave?.keepsDraft != false {
+                Button("Manter como rascunho") { workspace.resolveLeave(.keepDraft) }
+                Button("Descartar alterações", role: .destructive) { workspace.resolveLeave(.discard) }
+            } else {
+                Button("Descartar e trocar", role: .destructive) { workspace.resolveLeave(.keepDraft) }
+            }
             Button("Continuar editando", role: .cancel) { workspace.pendingLeave = nil }
         } message: {
-            Text("Gravar no vídeo: grava agora (você escolhe novo arquivo ou este arquivo).\nRascunho: as alterações ficam guardadas no app para continuar depois; o vídeo não muda.\nDescartar: volta a legenda para como estava quando a tela abriu.")
+            Text(workspace.pendingLeave?.keepsDraft != false
+                 ? "Gravar no vídeo: grava agora (você escolhe novo arquivo ou este arquivo).\nRascunho: as alterações ficam guardadas no app para continuar depois; o vídeo não muda.\nDescartar: volta a legenda para como estava quando a tela abriu."
+                 : "Trocar a legenda descarta o rascunho desta (uma cópia da tradução fica no projeto). Grave no vídeo antes se quiser manter as alterações.")
         }
         .confirmationDialog("Onde gravar a legenda nova?", isPresented: $workspace.askEmbedDestination) {
             Button("Criar um novo arquivo") { workspace.embedTranslation(replaceOriginal: false) }
@@ -85,12 +92,34 @@ struct WorkspaceView: View {
     private var subtitles: some View {
         VStack(spacing: 0) {
             SubtitleSessionBar(workspace: workspace)
+            if workspace.isEditingOriginal && (workspace.operation != nil || workspace.notice != nil) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    if let operation = workspace.operation {
+                        OperationProgress(message: operation.message, fraction: operation.fraction,
+                                          onCancel: operation.kind == .loading ? nil : { workspace.cancelOperation() })
+                    }
+                    if let notice = workspace.notice {
+                        HStack {
+                            InlineMessage(kind: notice.kind, text: notice.text)
+                            if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
+                            Spacer()
+                            Button("Fechar aviso", systemImage: "xmark") { workspace.notice = nil }
+                                .labelStyle(.iconOnly).buttonStyle(.borderless)
+                        }
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.l)
+                .padding(.bottom, Theme.Spacing.s)
+            }
             Divider()
             HStack(spacing: 0) {
                 editorArea.frame(maxWidth: .infinity)
-                Divider()
-                InspectorView(workspace: workspace, requestTranslate: requestTranslate)
-                    .frame(width: Self.inspectorWidth)
+                // Correcting needs nothing beside the editor; a new subtitle has its tools there.
+                if !workspace.isEditingOriginal {
+                    Divider()
+                    InspectorView(workspace: workspace, requestTranslate: requestTranslate)
+                        .frame(width: Self.inspectorWidth)
+                }
             }
         }
         .paneBackground()
@@ -131,10 +160,8 @@ private struct SubtitleSessionBar: View {
             Button { workspace.requestBackToChooser() } label: { Label("Voltar", systemImage: "chevron.left") }
                 .disabled(workspace.isBusy)
                 .hint("Voltar", "Volta à escolha do que editar e recarrega tudo. Se você alterou algo, o app pergunta se grava, guarda como rascunho ou descarta.")
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title).font(.headline).lineLimit(1)
-                Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            }
+            Divider().frame(height: 20)
+            if workspace.isEditingOriginal { editChips } else { newChips }
             Spacer(minLength: Theme.Spacing.s)
             if workspace.hasDraft {
                 Menu {
@@ -148,6 +175,18 @@ private struct SubtitleSessionBar: View {
                 .imageScale(.small)
                 .fixedSize()
                 .hint("Rascunho", "Há alterações guardadas no app que ainda não estão no vídeo. Use “Gravar no vídeo…” para gravá-las, ou descarte o rascunho neste menu.")
+            }
+            if workspace.isEditingOriginal {
+                Menu {
+                    Button("Salvar como arquivo de legenda…") { workspace.exportSource() }
+                    Button("Editar séries e glossários…") { workspace.showSeries = true }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .menuStyle(.button)
+                .buttonStyle(.borderless)
+                .fixedSize()
+                .hint("Mais", "Salvar a legenda como arquivo separado (sem mexer no vídeo) e editar séries e glossários.")
             }
             Button { workspace.requestWriteToVideo() } label: { Label("Gravar no vídeo…", systemImage: "square.and.arrow.down.on.square") }
                 .buttonStyle(.glassProminent)
@@ -172,16 +211,54 @@ private struct SubtitleSessionBar: View {
         workspace.editor.hasDocument && (workspace.isEditingOriginal || workspace.editor.translation != nil)
     }
 
-    private var title: String {
-        workspace.isEditingOriginal ? "Corrigindo uma legenda" : "Legenda nova em \(Languages.name(for: workspace.app.settings.targetLanguage))"
+    private var textTracks: [MediaTrack] { workspace.subtitleTracks.filter { $0.textSubtitleExtension != nil } }
+    private var mainID: Int { workspace.project.externalSubtitlePath != nil ? -2 : (workspace.project.sourceTrackID ?? -1) }
+
+    /// Correcting: the subtitle edited, ⇄, and the one beside it.
+    private var editChips: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Text("Editando").foregroundStyle(.secondary)
+            trackPicker(selection: Binding(get: { mainID }, set: { workspace.requestTracks(main: $0, reference: workspace.project.referenceTrackID) }),
+                        none: false)
+                .hint("Legenda que você edita", "Trocar de legenda descarta o rascunho da atual; se houver, o app pergunta antes.")
+            Button { workspace.swapEditedAndReference() } label: { Image(systemName: "arrow.left.arrow.right") }
+                .buttonStyle(.borderless)
+                .disabled(workspace.project.referenceTrackID == nil || workspace.isBusy)
+                .hint("Inverter (⇄)", "A legenda ao lado passa a ser a editada, e a editada vai para o lado.")
+            Text("Ao lado").foregroundStyle(.secondary)
+            trackPicker(selection: Binding(get: { workspace.project.referenceTrackID ?? -1 },
+                                           set: { workspace.requestTracks(main: mainID, reference: $0 < 0 ? nil : $0) }),
+                        none: true)
+                .hint("Legenda ao lado", "Outra legenda do vídeo exibida ao lado de cada fala, só para consulta. As falas são casadas pelo tempo.")
+        }
+        .disabled(workspace.isBusy)
     }
 
-    private var subtitle: String {
-        let base = workspace.project.externalSubtitlePath != nil ? "arquivo do disco"
-            : workspace.subtitleTracks.first { $0.id == workspace.project.sourceTrackID }.map { "\($0.name ?? $0.codec) · \(Languages.display($0.displayLanguage))" } ?? "—"
-        if workspace.isEditingOriginal {
-            return workspace.editor.referenceTitle.map { "\(base) · ao lado: \($0)" } ?? base
+    /// New subtitle: its language and the base it comes from.
+    private var newChips: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Text("Legenda nova em").foregroundStyle(.secondary)
+            Picker("Idioma", selection: Binding(get: { workspace.app.settings.targetLanguage }, set: { workspace.changeOutputLanguage($0) })) {
+                ForEach(Languages.all, id: \.code) { Text($0.name).tag($0.code) }
+            }
+            .labelsHidden().fixedSize()
+            .hint("Idioma da legenda nova", "Cada idioma tem o seu rascunho; trocar não apaga nada.")
+            Text("a partir de").foregroundStyle(.secondary)
+            trackPicker(selection: Binding(get: { mainID }, set: { workspace.requestTracks(main: $0, reference: nil) }), none: false)
+                .hint("Legenda base", "A legenda que é traduzida. Trocar de base recomeça a tradução (uma cópia da atual fica no projeto); o app pergunta antes.")
         }
-        return "a partir de \(base)"
+        .disabled(workspace.isBusy)
+    }
+
+    private func trackPicker(selection: Binding<Int>, none: Bool) -> some View {
+        Picker("Legenda", selection: selection) {
+            if none { Text("Nenhuma").tag(-1) }
+            ForEach(textTracks) { track in
+                Text("\(track.name ?? track.codec) · \(Languages.display(track.displayLanguage))").tag(track.id)
+            }
+            if !none && workspace.project.externalSubtitlePath != nil { Text("Arquivo do disco").tag(-2) }
+        }
+        .labelsHidden()
+        .frame(maxWidth: 210)
     }
 }

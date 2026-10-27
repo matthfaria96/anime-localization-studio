@@ -257,6 +257,53 @@ final class EditorModel {
         return changed
     }
 
+    // MARK: Styles (ASS only; both documents keep the same styles)
+
+    /// A new style copied from `styleIndex` (or the first one). Returns its index.
+    @discardableResult
+    func addStyle(copying styleIndex: Int?, named name: String, undoManager: UndoManager?) -> Int? {
+        guard case .ass(let doc) = source, doc.styleCount > 0 else { return nil }
+        let from = styleIndex.flatMap { doc.styles.indices.contains($0) ? $0 : nil } ?? 0
+        var added: Int?
+        mutate("Novo estilo", undoManager: undoManager) { source, translation in
+            if case .ass(var d) = source { added = d.duplicateStyle(at: from, named: name); source = .ass(d) }
+            if case .ass(var d) = translation { d.duplicateStyle(at: from, named: name); translation = .ass(d) }
+        }
+        return added
+    }
+
+    func renameStyle(at styleIndex: Int, to name: String, undoManager: UndoManager?) {
+        mutate("Renomear estilo", undoManager: undoManager) { source, translation in
+            if case .ass(var d) = source { d.renameStyle(at: styleIndex, to: name); source = .ass(d) }
+            if case .ass(var d) = translation { d.renameStyle(at: styleIndex, to: name); translation = .ass(d) }
+        }
+    }
+
+    func removeStyle(at styleIndex: Int, movingLinesTo replacement: String, undoManager: UndoManager?) {
+        mutate("Apagar estilo", undoManager: undoManager) { source, translation in
+            if case .ass(var d) = source { d.removeStyle(at: styleIndex, movingEventsTo: replacement); source = .ass(d) }
+            if case .ass(var d) = translation { d.removeStyle(at: styleIndex, movingEventsTo: replacement); translation = .ass(d) }
+        }
+    }
+
+    func linesUsingStyle(_ name: String) -> Int {
+        guard case .ass(let doc) = source else { return 0 }
+        return doc.eventCount(usingStyle: name)
+    }
+
+    /// Font families the subtitle asks for (styles and inline `\fn`), from both documents.
+    var usedFonts: [String] {
+        var fonts: Set<String> = []
+        if case .ass(let doc) = source { fonts.formUnion(doc.usedFonts) }
+        if case .ass(let doc) = translation { fonts.formUnion(doc.usedFonts) }
+        return fonts.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    /// Characters already used, for suggestions.
+    var actorNames: [String] {
+        Array(Set(rows.map(\.actor).filter { !$0.isEmpty })).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
     func updateStyle(_ info: ASSStyleInfo, at styleIndex: Int, undoManager: UndoManager?) {
         mutate("Editar estilo", undoManager: undoManager) { source, translation in
             if case .ass(var doc) = source { doc.updateStyle(at: styleIndex) { info.apply(to: &$0) }; source = .ass(doc) }

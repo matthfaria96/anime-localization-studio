@@ -88,6 +88,10 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ (0.12.0) Rascunho + "Gravar no vídeo…" como único salvamento; sair pergunta gravar, rascunho ou descartar
 - ✅ (0.12.0) Abas com sublinhado rosa; Dublar com resumo, histórico e "Recomeçar do zero"
 - ⬜ Referência ao lado a partir de um arquivo do disco (hoje só faixas do vídeo)
+- ✅ (0.13.0) Estilos: criar, duplicar, renomear, apagar; Fontes: estado, adicionar (anexadas ao gravar), extrair
+- ✅ (0.13.0) ⇄ inverter legenda editada e de referência; personagens em lote; SRT guarda personagens no projeto
+- ✅ (0.13.0) Dublagem com referência por fala (voz + emoção) e voz original no idioma de saída
+- ⬜ Tradução de fala para fala com sincronia labial (não há modelo local com licença livre para isso)
 - ✅ Visão geral com dados do arquivo, faixas, faixas padrão e extração de faixas
 - ✅ Legendar pergunta "editar existente" ou "criar tradução"; edição salva no lugar da faixa original
 - ✅ Dublar mostra áudio de base, origem do texto e idioma do resultado; "gerar tudo do zero"

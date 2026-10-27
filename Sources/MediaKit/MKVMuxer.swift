@@ -34,6 +34,19 @@ public struct MuxPlan: Sendable, Hashable, Codable {
     public var replaceSource: Bool = false
     /// Tracks of the source left out of the result (an edited subtitle replaces its old version).
     public var excludedTrackIDs: Set<Int> = []
+    /// Files attached to the result (fonts the subtitle needs). One already attached under the
+    /// same name is not attached twice.
+    public var attachments: [URL] = []
+
+    /// Attachments that are really added (not already in the source).
+    public var newAttachments: [URL] {
+        let existing = Set(source.attachments.map { $0.fileName.lowercased() })
+        var seen = Set<String>()
+        return attachments.filter { url in
+            let name = url.lastPathComponent.lowercased()
+            return !existing.contains(name) && seen.insert(name).inserted
+        }
+    }
 
     /// Source tracks that stay in the result.
     public var keptTracks: [MediaTrack] { source.tracks.filter { !excludedTrackIDs.contains($0.id) } }
@@ -151,6 +164,7 @@ public struct MKVMuxer: Sendable {
             args += ["--no-chapters", "--no-global-tags", "--no-attachments"]
             args.append(track.file.path)
         }
+        for file in plan.newAttachments { args += ["--attach-file", file.path] }
         args += ["--track-order", trackOrder(for: plan)]
         return args
     }

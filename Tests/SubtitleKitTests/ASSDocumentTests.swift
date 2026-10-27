@@ -94,3 +94,51 @@ struct SubtitleTimeTests {
         #expect(SubtitleTime.parseASS("0:61:x") == nil)
     }
 }
+
+@Suite("Style editing and fonts")
+struct StyleEditingTests {
+    private let script = """
+    [Script Info]
+    ScriptType: v4.00+
+
+    [V4+ Styles]
+    Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+    Style: Default,Open Sans Semibold,60,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,3,1,2,40,40,40,1
+    Style: Sign,@Arial,50,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,3,1,8,40,40,40,1
+
+    [Events]
+    Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+    Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello
+    Dialogue: 0,0:00:03.00,0:00:04.00,Sign,,0,0,0,,{\\fnTrebuchet MS\\b1}Town
+    Dialogue: 0,0:00:05.00,0:00:06.00,Default,,0,0,0,,Bye
+
+    """
+
+    @Test func duplicateRenameAndRemoveKeepEventsConsistent() throws {
+        var doc = ASSDocument.parse(text: script)
+        let added = doc.duplicateStyle(at: 0, named: "Default")
+        let index = try #require(added)
+        #expect(doc.styleNames == ["Default", "Default 2", "Sign"])
+        #expect(doc.styles[index]["Fontname"] == "Open Sans Semibold")
+
+        doc.renameStyle(at: 0, to: "Fala")
+        #expect(doc.styleNames.first == "Fala")
+        #expect(doc.eventCount(usingStyle: "Fala") == 2 && doc.eventCount(usingStyle: "Default") == 0)
+
+        doc.removeStyle(at: 2, movingEventsTo: "Fala")
+        #expect(doc.styleNames == ["Fala", "Default 2"])
+        #expect(doc.eventCount(usingStyle: "Fala") == 3)
+        #expect(doc.events[1].text == "{\\fnTrebuchet MS\\b1}Town", "only the style field changes")
+    }
+
+    @Test func untouchedLinesKeepTheirText() {
+        var doc = ASSDocument.parse(text: script)
+        doc.duplicateStyle(at: 1, named: "Sign")
+        #expect(doc.serialized().contains("Style: Default,Open Sans Semibold,60,&H00FFFFFF"))
+        #expect(doc.serialized().contains("Dialogue: 0,0:00:05.00,0:00:06.00,Default,,0,0,0,,Bye"))
+    }
+
+    @Test func listsStyleAndInlineFonts() {
+        #expect(ASSDocument.parse(text: script).usedFonts == ["Arial", "Open Sans Semibold", "Trebuchet MS"])
+    }
+}

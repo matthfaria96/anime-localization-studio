@@ -188,3 +188,19 @@ struct ReferenceTests {
         #expect(lines[2] == nil)
     }
 }
+
+@Suite("Characters in SubRip")
+struct SRTSpeakerTests {
+    @Test func charactersStayOutOfTheFile() throws {
+        let data = Data("1\n00:00:01,000 --> 00:00:02,000\nOi\n\n2\n00:00:03,000 --> 00:00:04,000\nTchau\n\n".utf8)
+        var doc = try SubtitleDocument.parse(data, format: .srt)
+        doc.setActor("Kirito", at: 1)
+        #expect(doc.cues[1].actor == "Kirito")
+        #expect(doc.encoded() == data, "the file is byte for byte the same")
+        #expect(doc.sideSpeakers == [1: "Kirito"])
+        let reloaded = try SubtitleDocument.parse(data, format: .srt).withSideSpeakers(doc.sideSpeakers)
+        #expect(reloaded.cues[1].actor == "Kirito")
+        doc.insertLine(after: 0)
+        #expect(doc.cues[2].actor == "Kirito", "the name moves with its line")
+    }
+}

@@ -57,6 +57,31 @@ public struct OriginalVoices: Sendable {
         return samples
     }
 
+    /// The original audio of each line, voices only, to clone the voice and the emotion of that
+    /// very line. Lines shorter than `minimumMilliseconds` are left out (too little to clone from).
+    public func lineClips(for lines: [Line], media: MediaInfo, audioTrack: MediaTrack, minimumMilliseconds: Int = 1_500,
+                          progress: (@Sendable (Double, String) -> Void)? = nil) async throws -> [Int: URL] {
+        let ffmpeg = try tools.require(.ffmpeg)
+        let folder = workDirectory.appendingPathComponent("lines-\(audioTrack.id)", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let dialogue = try await isolatedDialogue(media: media, audioTrack: audioTrack, progress: progress)
+        let usable = lines.filter { $0.end - $0.start >= minimumMilliseconds }
+        var clips: [Int: URL] = [:]
+        for (n, line) in usable.enumerated() {
+            try Task.checkCancellation()
+            progress?(0.6 + 0.4 * Double(n) / Double(max(1, usable.count)), "Separando a voz de cada fala (\(n + 1) de \(usable.count))…")
+            let clip = folder.appendingPathComponent("\(line.start)-\(line.end).wav")
+            if !FileManager.default.fileExists(atPath: clip.path) {
+                try await ProcessRunner.runChecked(ffmpeg, ["-nostdin", "-v", "error", "-y", "-i", dialogue.path,
+                                                            "-ss", String(format: "%.3f", Double(line.start) / 1_000),
+                                                            "-to", String(format: "%.3f", Double(line.end) / 1_000),
+                                                            "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", clip.path])
+            }
+            clips[line.id] = clip
+        }
+        return clips
+    }
+
     /// The original audio with only the voices (cached per track).
     func isolatedDialogue(media: MediaInfo, audioTrack: MediaTrack, progress: (@Sendable (Double, String) -> Void)?) async throws -> URL {
         let dialogue = workDirectory.appendingPathComponent("dialogue-\(audioTrack.id).wav")

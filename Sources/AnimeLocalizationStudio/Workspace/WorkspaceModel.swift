@@ -77,7 +77,7 @@ final class WorkspaceModel {
             startPreview()
             await loadSubtitles()
             operation = nil
-            Task { await loadEmbeddedFonts(info) }
+            Task { await loadEmbeddedFonts(info); await loadAddedFonts() }
             applyTestHooks()
         } catch {
             operation = nil
@@ -92,12 +92,14 @@ final class WorkspaceModel {
             let (prepared, _, sourceURL) = try await workflow().prepareSource(project)
             project = prepared
             if project.sourceFormat == nil { project.sourceFormat = SubtitleFormat(fileExtension: sourceURL.pathExtension) }
-            let source = try SubtitleDocument.load(sourceURL)
+            let speakers = project.lineSpeakers ?? [:]
+            let source = try SubtitleDocument.load(sourceURL).withSideSpeakers(speakers)
             editorLoadedSource = source
             cast = loadCast()
             writtenSource = nil
             let translationURL = store.translationURL(for: project, language: app.settings.targetLanguage)
-            let translation = translationURL.flatMap { FileManager.default.fileExists(atPath: $0.path) ? try? SubtitleDocument.load($0) : nil }
+            let translation = translationURL.flatMap { FileManager.default.fileExists(atPath: $0.path) ? try? SubtitleDocument.load($0) : nil }?
+                .withSideSpeakers(speakers)
             editor.load(source: source, translation: translation.flatMap { $0.count == source.count ? $0 : nil })
             try? store.save(project)
             await loadReference()
@@ -580,6 +582,8 @@ final class WorkspaceModel {
                 if project.externalSubtitlePath != nil { project.externalSubtitlePath = url.path }
             }
             if source != nil || translation != nil { project.draftPending = true }
+            // SubRip has no field for the character: keep who speaks in the project.
+            if let doc = source ?? translation, !doc.storesActorsInFile { project.lineSpeakers = doc.sideSpeakers }
             if let translation, let url = store.translationURL(for: project, language: app.settings.targetLanguage) {
                 try translation.write(to: url)
                 if project.translationStatus == .new || project.translationStatus == .extracted { project.translationStatus = .reviewed }

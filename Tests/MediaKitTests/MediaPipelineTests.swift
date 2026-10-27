@@ -287,4 +287,24 @@ struct ReplaceTrackTests {
         let subs = try #require(report.outputInfo).tracks(.subtitles)
         #expect(subs.count == 1 && subs[0].name == "English (Full)")
     }
+
+    @Test func addedFontIsAttachedOnceAndVerified() async throws {
+        let dir = MediaFixtures.temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let episode = try await MediaFixtures.makeEpisode(in: dir)
+        let info = try await MediaInspector(tools: testTools).inspect(episode)
+        let font = dir.appendingPathComponent("MyFansubFont.ttf")
+        try Data(contentsOf: URL(fileURLWithPath: "/System/Library/Fonts/Supplemental/Arial.ttf")).write(to: font)
+        let subtitle = dir.appendingPathComponent("pt.ass")
+        try MediaFixtures.ass.write(to: subtitle, atomically: true, encoding: .utf8)
+        var plan = MuxPlan(source: info, output: dir.appendingPathComponent("fonts.mkv"),
+                           newTracks: [NewTrack(file: subtitle, kind: .subtitles, name: "Português (Brasil)")])
+        plan.attachments = [font, font]
+        #expect(plan.newAttachments.count == 1)
+        let (_, report) = try await MKVMuxer(tools: testTools).mux(plan)
+        #expect(report.passed, "\(report.failures)")
+        let attached = try #require(report.outputInfo).attachments
+        #expect(attached.count == info.attachments.count + 1)
+        #expect(attached.contains { $0.fileName == "MyFansubFont.ttf" })
+    }
 }

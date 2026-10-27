@@ -87,6 +87,10 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     public var subtitleTask: SubtitleTask?
     /// Audio track the dub is based on (voices and background); nil = the default one.
     public var dubAudioTrackID: Int?
+    /// Characters of each line for subtitles that cannot store them (SRT), by line index.
+    public var lineSpeakers: [Int: String]?
+    /// Fonts the person added (files in the project's Fonts folder), attached when writing.
+    public var addedFonts: [String]?
     /// Track shown beside the subtitle being edited (read only).
     public var referenceTrackID: Int?
     /// The subtitle was changed in the app and not yet written into the video.
@@ -143,6 +147,16 @@ public struct ProjectStore: Sendable {
     }
 
     // MARK: Working files
+
+    /// Fonts added in the app for this video, attached when its subtitle is written.
+    public func fontsDirectory(for project: StudioProject) -> URL {
+        directory(for: project.id).appendingPathComponent("Fonts", isDirectory: true)
+    }
+
+    public func addedFontURLs(for project: StudioProject) -> [URL] {
+        (project.addedFonts ?? []).map { fontsDirectory(for: project).appendingPathComponent($0) }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
 
     public func sourceSubtitleURL(for project: StudioProject) -> URL? {
         guard let format = project.sourceFormat else { return nil }

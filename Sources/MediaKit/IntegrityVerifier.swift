@@ -76,8 +76,13 @@ public struct IntegrityVerifier: Sendable {
             }
         }
 
-        report.add("Anexos (fontes) preservados", info.attachments.count == plan.source.attachments.count,
-                   "\(info.attachments.count) de \(plan.source.attachments.count)")
+        let expectedAttachments = plan.source.attachments.count + plan.newAttachments.count
+        report.add("Anexos (fontes) preservados", info.attachments.count == expectedAttachments,
+                   "\(info.attachments.count) de \(expectedAttachments)")
+        for file in plan.newAttachments {
+            let found = info.attachments.contains { $0.fileName.caseInsensitiveCompare(file.lastPathComponent) == .orderedSame }
+            report.add("Fonte “\(file.lastPathComponent)” anexada", found, found ? "Presente" : "Não encontrada")
+        }
         report.add("Capítulos preservados", info.chapterCount == plan.source.chapterCount,
                    "\(info.chapterCount) de \(plan.source.chapterCount)")
 

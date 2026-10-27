@@ -9,6 +9,9 @@ public struct SRTCue: Sendable, Hashable {
     public var timingSuffix: String
     /// Cue text, lines separated by `\n`.
     public var text: String
+    /// Who speaks. SubRip has no field for it, so it is never written to the file; the app
+    /// keeps it in the project instead.
+    public var speaker: String = ""
     fileprivate var trailingBlankLines: Int
     fileprivate let originalLines: [String]?
     fileprivate let originalSnapshot: Snapshot?

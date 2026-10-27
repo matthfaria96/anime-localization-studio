@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.13.0 — 27/10/2026
+
+### Adicionado
+- **Estilos e fontes** (Legendar): criar, duplicar, renomear (as falas acompanham) e apagar estilos (escolhendo para qual estilo vão as falas), além de editar; seletor de fonte com as fontes do Mac, do vídeo e as adicionadas. Aba **Fontes**: cada fonte que a legenda usa aparece como anexada ao vídeo, só neste Mac ou faltando; **Adicionar fontes…** (anexadas ao vídeo em "Gravar no vídeo…", verificadas) e **Extrair fontes do vídeo…**.
+- Barra do Legendar com as duas legendas à vista: **Editando [▾] ⇄ Ao lado [▾]** (o ⇄ inverte) ou **Legenda nova em [idioma] a partir de [base]**. Trocar a legenda editada ou a base pergunta antes se houver rascunho.
+- **Personagens** no Legendar: definir quem fala em várias falas de uma vez (com sugestões) e identificar falantes pelo áudio. No ASS o nome vai no campo `Name` (não aparece na tela); no SRT, que não tem esse campo, fica guardado no projeto e o arquivo não muda.
+- Dublagem com **a voz e a emoção de cada fala**: com a voz original, cada fala é recriada a partir do próprio trecho original (sem a música); falas com menos de 1,5 s usam a amostra do personagem. Pode ser desligado em "Ajustar vozes".
+
+### Corrigido
+- A voz original no Mac falava sempre português: agora segue o idioma de saída (português, espanhol, inglês, francês, alemão, italiano; cada idioma baixa o seu pacote). Para japonês, coreano e chinês o app avisa e oferece as outras vozes.
+- Ao corrigir uma legenda, o painel da direita quase vazio saiu; "Salvar como arquivo" e glossários ficam no menu ⋯ da barra, e avisos aparecem logo abaixo dela.
+
 ## 0.12.0 — 27/10/2026
 
 ### Mudou

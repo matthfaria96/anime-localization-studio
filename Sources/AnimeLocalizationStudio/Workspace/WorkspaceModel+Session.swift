@@ -9,6 +9,11 @@ enum LeaveTarget: Equatable {
     case chooser
     case close
     case open(URL)
+    /// Another subtitle to edit (or another base), and what goes beside it.
+    case tracks(main: Int, reference: Int?)
+
+    /// Switching what is edited replaces the draft, so it cannot be kept.
+    var keepsDraft: Bool { if case .tracks = self { false } else { true } }
 }
 
 /// Legendar keeps every edit as a draft in the app (written as you type). The video changes
@@ -57,6 +62,7 @@ extension WorkspaceModel {
                 }
             }
             project.draftPending = sessionDraftPending
+            if let doc = sessionSource, !doc.storesActorsInFile { project.lineSpeakers = doc.sideSpeakers }
             try store.save(project)
             editor.load(source: sessionSource, translation: sessionTranslation)
             beginSubtitleSession()
@@ -91,6 +97,9 @@ extension WorkspaceModel {
             Task { await reload() }
         case .close: app.closeVideoNow()
         case .open(let url): app.openNow(url)
+        case .tracks(let main, let reference):
+            startSubtitleWork(task: project.subtitleTask ?? .edit, trackID: main, referenceID: reference,
+                              language: app.settings.targetLanguage, autoTranslate: false)
         }
     }
 }

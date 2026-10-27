@@ -7,7 +7,7 @@ import StudioCore
 extension WorkspaceModel {
     // MARK: Automatic dub with the original voices
 
-    var voiceModelsInstalled: Bool { ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels).modelsInstalled }
+    var voiceModelsInstalled: Bool { ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: app.settings.targetLanguage).modelsInstalled }
 
     /// Lines already synthesized for this episode (reused by the next dub).
     var cachedDubLines: Int {
@@ -103,7 +103,7 @@ extension WorkspaceModel {
             switch self {
             case .speakers: "Identificar quem fala"
             case .voices: "Preparar a voz de cada personagem"
-            case .speech: "Gerar as falas em português"
+            case .speech: "Gerar as falas dubladas"
             case .mix: "Mixar com a música e os efeitos"
             case .file: "Gravar e verificar o MKV"
             }
@@ -163,7 +163,7 @@ extension WorkspaceModel {
                 updateCast(filled)
                 if app.settings.dubbingEngine == .original {
                     operation?.message = voiceModelsInstalled ? "Carregando o modelo de voz…" : "Baixando os modelos de voz (\(ClonedVoiceSynthesizer.downloadSize))…"
-                    try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels).prepare()
+                    try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: app.settings.targetLanguage).prepare()
                 }
                 let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
                 let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled,

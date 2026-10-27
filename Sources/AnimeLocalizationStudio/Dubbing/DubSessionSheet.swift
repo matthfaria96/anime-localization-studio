@@ -45,7 +45,9 @@ struct DubSessionSheet: View {
                 summary("waveform", "Áudio de base", workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "—")
                 summary("text.bubble", "Texto falado", "legenda traduzida, \(segmentCount) falas")
                 summary("globe", "Idioma do resultado", Locale.current.localizedString(forIdentifier: app.settings.targetLanguage) ?? app.settings.targetLanguage)
-                summary("waveform.badge.mic", "Vozes", app.settings.dubbingEngine.label)
+                summary("waveform.badge.mic", "Vozes", app.settings.dubbingEngine == .original
+                        ? (app.settings.dubbingPerLineVoice ? "voz original, com a emoção de cada fala" : "voz original, uma amostra por personagem")
+                        : app.settings.dubbingEngine.label)
                 summary("slider.horizontal.3", "Modo", app.settings.dubbingMode.label)
                 summary("person.2", "Personagens", speakers > 0 ? Plural.count(speakers, "personagem", "personagens") : "identificados pelo áudio")
             }

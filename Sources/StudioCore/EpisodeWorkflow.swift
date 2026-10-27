@@ -123,6 +123,7 @@ public struct EpisodeWorkflow: Sendable {
         var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: settings.targetLanguage.uppercased()),
                            newTracks: [track], clearOtherDefaults: settings.makeDefault, placeNewTracksFirst: settings.placeNewTrackFirst)
         plan.replaceSource = replaceOriginal
+        plan.attachments = store.addedFontURLs(for: project)
         let previousSource = project.sourceTrackID.flatMap { id in info.tracks.first { $0.id == id } }
         let (url, report) = try await MKVMuxer(tools: tools).mux(plan) { value in
             progress(WorkflowStep(fraction: value, message: value < 0.9 ? "Gravando novo MKV…" : "Verificando integridade…"))
@@ -260,7 +261,7 @@ public struct EpisodeWorkflow: Sendable {
         let turns = try await diarizer.diarize(wav, allowModelDownload: allowModelDownload) { value in
             progress(WorkflowStep(fraction: 0.2 + value * 0.8, message: "Identificando quem fala…"))
         }
-        let spoken = DubbingPlan.segments(from: document)
+        let spoken = DubbingPlan.segments(from: document.withSideSpeakers(project.lineSpeakers ?? [:]))
         let speakers = SpeakerDiarization.assign(turns, to: spoken.map { ($0.start, $0.end) })
         var result: [Int: String] = [:]
         for (segment, speaker) in zip(spoken, speakers) { if let speaker { result[segment.id] = speaker } }
@@ -304,7 +305,7 @@ public struct EpisodeWorkflow: Sendable {
         let translation = store.translationURL(for: project, language: settings.targetLanguage).flatMap { try? SubtitleDocument.load($0) }
         guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
         else { throw WorkflowError.noAudio }
-        let lines = DubbingPlan.segments(from: translation ?? source)
+        let lines = DubbingPlan.segments(from: (translation ?? source).withSideSpeakers(project.lineSpeakers ?? [:]))
             .filter { $0.speaker != "Desconhecido" }
             .map { OriginalVoices.Line(id: $0.id, start: $0.start, end: $0.end, speaker: $0.speaker, text: source.plainText(at: $0.id)) }
         guard !lines.isEmpty else { return [] }
@@ -362,6 +363,7 @@ public struct EpisodeWorkflow: Sendable {
                            newTracks: [track], clearOtherDefaults: track.isDefault, placeNewTracksFirst: false)
         if let old { plan.excludedTrackIDs = [old.id] }
         plan.replaceSource = replaceOriginal
+        plan.attachments = store.addedFontURLs(for: project)
         let (url, report) = try await MKVMuxer(tools: tools).mux(plan) { value in
             progress(WorkflowStep(fraction: value, message: value < 0.9 ? "Gravando o MKV…" : "Verificando integridade…"))
         }
@@ -392,12 +394,20 @@ public struct EpisodeWorkflow: Sendable {
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
         else { throw WorkflowError.noAudio }
-        let segments = DubbingPlan.segments(from: translation)
+        let segments = DubbingPlan.segments(from: translation.withSideSpeakers(project.lineSpeakers ?? [:]))
         let work = store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
         let dubAudio = store.directory(for: project.id).appendingPathComponent("dub.\(settings.targetLanguage).m4a")
+        var lineVoices: [Int: String] = [:]
+        if settings.dubbingEngine == .original && settings.dubbingPerLineVoice {
+            // Each line is cloned from its own original audio: same voice, same emotion.
+            let lines = segments.map { OriginalVoices.Line(id: $0.id, start: $0.start, end: $0.end, speaker: $0.speaker, text: "") }
+            lineVoices = try await OriginalVoices(tools: tools, workDirectory: work).lineClips(for: lines, media: info, audioTrack: audio) { value, message in
+                progress(WorkflowStep(fraction: value * 0.05, message: message))
+            }.mapValues(\.path)
+        }
         let pipeline = DubbingPipeline(synthesizer: synthesizer, tools: tools, workDirectory: work, cast: cast,
                                        options: DubbingOptions(maxSpeedup: settings.dubbingMaxSpeedup, defaultVoice: settings.dubbingDefaultVoice,
-                                                               mode: settings.dubbingMode))
+                                                               mode: settings.dubbingMode, lineVoices: lineVoices))
         let report = try await pipeline.run(segments, media: info, audioTrack: audio, output: dubAudio) { value, message in
             progress(WorkflowStep(fraction: value * 0.85, message: message))
         }
@@ -410,6 +420,7 @@ public struct EpisodeWorkflow: Sendable {
         var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "\(settings.targetLanguage.uppercased()) DUB"),
                            newTracks: tracks, clearOtherDefaults: settings.makeDefault, placeNewTracksFirst: settings.placeNewTrackFirst)
         plan.replaceSource = replaceOriginal
+        plan.attachments = store.addedFontURLs(for: project)
         AppLog.shared.info("Dublagem: \(segments.count) falas, \(report.synthesized) geradas, \(report.failed.count) sem voz; gravando em \(replaceOriginal ? "o próprio arquivo" : plan.output.lastPathComponent)")
         let (url, verification) = try await MKVMuxer(tools: tools).mux(plan) { value in
             progress(WorkflowStep(fraction: 0.85 + value * 0.15, message: value < 0.9 ? "Gravando novo MKV…" : "Verificando integridade…"))

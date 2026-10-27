@@ -66,6 +66,34 @@ extension WorkspaceModel {
         }
     }
 
+    /// Changes what is edited (or the base) and what is beside it, from the Legendar bar.
+    /// Only the reference changing never loses anything; another main subtitle replaces the
+    /// draft, so it asks first when there is one.
+    func requestTracks(main: Int, reference: Int?) {
+        let reference = reference == main ? nil : reference
+        // -2 is the subtitle file from the disk, already the one being edited.
+        if main == -2 || (main == project.sourceTrackID && project.externalSubtitlePath == nil) {
+            setReference(reference)
+            return
+        }
+        let target = LeaveTarget.tracks(main: main, reference: reference)
+        if hasUnsavedSubtitleChanges(on: .subtitles) || project.draftPending == true { pendingLeave = target } else { perform(target) }
+    }
+
+    /// ⇄: the subtitle beside becomes the one edited, and the other way around.
+    func swapEditedAndReference() {
+        guard let reference = project.referenceTrackID, let main = project.sourceTrackID else { return }
+        requestTracks(main: reference, reference: main)
+    }
+
+    /// Another output language for the new subtitle: each language has its own draft.
+    func changeOutputLanguage(_ language: String) {
+        guard language != app.settings.targetLanguage else { return }
+        editor.flush()
+        app.settings.targetLanguage = language
+        Task { await reload() }
+    }
+
     func setReference(_ id: Int?) {
         project.referenceTrackID = id
         try? store.save(project)

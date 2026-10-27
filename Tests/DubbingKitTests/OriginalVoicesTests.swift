@@ -46,6 +46,31 @@ struct OriginalVoicesTests {
         #expect(AutoCasting.highSystemVoices.contains(voices["Falante 1"] ?? ""))
         #expect(AutoCasting.lowSystemVoices.contains(voices["Falante 2"] ?? ""))
         #expect(samples[0].text.contains("castelo"))
+
+        // Each line's own original audio, for cloning voice and emotion line by line.
+        let voices2 = OriginalVoices(tools: tools, workDirectory: dir.appendingPathComponent("work"))
+        let clips = try await voices2.lineClips(for: lines, media: media, audioTrack: media.tracks(.audio)[0], minimumMilliseconds: 1_000)
+        #expect(clips.count == lines.filter { $0.end - $0.start >= 1_000 }.count)
+        for line in lines {
+            guard let clip = clips[line.id] else { continue }
+            let length = try await AudioMixer(tools: tools).duration(of: clip)
+            // The episode is cut at 15 s, so a line past the end is clipped with the audio.
+            let expected = min(line.end, media.durationMilliseconds ?? line.end) - line.start
+            #expect(abs(length - expected) < 150, "line \(line.id): \(length) ms")
+        }
+        let none = try await voices2.lineClips(for: lines, media: media, audioTrack: media.tracks(.audio)[0], minimumMilliseconds: 60_000)
+        #expect(none.isEmpty, "lines too short to clone from are left to the character sample")
+    }
+}
+
+@Suite("Original voice languages")
+struct OriginalVoiceLanguageTests {
+    @Test func followsTheOutputLanguage() {
+        #expect(ClonedVoiceSynthesizer.supports("pt-BR") && ClonedVoiceSynthesizer.supports("es") && ClonedVoiceSynthesizer.supports("fr"))
+        #expect(!ClonedVoiceSynthesizer.supports("ja") && !ClonedVoiceSynthesizer.supports("ko"))
+        let spanish = ClonedVoiceSynthesizer(modelsDirectory: URL(fileURLWithPath: "/tmp"), language: "es")
+        let portuguese = ClonedVoiceSynthesizer(modelsDirectory: URL(fileURLWithPath: "/tmp"), language: "pt-BR")
+        #expect(spanish.id != portuguese.id, "clips made in one language are never reused for another")
     }
 }
 
