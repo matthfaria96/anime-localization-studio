@@ -71,9 +71,8 @@ extension WorkspaceModel {
         project.subtitleTask = .edit
         project.referenceTrackID = nil
         if project.newTrackLanguage == nil { project.newTrackLanguage = app.settings.targetLanguage }
-        let before = project.externalSubtitlePath
         openExternalSubtitle()
-        if project.externalSubtitlePath == before { project.subtitleTask = nil } else { chooseSubtitleTask(.edit) }
+        chooseSubtitleTask(.edit)
     }
 
     /// A subtitle made from the speech of the video, in the language spoken, at the right times;

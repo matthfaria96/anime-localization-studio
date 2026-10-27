@@ -17,7 +17,7 @@ struct WorkspaceView: View {
                 switch screen {
                 case .overview: OverviewView(workspace: workspace)
                 case .subtitles:
-                    if workspace.project.subtitleTask == nil { SubtitleStartForm(workspace: workspace) } else { subtitles }
+                    subtitles
                 case .dubbing: DubbingView(workspace: workspace)
                 }
             }
@@ -62,6 +62,7 @@ struct WorkspaceView: View {
         } message: {
             Text("A legenda corrigida entra no lugar da faixa de onde veio, com o mesmo idioma, nome e flags; as outras faixas não mudam e o vídeo não é recodificado.\nNovo arquivo: cria “\(workspace.title) [editado].mkv” ao lado.\nEste arquivo: o MKV é regravado, conferido, e só então substitui o original, que vai para a Lixeira.")
         }
+        .sheet(isPresented: $workspace.showFromAudio) { FromAudioSheet(workspace: workspace) }
         .sheet(isPresented: $workspace.showSeries) {
             VStack(spacing: 0) {
                 SeriesView().frame(minWidth: 760, minHeight: 480)
@@ -167,10 +168,6 @@ private struct SubtitleSessionBar: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.m) {
-            Button { workspace.requestBackToChooser() } label: { Label("Voltar", systemImage: "chevron.left") }
-                .disabled(workspace.isBusy)
-                .hint("Voltar", "Volta à escolha do que editar e recarrega tudo. Se você alterou algo, o app pergunta se grava, guarda como rascunho ou descarta.")
-            Divider().frame(height: 20)
             if workspace.isEditingOriginal { editChips } else { newChips }
             Spacer(minLength: Theme.Spacing.s)
             if workspace.hasDraft {
@@ -186,6 +183,8 @@ private struct SubtitleSessionBar: View {
                 .fixedSize()
                 .hint("Rascunho", "Há alterações guardadas no app que ainda não estão no vídeo. Use “Gravar no vídeo…” para gravá-las, ou descarte o rascunho neste menu.")
             }
+            newMenu
+            translateMenu
             if workspace.isEditingOriginal {
                 Menu {
                     Button("Salvar como arquivo de legenda…") { workspace.exportSource() }
@@ -215,6 +214,49 @@ private struct SubtitleSessionBar: View {
                  ? "Todas as correções que ainda não foram gravadas no vídeo são perdidas e a legenda volta a ser a do vídeo."
                  : "A legenda nova é apagada (uma cópia de segurança fica no projeto).")
         }
+    }
+
+    /// Everything that starts a different subtitle, in one place.
+    private var newMenu: some View {
+        Menu {
+            Menu("Em branco") {
+                ForEach(Languages.all, id: \.code) { language in
+                    Button(language.name) { workspace.requestNewSubtitle(.blank(language: language.code)) }
+                }
+            }
+            Button("Importar arquivo de legenda…") { workspace.requestNewSubtitle(.importFile) }
+            Button("Criar a partir do áudio…") { workspace.showFromAudio = true }
+                .disabled(workspace.audioTracks.isEmpty)
+        } label: {
+            Label("Nova legenda", systemImage: "plus.rectangle.on.rectangle")
+        }
+        .menuStyle(.button)
+        .fixedSize()
+        .disabled(workspace.isBusy)
+        .hint("Nova legenda", "Começar uma legenda em branco, importar um arquivo ASS/SSA/SRT ou criar a legenda ouvindo o áudio. Se a atual tiver alterações não gravadas, o app pergunta antes.")
+    }
+
+    /// Translating the subtitle being edited, or going back to editing only it.
+    private var translateMenu: some View {
+        Menu {
+            if workspace.isEditingOriginal {
+                Section("Traduzir esta legenda para") {
+                    ForEach(Languages.all, id: \.code) { language in
+                        Button(language.name) { workspace.translateCurrent(to: language.code) }
+                    }
+                }
+            } else {
+                Button("Voltar a editar só a original") { workspace.stopTranslating() }
+            }
+        } label: {
+            Label(workspace.isEditingOriginal ? "Traduzir" : "Tradução", systemImage: "translate")
+        }
+        .menuStyle(.button)
+        .fixedSize()
+        .disabled(workspace.isBusy || !workspace.editor.hasDocument)
+        .hint("Traduzir", workspace.isEditingOriginal
+              ? "Cria uma legenda nova no idioma escolhido a partir desta, traduzindo tudo automaticamente. A original fica ao lado para revisar."
+              : "Volta a editar só a legenda original; a tradução continua guardada como rascunho.")
     }
 
     private var canWrite: Bool {

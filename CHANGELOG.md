@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0 — 27/10/2026
+
+### Mudou
+- Legendar abre direto no editor, sem tela de escolhas nem "Voltar". Tudo fica na barra: **Editando [▾] ⇄ Ao lado [▾]**, **Nova legenda** (em branco no idioma escolhido, importar arquivo, criar a partir do áudio) e **Traduzir** (traduz a legenda atual para o idioma escolhido, automaticamente; na tradução, "Voltar a editar só a original").
+- "Criar a partir do áudio" virou uma janela curta (áudio, idioma falado, identificar quem fala, traduzir em seguida).
+- Vídeo sem legenda de texto: o editor oferece começar em branco, importar ou criar do áudio.
+- Trocar para uma legenda nova com alterações não gravadas pergunta antes (gravar no vídeo, descartar e trocar ou continuar).
+
 ## 0.15.0 — 27/10/2026
 
 ### Mudou

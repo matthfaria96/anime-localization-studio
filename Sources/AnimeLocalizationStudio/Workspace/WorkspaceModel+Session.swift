@@ -5,15 +5,30 @@ import SubtitleKit
 /// Where to go once the question about unsaved subtitle edits is answered.
 enum LeaveTarget: Equatable {
     case screen(EpisodeScreen)
-    /// Back to the start form of Legendar.
-    case chooser
     case close
     case open(URL)
     /// Another subtitle to edit (or another base), and what goes beside it.
     case tracks(main: Int, reference: Int?)
+    /// A new subtitle in place of the current one.
+    case blank(language: String)
+    case importFile
+    case fromAudio(FromAudioRequest)
 
-    /// Switching what is edited replaces the draft, so it cannot be kept.
-    var keepsDraft: Bool { if case .tracks = self { false } else { true } }
+    /// Replacing what is edited replaces the draft, so it cannot be kept.
+    var keepsDraft: Bool {
+        switch self {
+        case .screen, .close, .open: true
+        case .tracks, .blank, .importFile, .fromAudio: false
+        }
+    }
+}
+
+/// What “Criar a partir do áudio” was asked to do.
+struct FromAudioRequest: Equatable {
+    var spokenLanguage: String
+    var audioTrackID: Int?
+    var identifySpeakers: Bool
+    var translateTo: String?
 }
 
 /// Legendar keeps every edit as a draft in the app (written as you type). The video changes
@@ -44,9 +59,23 @@ extension WorkspaceModel {
         return editor.source != sessionSource || editor.translation != sessionTranslation
     }
 
-    /// “Voltar”: back to the start form, reloading everything.
-    func requestBackToChooser() {
-        if hasUnsavedSubtitleChanges(on: .subtitles) { pendingLeave = .chooser } else { perform(.chooser) }
+    /// A new subtitle (blank, imported, from the audio) in place of the current one; asks first
+    /// when the current one has changes not written into the video.
+    func requestNewSubtitle(_ target: LeaveTarget) {
+        if hasUnsavedSubtitleChanges(on: .subtitles) || project.draftPending == true { pendingLeave = target } else { perform(target) }
+    }
+
+    /// The subtitle being edited, translated into `language` as a new one (automatic translation).
+    func translateCurrent(to language: String) {
+        startSubtitleWork(task: .translate, trackID: project.externalSubtitlePath == nil ? project.sourceTrackID : nil,
+                          referenceID: nil, language: language, autoTranslate: true)
+    }
+
+    /// Back to editing only the original (the translation stays as a draft of its own).
+    func stopTranslating() {
+        editor.flush()
+        chooseSubtitleTask(.edit)
+        Task { await reload() }
     }
 
     /// Restores the subtitles as they were when Legendar loaded them.
@@ -92,11 +121,13 @@ extension WorkspaceModel {
     func perform(_ target: LeaveTarget) {
         switch target {
         case .screen(let screen): app.showNow(screen)
-        case .chooser:
-            chooseSubtitleTask(nil)
-            Task { await reload() }
         case .close: app.closeVideoNow()
         case .open(let url): app.openNow(url)
+        case .blank(let language): startBlankSubtitle(language: language)
+        case .importFile: startImportedSubtitle()
+        case .fromAudio(let request):
+            startFromAudio(spokenLanguage: request.spokenLanguage, audioTrackID: request.audioTrackID,
+                           identifySpeakers: request.identifySpeakers, translateTo: request.translateTo)
         case .tracks(let main, let reference):
             startSubtitleWork(task: project.subtitleTask ?? .edit, trackID: main, referenceID: reference,
                               language: app.settings.targetLanguage, autoTranslate: false)

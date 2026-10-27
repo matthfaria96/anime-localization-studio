@@ -40,25 +40,17 @@ struct EditorPane: View {
             // Observing the playback time here would rebuild the whole table 30 times a second.
             .background { PlaybackFollower(workspace: workspace) }
         } else {
-            EmptyStateView(title: "Nenhuma legenda aberta",
-                           message: "Escolha uma faixa de legenda de texto no inspetor, abra uma legenda externa (ASS, SSA ou SRT) ou transcreva o áudio do vídeo no próprio Mac.",
+            EmptyStateView(title: "Este vídeo não tem legenda de texto",
+                           message: "Comece uma em branco, importe um arquivo ou deixe o app criar a legenda ouvindo o áudio, no tempo de cada fala.",
                            systemImage: "captions.bubble") {
-                Button("Abrir legenda externa…") { workspace.openExternalSubtitle() }
-                Menu("Transcrever o áudio") {
-                    Section("Transcrever e identificar quem fala") {
-                        ForEach(TranscriptionLanguage.all, id: \.code) { language in
-                            Button(language.name) { workspace.transcribeAudio(language: language.code, identifySpeakers: true) }
-                        }
-                    }
-                    Section("Só transcrever") {
-                        ForEach(TranscriptionLanguage.all, id: \.code) { language in
-                            Button(language.name) { workspace.transcribeAudio(language: language.code) }
-                        }
-                    }
-                }
-                .fixedSize()
-                .disabled(workspace.isBusy || workspace.audioTracks.isEmpty)
-                .hint("Transcrever o áudio", "Cria a legenda a partir da fala do vídeo, no próprio Mac. Escolha o idioma falado; a primeira opção também descobre quem fala em cada linha.")
+                Button("Começar em branco") { workspace.requestNewSubtitle(.blank(language: workspace.app.settings.targetLanguage)) }
+                    .hint("Começar em branco", "Uma legenda vazia, no idioma de saída escolhido em Ajustes, para escrever do zero.")
+                Button("Importar arquivo…") { workspace.requestNewSubtitle(.importFile) }
+                    .hint("Importar arquivo", "Abre um arquivo ASS, SSA ou SRT do disco.")
+                Button("Criar a partir do áudio…") { workspace.showFromAudio = true }
+                    .buttonStyle(.glassProminent)
+                    .disabled(workspace.isBusy || workspace.audioTracks.isEmpty)
+                    .hint("Criar a partir do áudio", "Ouve o vídeo e escreve o que é dito, no idioma falado, no tempo certo. Tudo no Mac.")
                 if !workspace.bitmapSubtitleTracks.isEmpty {
                     Menu("Reconhecer texto (OCR)") {
                         ForEach(TranscriptionLanguage.all, id: \.code) { language in

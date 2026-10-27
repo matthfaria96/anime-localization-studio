@@ -49,6 +49,8 @@ final class WorkspaceModel {
         self.app = app
         project = ProjectStore(paths: app.paths).project(for: url)
         lastReport = project.lastReport
+        // Legendar opens straight in the editor: correcting is the default.
+        if project.subtitleTask == nil { project.subtitleTask = .edit }
         overlayMode = project.subtitleTask == .edit ? .original : .translation
         editor.editsOriginal = project.subtitleTask == .edit
         editor.onChange = { [weak self] source, translation in self?.writeWorkingFiles(source: source, translation: translation) }
@@ -195,6 +197,8 @@ final class WorkspaceModel {
     var askSaveEditedDestination = false
     /// Glossaries and series notes, opened from Legendar.
     var showSeries = false
+    /// “Criar a partir do áudio” window.
+    var showFromAudio = false
     /// Where the person wanted to go when Legendar had unsaved changes (asks save or discard).
     var pendingLeave: LeaveTarget?
     /// The subtitles as they were when Legendar loaded them.
