@@ -58,6 +58,13 @@ for lproj in "$RES_BUNDLE"/**/*.lproj(N/); do cp -R "$lproj" "$APP/Contents/Reso
 CAR=("$RES_BUNDLE"/**/Assets.car(N))
 [[ -n "${CAR[1]:-}" ]] || fail "Assets.car was not built"
 cp "${CAR[1]}" "$APP/Contents/Resources/Assets.car"
+# Resource bundles of the Swift packages (MLX's GPU kernels, swift-transformers…): MLX and
+# Bundle.module look for them in Contents/Resources.
+for bundle in "$BIN_DIR"/*.bundle(N/); do
+  [[ "$bundle" == "$RES_BUNDLE" ]] || cp -R "$bundle" "$APP/Contents/Resources/"
+done
+[[ -f "$APP/Contents/Resources/mlx-swift_Cmlx.bundle/Contents/Resources/default.metallib" ]] \
+  || fail "MLX kernels (default.metallib) missing: install the Metal Toolchain (xcodebuild -downloadComponent MetalToolchain)"
 ls "$APP/Contents/Resources"/pt-BR.lproj/Localizable.strings >/dev/null 2>&1 || ls "$APP/Contents/Resources"/pt-br.lproj/Localizable.strings >/dev/null \
   || fail "pt-BR localization was not copied"
 
@@ -118,6 +125,10 @@ for pkg in libass freetype fribidi harfbuzz libunibreak gettext pcre2 graphite2 
 done
 # Swift packages linked into the executable (FluidAudio, Apache-2.0).
 for f in .build/checkouts/FluidAudio/(LICENSE|NOTICE)*(N); do cp "$f" "$APP/Contents/Resources/Licenses/FluidAudio-${f:t}"; done
+# speech-swift (Apache-2.0) with Chatterbox Multilingual (MIT model), MLX (MIT), swift-transformers (Apache-2.0).
+for pkg in speech-swift mlx-swift swift-transformers swift-crypto swift-jinja; do
+  for f in .build/checkouts/$pkg/(LICENSE|LICENSE.txt|LICENSE.md|NOTICE)(N); do cp "$f" "$APP/Contents/Resources/Licenses/$pkg-${f:t}"; done
+done
 # Code FluidAudio ports from other projects (fastcluster, VBx clustering used by diarization, …).
 [[ -d .build/checkouts/FluidAudio/ThirdPartyLicenses ]] && cp -R .build/checkouts/FluidAudio/ThirdPartyLicenses "$APP/Contents/Resources/Licenses/FluidAudio-ThirdPartyLicenses"
 # glib ships no license file in its keg; it is LGPL-2.1-or-later, the same text as FriBidi's COPYING.

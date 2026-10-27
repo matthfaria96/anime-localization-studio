@@ -21,8 +21,14 @@ public struct AppPaths: Sendable {
     public var library: URL { root.appendingPathComponent("library.json") }
     /// Downloaded on-device models (speaker diarization).
     public var diarizationModels: URL { root.appendingPathComponent("Models/Diarization", isDirectory: true) }
-    /// On-device voice cloning models (PocketTTS).
-    public var voiceModels: URL { root.appendingPathComponent("Models/PocketTTS", isDirectory: true) }
+    /// On-device voice cloning model (Chatterbox Multilingual).
+    public var voiceModels: URL { root.appendingPathComponent("Models/Chatterbox", isDirectory: true) }
+    /// The earlier voice model (PocketTTS), only to be measured and cleared.
+    public var legacyVoiceModels: URL { root.appendingPathComponent("Models/PocketTTS", isDirectory: true) }
+    /// Chatterbox's speech tokenizer, which its loader keeps in the user's Caches.
+    public var voiceTokenizer: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("chatterbox-s3-tokenizer", isDirectory: true)
+    }
     public var logs: URL { root.appendingPathComponent("Logs", isDirectory: true) }
     public var previews: URL { caches.appendingPathComponent("Previews", isDirectory: true) }
     public var scratch: URL { caches.appendingPathComponent("Work", isDirectory: true) }

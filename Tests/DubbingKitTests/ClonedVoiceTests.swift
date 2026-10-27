@@ -4,18 +4,33 @@ import Testing
 @testable import DubbingKit
 @testable import MediaKit
 
-/// Models live where the app keeps them; the test runs when they are there or with
-/// ALS_POCKET=1 (one-time download, about 500 MB).
+/// The model lives where the app keeps it; the test runs when it is there or with
+/// ALS_CHATTERBOX=1 (one-time download, about 2 GB).
 private let modelsDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    .appendingPathComponent("Anime Localization Studio/Models/PocketTTS", isDirectory: true)
+    .appendingPathComponent("Anime Localization Studio/Models/Chatterbox", isDirectory: true)
 private let synthesizer = ClonedVoiceSynthesizer(modelsDirectory: modelsDirectory)
-private let enabled = synthesizer.modelsInstalled || ProcessInfo.processInfo.environment["ALS_POCKET"] == "1"
+private let enabled = synthesizer.modelsInstalled || ProcessInfo.processInfo.environment["ALS_CHATTERBOX"] == "1"
 
-@Suite("Cloned Portuguese voice (PocketTTS, real models)", .enabled(if: enabled), .serialized)
+/// MLX looks for its GPU kernels next to the binary that contains it (here, the test bundle)
+/// as `mlx.metallib`; SwiftPM puts them in `mlx-swift_Cmlx.bundle` beside the test bundle.
+/// The app gets the bundle copied into Contents/Resources by Scripts/build-app.sh.
+private func installMetallibForTests() throws {
+    var info = Dl_info()
+    guard dladdr(#dsohandle, &info) != 0, let name = info.dli_fname else { return }
+    let binaryDir = URL(fileURLWithPath: String(cString: name)).deletingLastPathComponent()
+    let target = binaryDir.appendingPathComponent("mlx.metallib")
+    guard !FileManager.default.fileExists(atPath: target.path) else { return }
+    let products = binaryDir.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    let source = products.appendingPathComponent("mlx-swift_Cmlx.bundle/Contents/Resources/default.metallib")
+    try FileManager.default.copyItem(at: source, to: target)
+}
+
+@Suite("Cloned Portuguese voice (Chatterbox, real model)", .enabled(if: enabled), .serialized)
 struct ClonedVoiceTests {
     @Test func speaksUnderstandablePortugueseWithTheReferenceVoice() async throws {
+        try installMetallibForTests()
         let tools = ToolLocator()
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ALSPocket-\(UUID().uuidString)")
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ALSChatterbox-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         // A reference voice (the "original" character), ~8 s.
@@ -26,13 +41,13 @@ struct ClonedVoiceTests {
         let clock = ContinuousClock()
         let start = clock.now
         try await synthesizer.synthesize("Eu não vou deixar você machucar os meus amigos.", voice: reference.path, style: nil, speed: 1, to: output)
-        print("PocketTTS synthesis took \(clock.now - start)")
+        print("Chatterbox synthesis took \(clock.now - start)")
         // Warm model, same cloned voice: the cost per line of an episode.
         let warm = clock.now
         for line in ["Espera, aonde você vai?", "Precisamos chegar ao último andar, custe o que custar."] {
             try await synthesizer.synthesize(line, voice: reference.path, style: nil, speed: 1, to: dir.appendingPathComponent("w.wav"))
         }
-        print("PocketTTS warm, 2 lines: \(clock.now - warm)")
+        print("Chatterbox warm, 2 lines: \(clock.now - warm)")
         let length = try await AudioMixer(tools: tools).duration(of: output)
         #expect(length > 1_000 && length < 10_000, "\(length) ms")
         // Understandable Portuguese: Apple's pt-BR recognizer must read the words back.

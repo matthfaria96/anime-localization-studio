@@ -159,7 +159,7 @@ private struct AboutSettings: View {
             Text("Tradução, edição, dublagem e incorporação de faixas para animes, séries e filmes.")
                 .multilineTextAlignment(.center)
             Link("witchmymac.com", destination: URL(string: "https://witchmymac.com")!)
-            Text("Usa libass (ISC) e suas bibliotecas, FluidAudio (Apache-2.0) e modelos de identificação de falantes de pyannote, WeSpeaker e BUT Speech@FIT (CC-BY-4.0, conversão da Fluid Inference). Pocket TTS da Kyutai (CC-BY-4.0) faz a voz no Mac; a dublagem online usa a API da ElevenLabs (serviço externo, com a sua conta). MKVToolNix (GPL-2.0) e FFmpeg são programas externos. Licenças completas em Contents/Resources/Licenses e THIRD_PARTY_NOTICES.md.")
+            Text("Usa libass (ISC) e suas bibliotecas, FluidAudio (Apache-2.0) e modelos de identificação de falantes de pyannote, WeSpeaker e BUT Speech@FIT (CC-BY-4.0, conversão da Fluid Inference). Chatterbox Multilingual da Resemble AI (MIT), pelo speech-swift (Apache-2.0) e MLX (MIT), faz a voz no Mac; a dublagem online usa a API da ElevenLabs (serviço externo, com a sua conta). MKVToolNix (GPL-2.0) e FFmpeg são programas externos. Licenças completas em Contents/Resources/Licenses e THIRD_PARTY_NOTICES.md.")
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 460)
         }
         .padding(Theme.Spacing.xl)

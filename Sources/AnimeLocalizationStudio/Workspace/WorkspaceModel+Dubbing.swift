@@ -239,8 +239,13 @@ extension WorkspaceModel {
                     Task { @MainActor in self.operation?.fraction = 0.2 + step.fraction * 0.2; self.operation?.message = step.message }
                 }
                 updateCast(filled)
-                operation?.message = voiceModelsInstalled ? "Carregando o modelo de voz…" : "Baixando os modelos de voz (\(ClonedVoiceSynthesizer.downloadSize))…"
-                try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: app.settings.targetLanguage).prepare()
+                let downloading = !voiceModelsInstalled
+                operation?.message = downloading ? "Baixando o modelo de voz (\(ClonedVoiceSynthesizer.downloadSize))…" : "Carregando o modelo de voz…"
+                try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: app.settings.targetLanguage).prepare { value in
+                    Task { @MainActor in
+                        self.operation?.message = downloading ? "Baixando o modelo de voz… \(Int(value * 100))%" : "Carregando o modelo de voz…"
+                    }
+                }
                 let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
                 let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled,
                                                                                     replaceOriginal: replaceOriginal, audioTrackID: audioTrackID) { step in

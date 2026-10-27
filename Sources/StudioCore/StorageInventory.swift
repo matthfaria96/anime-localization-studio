@@ -19,7 +19,7 @@ public struct StorageInventory: Sendable {
             case .work: "Arquivos temporários"
             case .dubs: "Arquivos de dublagem"
             case .projects: "Projetos (legendas e traduções)"
-            case .voiceModels: "Modelos de voz (Pocket TTS)"
+            case .voiceModels: "Modelos de voz (Chatterbox)"
             case .speakerModels: "Modelos de identificação de falantes"
             }
         }
@@ -54,7 +54,7 @@ public struct StorageInventory: Sendable {
         case .work: [paths.scratch]
         case .dubs: projectFolders().map { $0.appendingPathComponent("Dub", isDirectory: true) }
         case .projects: [paths.projects]
-        case .voiceModels: [paths.voiceModels]
+        case .voiceModels: [paths.voiceModels, paths.legacyVoiceModels, paths.voiceTokenizer]
         case .speakerModels: [paths.diarizationModels]
         }
     }

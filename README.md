@@ -38,7 +38,8 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
     personagem, traduz e fala com a voz de cada um, mantendo a emoção e a música. Não precisa de
     legenda. Um trabalho interrompido é retomado sem enviar nem cobrar de novo.
   - **Voz original no Mac** (gratuita, offline): fala a legenda traduzida com um clone da voz de
-    cada personagem e a emoção de cada fala (Pocket TTS), em *substituir falas* ou *voice-over*.
+    cada personagem e a emoção de cada fala (Chatterbox Multilingual, 23 idiomas, na GPU do Mac),
+    em *substituir falas* ou *voice-over*.
   O resultado entra no MKV como faixa de áudio nova, verificada, num arquivo novo ou no próprio.
 - **Identificar quem fala** no áudio (no Mac), na transcrição ou numa legenda sem personagens,
   para montar o elenco da dublagem.

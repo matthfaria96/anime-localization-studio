@@ -64,7 +64,8 @@ struct OriginalVoicesTests {
 struct OriginalVoiceLanguageTests {
     @Test func followsTheOutputLanguage() {
         #expect(ClonedVoiceSynthesizer.supports("pt-BR") && ClonedVoiceSynthesizer.supports("es") && ClonedVoiceSynthesizer.supports("fr"))
-        #expect(!ClonedVoiceSynthesizer.supports("ja") && !ClonedVoiceSynthesizer.supports("ko"))
+        #expect(ClonedVoiceSynthesizer.supports("ja") && ClonedVoiceSynthesizer.supports("ko") && ClonedVoiceSynthesizer.supports("pt-PT"))
+        #expect(!ClonedVoiceSynthesizer.supports("th") && !ClonedVoiceSynthesizer.supports("vi"))
         let spanish = ClonedVoiceSynthesizer(modelsDirectory: URL(fileURLWithPath: "/tmp"), language: "es")
         let portuguese = ClonedVoiceSynthesizer(modelsDirectory: URL(fileURLWithPath: "/tmp"), language: "pt-BR")
         #expect(spanish.id != portuguese.id, "clips made in one language are never reused for another")

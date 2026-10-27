@@ -91,7 +91,7 @@ struct DubbingView: View {
             OptionCard(title: "Voz original no Mac", systemImage: "desktopcomputer",
                        detail: "Gratuita e offline. Fala o texto da legenda traduzida com um clone da voz de cada personagem.",
                        selected: !online) { app.settings.dubbingEngine = .original }
-                .hint("Voz original no Mac", "Tudo no próprio Mac (Pocket TTS da Kyutai, CC-BY-4.0). Precisa de uma legenda traduzida; fala português, espanhol, inglês, francês, alemão e italiano.")
+                .hint("Voz original no Mac", "Tudo no próprio Mac (Chatterbox Multilingual da Resemble AI, MIT), pela GPU do Apple silicon. Fala 23 idiomas, inclusive português e japonês. Precisa de uma legenda traduzida.")
         }
     }
 

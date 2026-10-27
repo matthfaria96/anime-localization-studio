@@ -1,4 +1,5 @@
 import AppKit
+import StudioCore
 import SwiftUI
 
 @main
@@ -20,6 +21,20 @@ struct AnimeLocalizationStudioApp: App {
                     default: break
                     }
                     if let path = ProcessInfo.processInfo.environment["ALS_OPEN"] { app.open(URL(fileURLWithPath: path)) }
+                    // Test hook: ALS_VOICE_TEST=<reference.wav> speaks one line with the Mac's voice into ALS_VOICE_OUT.
+                    if let reference = ProcessInfo.processInfo.environment["ALS_VOICE_TEST"],
+                       let output = ProcessInfo.processInfo.environment["ALS_VOICE_OUT"] {
+                        let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
+                        Task {
+                            do {
+                                try await synthesizer.synthesize("Eu não vou deixar você machucar os meus amigos.", voice: reference, style: nil, speed: 1,
+                                                                 to: URL(fileURLWithPath: output))
+                                AppLog.shared.info("Teste de voz: \(output)")
+                            } catch {
+                                try? error.localizedDescription.write(toFile: output + ".error", atomically: true, encoding: .utf8)
+                            }
+                        }
+                    }
                     // Test hook for captures: ALS_SIZE=1080x700 sets the window's content size.
                     if let size = ProcessInfo.processInfo.environment["ALS_SIZE"]?.split(separator: "x").compactMap({ Double($0) }), size.count == 2 {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

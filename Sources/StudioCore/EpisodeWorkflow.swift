@@ -347,7 +347,7 @@ public struct EpisodeWorkflow: Sendable {
     }
 
     /// Gives every speaker without a voice their own: the clip of their original voice, which
-    /// PocketTTS clones on the Mac. Voices made by another engine are replaced.
+    /// Chatterbox clones on the Mac. Voices made by another engine are replaced.
     public func automaticCast(_ project: StudioProject, cast: VoiceCast, audioTrackID: Int? = nil,
                               progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> VoiceCast {
         let samples = try await voiceSamples(project, audioTrackID: audioTrackID, progress: progress)

@@ -78,6 +78,10 @@ válido por três anos, no caso da GPL) e documentar as opções de compilação
 
 | Serviço | Licença | Forma de uso |
 |---|---|---|
+| speech-swift — soniqo | Apache-2.0 (biblioteca Swift incorporada: ChatterboxTTS e AudioCommon) |
+| Chatterbox Multilingual — Resemble AI | MIT (modelo, baixado sob demanda; conversão MLX `aufklarer/Chatterbox-Multilingual-MLX-fp16`) |
+| MLX / mlx-swift — Apple | MIT (biblioteca incorporada) |
+| swift-transformers — Hugging Face | Apache-2.0 (biblioteca incorporada) |
 | ElevenLabs (serviço online, opcional) | Termos de uso da ElevenLabs; acessado pela API com a chave da pessoa. Nenhum código incorporado | Comunicação HTTP com o backend local (`127.0.0.1:3900`) quando o usuário o instala e executa. Nenhum código é incorporado |
 | Ollama, LM Studio ou outro servidor compatível com a API OpenAI | Licença de cada servidor e de cada modelo baixado | Requisições HTTP para tradução, configuradas pelo usuário |
 

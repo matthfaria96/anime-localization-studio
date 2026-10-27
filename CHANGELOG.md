@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.0 — 27/10/2026
+
+### Mudou
+- A **Voz original no Mac** agora usa o **Chatterbox Multilingual** (Resemble AI, MIT) pelo speech-swift (Apache-2.0) e MLX, na GPU do Apple silicon, no lugar do Pocket TTS. Clona a voz de cada personagem a partir do trecho original de cada fala (voz e emoção), em 23 idiomas, inclusive português e japonês. O modelo (~2 GB) é baixado uma vez, com progresso na janela da dublagem. Teste real: o reconhecimento de fala da Apple leu de volta a frase gerada sem erros.
+- Ajustes › Armazenamento mostra e limpa o modelo novo, o tokenizador e o modelo antigo (Pocket TTS).
+
+### Notas de build
+- Compilar exige o Metal Toolchain do Xcode (`xcodebuild -downloadComponent MetalToolchain`); `Scripts/build-app.sh` copia os kernels do MLX para o app e falha se faltarem.
+
 ## 0.16.0 — 27/10/2026
 
 ### Mudou

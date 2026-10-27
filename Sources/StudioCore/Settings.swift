@@ -28,7 +28,7 @@ public enum EngineChoice: String, Sendable, Codable, CaseIterable, Identifiable 
 public enum DubbingEngineChoice: String, Sendable, Codable, CaseIterable, Identifiable {
     /// ElevenLabs automatic dubbing (online): speakers, translation and cloned voices.
     case elevenLabs
-    /// Clone of each character's original voice, made on the Mac (PocketTTS), from the translated subtitle.
+    /// Clone of each character's original voice, made on the Mac (Chatterbox), from the translated subtitle.
     case original
 
     public var id: String { rawValue }

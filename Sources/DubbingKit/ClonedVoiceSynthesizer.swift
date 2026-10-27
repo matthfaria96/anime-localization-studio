@@ -1,62 +1,53 @@
-import FluidAudio
+import AVFoundation
+import ChatterboxTTS
 import Foundation
 
 /// Speaks the output language with a clone of each character's original voice, on the Mac:
-/// Kyutai's PocketTTS (Core ML, via FluidAudio) conditions the speech on 1–30 s of the original
-/// voice. `voice` is the path of that reference clip (made by `OriginalVoices`): the character's
+/// Chatterbox Multilingual (Resemble AI, MIT) on MLX, through speech-swift (Apache-2.0). It
+/// clones from a short reference with no training, and carries the reference's delivery.
+/// `voice` is the path of that reference clip (made by `OriginalVoices`): the character's
 /// sample, or the original audio of the very line, which carries its emotion too.
-/// Each language is its own model pack (CC-BY-4.0), downloaded only after the person confirms.
+/// The model (about 2 GB) is downloaded only after the person confirms.
 public struct ClonedVoiceSynthesizer: SpeechSynthesizer {
     public let id: String
     public let modelsDirectory: URL
-    /// The PocketTTS pack for the output language, or nil when there is none.
-    let pack: PocketTtsLanguage?
+    /// Chatterbox language code for the output language, or nil when it has none.
+    let languageCode: String?
     public let languageName: String
+    /// How expressive the delivery is (0.25 calm … 1 very emphatic); 0.5 is the model's default.
+    public var expressiveness: Float = 0.6
 
-    public static let downloadSize = "cerca de 500 MB"
-    public static let modelCredits = "Pocket TTS da Kyutai (CC-BY-4.0), conversão Core ML da Fluid Inference"
+    public static let downloadSize = "cerca de 2 GB"
+    public static let modelCredits = "Chatterbox Multilingual da Resemble AI (MIT), pelo speech-swift (Apache-2.0)"
 
     public init(modelsDirectory: URL, language: String = "pt-BR") {
         self.modelsDirectory = modelsDirectory
-        pack = Self.pack(for: language)
+        languageCode = Self.code(for: language)
         languageName = Locale(identifier: "pt_BR").localizedString(forLanguageCode: String(language.prefix(2))) ?? language
-        id = "pocket-tts-\(pack?.rawValue ?? "none")"
+        id = "chatterbox-\(languageCode ?? "none")"
     }
 
-    /// Output languages the on-device clone can speak.
-    public static func pack(for language: String) -> PocketTtsLanguage? {
-        switch String(language.prefix(2)).lowercased() {
-        case "pt": .portuguese
-        case "es": .spanish
-        case "en": .english
-        case "fr": .french24L
-        case "de": .german
-        case "it": .italian
-        default: nil
-        }
+    /// `pt-BR` → `pt`, when Chatterbox speaks it.
+    static func code(for language: String) -> String? {
+        let code = String(language.split(separator: "-").first ?? Substring(language)).lowercased()
+        return MTLTokenizer.supportedLanguages.contains(code) ? code : nil
     }
 
-    public static func supports(_ language: String) -> Bool { pack(for: language) != nil }
+    /// Output languages the on-device clone can speak (23, Portuguese and Japanese included).
+    public static func supports(_ language: String) -> Bool { code(for: language) != nil }
 
-    /// Whether the language pack and the cloning encoder are already on disk.
+    /// Whether the model is already on disk.
     public var modelsInstalled: Bool {
-        guard let pack else { return false }
-        let fm = FileManager.default
-        var hasPack = false, hasEncoder = false
-        let enumerator = fm.enumerator(at: modelsDirectory, includingPropertiesForKeys: nil)
-        while let url = enumerator?.nextObject() as? URL {
-            if url.lastPathComponent.hasPrefix("flowlm_step"), url.pathComponents.contains(pack.rawValue) { hasPack = true }
-            if url.lastPathComponent.hasPrefix("mimi_encoder"), url.pathExtension == "mlmodelc" { hasEncoder = true }
-            if hasPack && hasEncoder { return true }
-        }
-        return false
+        FileManager.default.fileExists(atPath: modelsDirectory.appendingPathComponent("model.safetensors").path)
     }
 
     public func synthesize(_ text: String, voice: String, style: String?, speed: Double, to url: URL) async throws {
-        guard let pack else { throw unsupported }
+        guard let languageCode else { throw unsupported }
         do {
-            let audio = try await PocketEngine.shared.speak(text, reference: URL(fileURLWithPath: voice), language: pack, modelsDirectory: modelsDirectory)
-            try audio.write(to: url, options: .atomic)
+            let samples = try await ChatterboxEngine.shared.speak(text, reference: URL(fileURLWithPath: voice), language: languageCode,
+                                                                   expressiveness: expressiveness, modelsDirectory: modelsDirectory)
+            guard !samples.isEmpty else { throw SynthesisError.failed("a voz não gerou áudio") }
+            try Self.writeWAV(samples, sampleRate: 24_000, to: url)
         } catch let error as SynthesisError {
             throw error
         } catch is CancellationError {
@@ -66,50 +57,77 @@ public struct ClonedVoiceSynthesizer: SpeechSynthesizer {
         }
     }
 
-    /// Downloads (when missing) and loads the models, ahead of a dub.
-    public func prepare() async throws {
-        guard let pack else { throw unsupported }
-        try await PocketEngine.shared.manager(for: modelsDirectory, language: pack)
+    /// Downloads (when missing) and loads the model, ahead of a dub.
+    public func prepare(progress: (@Sendable (Double) -> Void)? = nil) async throws {
+        guard languageCode != nil else { throw unsupported }
+        try await ChatterboxEngine.shared.load(modelsDirectory: modelsDirectory, progress: progress)
     }
 
     private var unsupported: SynthesisError {
-        .engineUnavailable("A voz original no Mac ainda não fala \(languageName). Ela fala português, espanhol, inglês, francês, alemão e italiano. Para \(languageName), use as vozes do macOS ou o VoiceStudio.")
+        .engineUnavailable("A voz do Mac ainda não fala \(languageName). Para esse idioma, use a ElevenLabs.")
+    }
+
+    static func writeWAV(_ samples: [Float], sampleRate: Double, to url: URL) throws {
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1),
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)) else {
+            throw SynthesisError.failed("não foi possível preparar o áudio")
+        }
+        buffer.frameLength = AVAudioFrameCount(samples.count)
+        samples.withUnsafeBufferPointer { buffer.floatChannelData![0].update(from: $0.baseAddress!, count: samples.count) }
+        let settings: [String: Any] = [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: sampleRate, AVNumberOfChannelsKey: 1,
+                                       AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false]
+        let file = try AVAudioFile(forWriting: url, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false)
+        try file.write(from: buffer)
     }
 }
 
-/// One loaded model for the whole app, and the cloned voices already computed. Character
-/// samples are reused for many lines; line clips are used once, so only a few are kept.
-actor PocketEngine {
-    static let shared = PocketEngine()
-    private var loaded: (URL, PocketTtsLanguage, PocketTtsManager)?
-    private var voices: [URL: PocketTtsVoiceData] = [:]
+/// One loaded model for the whole app, and the reference clips already read. Character
+/// samples are reused for many lines; line clips once, so only a few are kept.
+actor ChatterboxEngine {
+    static let shared = ChatterboxEngine()
+    private var model: ChatterboxTTSModel?
+    private var loadedFrom: URL?
+    private var references: [URL: (samples: [Float], rate: Int)] = [:]
     private var recent: [URL] = []
     private let keep = 24
 
-    @discardableResult
-    func manager(for directory: URL, language: PocketTtsLanguage) async throws -> PocketTtsManager {
-        if let (dir, lang, manager) = loaded, dir == directory, lang == language { return manager }
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let manager = PocketTtsManager(language: language, directory: directory, precision: .int8)
-        try await manager.initialize()
-        loaded = (directory, language, manager)
-        voices = [:]
+    func load(modelsDirectory: URL, progress: (@Sendable (Double) -> Void)? = nil) async throws {
+        if model != nil, loadedFrom == modelsDirectory { return }
+        try FileManager.default.createDirectory(at: modelsDirectory, withIntermediateDirectories: true)
+        var handler: ((Double, String) -> Void)?
+        if let progress { handler = { value, _ in progress(value) } }
+        model = try await ChatterboxTTSModel.fromPretrained(cacheDir: modelsDirectory, progressHandler: handler)
+        loadedFrom = modelsDirectory
+        references = [:]
         recent = []
-        return manager
     }
 
-    func speak(_ text: String, reference: URL, language: PocketTtsLanguage, modelsDirectory: URL) async throws -> Data {
-        let manager = try await manager(for: modelsDirectory, language: language)
-        let voice: PocketTtsVoiceData
-        if let cached = voices[reference] {
-            voice = cached
-        } else {
-            voice = try await manager.cloneVoice(from: reference)
-            voices[reference] = voice
+    func speak(_ text: String, reference: URL, language: String, expressiveness: Float, modelsDirectory: URL) async throws -> [Float] {
+        try await load(modelsDirectory: modelsDirectory)
+        guard let model else { throw SynthesisError.engineUnavailable("O modelo de voz não carregou.") }
+        let ref = try referenceSamples(reference)
+        try Task.checkCancellation()
+        return try model.clone(referenceSamples: ref.samples, sampleRate: ref.rate, text: text, languageId: language,
+                               exaggeration: expressiveness)
+    }
+
+    private func referenceSamples(_ url: URL) throws -> (samples: [Float], rate: Int) {
+        if let cached = references[url] { touch(url); return cached }
+        let file = try AVAudioFile(forReading: url)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
+            throw SynthesisError.failed("a referência de voz não pôde ser lida")
         }
-        recent.removeAll { $0 == reference }
-        recent.append(reference)
-        while recent.count > keep { voices[recent.removeFirst()] = nil }
-        return try await manager.synthesize(text: text, voiceData: voice)
+        try file.read(into: buffer)
+        let samples = Array(UnsafeBufferPointer(start: buffer.floatChannelData![0], count: Int(buffer.frameLength)))
+        let value = (samples, Int(file.processingFormat.sampleRate))
+        references[url] = value
+        touch(url)
+        return value
+    }
+
+    private func touch(_ url: URL) {
+        recent.removeAll { $0 == url }
+        recent.append(url)
+        while recent.count > keep { references[recent.removeFirst()] = nil }
     }
 }

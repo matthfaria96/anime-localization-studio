@@ -11,7 +11,10 @@ let package = Package(
     dependencies: [
         // Speaker diarization on the Neural Engine (Apache-2.0; models CC-BY-4.0, downloaded on request).
         // `traits: []` drops the default NemoTextProcessing binary (ASR text normalization, not used here).
-        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.17.7", traits: [])
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.17.7", traits: []),
+        // On-device voice cloning: Chatterbox Multilingual (Resemble AI, MIT; 23 languages) on MLX,
+        // from speech-swift (Apache-2.0). Pinned: the project has no recent release tag.
+        .package(url: "https://github.com/soniqo/speech-swift", revision: "9ce78eaec038b4dc8b519a8b01ecb4059549cfec")
     ],
     targets: [
         // Pure Swift: ASS/SSA/SRT parsing, preservation-first serialization, override tags, timing.
@@ -21,8 +24,9 @@ let package = Package(
         .target(name: "MediaKit"),
         // Translation engines, glossary, batched contextual pipeline with checkpoints.
         .target(name: "TranslationKit", dependencies: ["SubtitleKit"]),
-        // VoiceStudio adapter (local HTTP), voice casting and dubbing plans.
-        .target(name: "DubbingKit", dependencies: ["SubtitleKit", "MediaKit", .product(name: "FluidAudio", package: "FluidAudio")]),
+        // Dubbing: ElevenLabs (online), the Mac's own cloned voice (Chatterbox), mixing, casting.
+        .target(name: "DubbingKit", dependencies: ["SubtitleKit", "MediaKit", .product(name: "FluidAudio", package: "FluidAudio"),
+                                                   .product(name: "ChatterboxTTS", package: "speech-swift")]),
         // libass (ISC) through pkg-config; bundled into the app by Scripts/build-app.sh.
         .systemLibrary(name: "CLibass", pkgConfig: "libass", providers: [.brew(["libass"])]),
         // Faithful ASS rendering (animations, karaoke, drawings, embedded fonts) for the preview.
