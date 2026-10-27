@@ -1,5 +1,6 @@
 import AppKit
 import ASSRendering
+import AVFoundation
 import DubbingKit
 import MediaKit
 import Observation
@@ -26,7 +27,9 @@ final class WorkspaceModel {
     var info: MediaInfo?
     var loadError: String?
     var operation: RunningOperation?
-    var notice: (kind: InlineMessage.Kind, text: String)?
+    var notice: (kind: InlineMessage.Kind, text: String)? {
+        didSet { if notice?.text != oldValue?.text { noticeAction = nil } }
+    }
     var lastReport: TranslationReport?
     var lastMux: (url: URL, report: VerificationReport)?
     var overlayMode: OverlayMode = .translation
@@ -93,6 +96,13 @@ final class WorkspaceModel {
             editor.load(source: source, translation: translation.flatMap { $0.count == source.count ? $0 : nil })
             try? store.save(project)
             app.refreshRecents()
+            // A file muxed before already carries the translation as a track: use it.
+            if editor.translation == nil, let info, let existing = workflow().existingTranslationTrack(in: info, project: project),
+               let (linked, result) = try? await workflow().linkTranslation(project, track: existing) {
+                project = linked
+                editor.load(source: source, translation: result.document)
+                notice = (.info, "A faixa “\(existing.name ?? existing.displayLanguage)” do arquivo foi carregada como tradução. Troque em Tradução, no inspetor.")
+            }
         } catch WorkflowError.noTextSubtitle {
             editor.load(source: nil, translation: nil)
             notice = (.info, "Este arquivo não tem legenda de texto embutida. Abra uma legenda externa (ASS, SSA ou SRT).")
@@ -190,10 +200,128 @@ final class WorkspaceModel {
             project.sourceTrackID = nil
             try store.save(project)
             notice = nil
-            Task { await loadSubtitles() }
+            Task { await reload() }
         } catch {
             app.report(error, context: "Legenda não aberta")
         }
+    }
+
+    // MARK: Tracks of the file
+
+    /// Default audio/subtitle chosen in the inspector, not yet written to the file.
+    var pendingDefaults: TrackFlagEditor.Defaults?
+    /// Asks “new file or replace the original?” before muxing.
+    var askEmbedDestination = false
+    /// Asks “this file or a copy?” before writing default-track changes.
+    var askDefaultsDestination = false
+    /// Optional button shown with the notice (e.g. open the file just created).
+    var noticeAction: (title: String, run: () -> Void)?
+
+    var currentDefaults: TrackFlagEditor.Defaults {
+        TrackFlagEditor.Defaults(audioTrackID: info?.tracks(.audio).first(where: \.isDefault)?.id,
+                                 subtitleTrackID: info?.tracks(.subtitles).first(where: \.isDefault)?.id ?? -1)
+    }
+
+    var effectiveDefaults: TrackFlagEditor.Defaults { pendingDefaults ?? currentDefaults }
+    var hasPendingDefaults: Bool { pendingDefaults != nil && pendingDefaults != currentDefaults }
+
+    func chooseDefault(_ track: MediaTrack) {
+        var defaults = effectiveDefaults
+        switch track.kind {
+        case .audio: defaults.audioTrackID = track.id
+        case .subtitles: defaults.subtitleTrackID = defaults.subtitleTrackID == track.id ? -1 : track.id
+        default: return
+        }
+        pendingDefaults = defaults
+    }
+
+    func applyDefaults(inPlace: Bool) {
+        guard let defaults = pendingDefaults, !isBusy, claim("Faixas padrão") else { return }
+        editor.flush()
+        operation = RunningOperation(kind: .muxing, fraction: nil, message: inPlace ? "Alterando as faixas padrão…" : "Criando a cópia com as novas faixas padrão…")
+        let workflow = workflow()
+        let project = project
+        task = Task {
+            do {
+                let (updated, url) = try await workflow.applyDefaultTracks(project, defaults: defaults, inPlace: inPlace)
+                self.project = updated
+                pendingDefaults = nil
+                release()
+                operation = nil
+                if inPlace {
+                    await reload()
+                    notice = (.success, "Faixas padrão alteradas no próprio arquivo, sem regravar o vídeo.")
+                } else {
+                    notice = (.success, "Cópia criada com as novas faixas padrão: \(url.lastPathComponent). O original não mudou.")
+                    noticeAction = ("Abrir a cópia", { [app] in app.open(url) })
+                }
+                return
+            } catch {
+                notice = (.error, LogRedactor.redact(error.localizedDescription))
+            }
+            release()
+            operation = nil
+        }
+    }
+
+    /// Re-reads the file's tracks and the project's subtitles after anything changed them.
+    func reload() async {
+        let resume = player.currentTime
+        do {
+            let fresh = try await MediaInspector(tools: app.tools).inspect(url)
+            let fileChanged = fresh.fileSize != info?.fileSize || fresh.tracks.count != info?.tracks.count
+            info = fresh
+            if !fresh.tracks(.audio).contains(where: { $0.id == previewAudioTrackID }) {
+                previewAudioTrackID = fresh.tracks(.audio).first(where: \.isDefault)?.id ?? fresh.tracks(.audio).first?.id
+            }
+            project = store.project(for: url)
+            await loadSubtitles()
+            if fileChanged {
+                try? PreviewProxy(tools: app.tools, cacheDirectory: app.paths.previews).clearCache()
+                startPreview()
+            }
+            if resume > 0 { player.seek(to: resume) }
+        } catch {
+            notice = (.error, error.localizedDescription)
+        }
+    }
+
+    // MARK: Linking a translation
+
+    var linkableTracks: [MediaTrack] {
+        subtitleTracks.filter { $0.textSubtitleExtension != nil && $0.id != project.sourceTrackID }
+    }
+
+    func linkTranslation(track: MediaTrack?, file: URL? = nil, undoManager: UndoManager?) {
+        guard !isBusy, claim("Vincular tradução") else { return }
+        editor.flush()
+        notice = nil
+        operation = RunningOperation(kind: .extracting, fraction: nil, message: "Vinculando a tradução…")
+        let workflow = workflow()
+        let project = project
+        task = Task {
+            do {
+                let (updated, result) = try await workflow.linkTranslation(project, track: track, file: file)
+                self.project = updated
+                editor.applyTranslation(result.document, undoManager: undoManager)
+                editor.flush()
+                overlayMode = .translation
+                notice = (result.matched == result.total ? .success : .warning,
+                          "Tradução vinculada: \(result.matched) de \(result.total) falas encontraram correspondência pelo tempo\(result.matched < result.total ? "; as outras ficaram no original" : ""). ⌘Z desfaz.")
+            } catch {
+                notice = (.error, LogRedactor.redact(error.localizedDescription))
+            }
+            release()
+            operation = nil
+        }
+    }
+
+    func linkTranslationFile(undoManager: UndoManager?) {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = AppModel.subtitleTypes
+        panel.message = "Escolha a legenda traduzida (ASS, SSA ou SRT) para editar ao lado do original"
+        guard panel.runModal() == .OK, let file = panel.url else { return }
+        linkTranslation(track: nil, file: file, undoManager: undoManager)
     }
 
     // MARK: Translate
@@ -246,7 +374,13 @@ final class WorkspaceModel {
 
     // MARK: Mux
 
-    func embedTranslation() {
+    /// Asks where to write before muxing.
+    func requestEmbed() {
+        guard !isBusy, editor.translation != nil else { return }
+        askEmbedDestination = true
+    }
+
+    func embedTranslation(replaceOriginal: Bool = false) {
         guard !isBusy, editor.translation != nil, claim("Incorporação no estúdio") else { return }
         editor.flush()
         notice = nil
@@ -255,12 +389,20 @@ final class WorkspaceModel {
         let project = project
         task = Task {
             do {
-                let (updated, output, report) = try await workflow.mux(project) { step in
+                let (updated, output, report) = try await workflow.mux(project, replaceOriginal: replaceOriginal) { step in
                     Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
                 }
                 self.project = updated
                 lastMux = (output, report)
+                if replaceOriginal {
+                    release()
+                    operation = nil
+                    await reload()
+                    notice = (.success, "Faixa incorporada no próprio arquivo e verificada. A versão anterior está na Lixeira.")
+                    return
+                }
                 notice = (.success, "Novo arquivo criado e verificado: \(output.lastPathComponent). O original não foi alterado.")
+                noticeAction = ("Abrir o novo arquivo", { [app] in app.open(output) })
             } catch is CancellationError {
                 notice = (.info, "Incorporação cancelada. Nenhum arquivo foi criado.")
             } catch {
@@ -381,6 +523,73 @@ final class WorkspaceModel {
                 return
             } catch is CancellationError {
                 notice = (.info, "OCR cancelado.")
+            } catch {
+                notice = (.error, LogRedactor.redact(error.localizedDescription))
+            }
+            release()
+            operation = nil
+        }
+    }
+
+    // MARK: Automatic dub with the original voices
+
+    /// Clips of each speaker's original voice, for “Ouvir original”.
+    var voiceSamples: [String: URL] = [:]
+
+    func prepareVoiceSamples() async {
+        guard voiceSamples.isEmpty, claim("Amostras das vozes originais") else { return }
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Separando as vozes originais…")
+        defer { release(); operation = nil }
+        do {
+            let samples = try await workflow().voiceSamples(project) { step in
+                Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
+            }
+            voiceSamples = Dictionary(samples.map { ($0.speaker, $0.url) }, uniquingKeysWith: { a, _ in a })
+        } catch {
+            notice = (.error, LogRedactor.redact(error.localizedDescription))
+        }
+    }
+
+    /// One click: identify who speaks (when the subtitle does not say), give each character a
+    /// voice (a clone of the original, or a similar macOS voice), then dub and mux.
+    func autoDub(cast: VoiceCast, allowDiarizationDownload: Bool = false, undoManager: UndoManager?, onCast: @escaping (VoiceCast) -> Void) {
+        guard !isBusy, editor.translation != nil, claim("Dublagem automática") else { return }
+        editor.flush()
+        notice = nil
+        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando a dublagem…")
+        let workflow = workflow()
+        let systemVoices = Set(AVSpeechSynthesisVoice.speechVoices().map(\.name))
+        task = Task {
+            do {
+                var project = project
+                if let document = editor.translation, DubbingPlan.segments(from: document).allSatisfy({ $0.speaker == "Desconhecido" }) {
+                    let speakers = try await workflow.identifySpeakers(in: document, of: project, allowModelDownload: allowDiarizationDownload) { step in
+                        Task { @MainActor in self.operation?.fraction = step.fraction * 0.2; self.operation?.message = step.message }
+                    }
+                    editor.setActors(speakers, undoManager: undoManager)
+                    editor.flush()
+                }
+                let filled = try await workflow.automaticCast(project, cast: cast, systemVoices: systemVoices) { step in
+                    Task { @MainActor in self.operation?.fraction = 0.2 + step.fraction * 0.2; self.operation?.message = step.message }
+                }
+                onCast(filled)
+                saveCast(filled)
+                let synthesizer = app.settings.makeSynthesizer()
+                let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled) { step in
+                    Task { @MainActor in self.operation?.fraction = 0.4 + step.fraction * 0.6; self.operation?.message = step.message }
+                }
+                project = updated
+                self.project = updated
+                lastDub = (output, report, verification)
+                lastMux = (output, verification)
+                notice = report.failed.isEmpty
+                    ? (.success, "Dublagem pronta: \(output.lastPathComponent). O áudio e a legenda originais continuam no arquivo.")
+                    : (.warning, "Dublagem criada com \(report.failed.count) falas sem voz. Veja a lista de revisão.")
+                noticeAction = ("Abrir o arquivo dublado", { [app] in app.open(output) })
+            } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
+                pendingDiarizationDownload = { self.autoDub(cast: cast, allowDiarizationDownload: true, undoManager: undoManager, onCast: onCast) }
+            } catch is CancellationError {
+                notice = (.info, "Dublagem cancelada. As vozes já geradas ficam guardadas e serão reaproveitadas.")
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }

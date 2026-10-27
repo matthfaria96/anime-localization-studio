@@ -37,7 +37,7 @@ struct AnimeLocalizationStudioApp: App {
                     .disabled(app.workspace?.editor.translation == nil)
             }
             CommandMenu("Episódio") {
-                Button("Incorporar ao MKV") { app.workspace?.embedTranslation() }
+                Button("Incorporar ao MKV…") { app.workspace?.requestEmbed() }
                     .keyboardShortcut("m", modifiers: [.command, .shift])
                     .disabled(app.workspace?.editor.translation == nil)
                 Button("Cancelar operação") { app.workspace?.cancelOperation() }

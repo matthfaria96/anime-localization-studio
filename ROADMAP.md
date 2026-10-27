@@ -54,6 +54,12 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Modo "Substituir falas": novas vozes sobre a trilha sem o diálogo original (fundo em cache por faixa)
 - ⬜ Teste com o VoiceStudio real (o adaptador só foi testado contra servidor simulado)
 
+## Fase 4b — Dublagem automática ✅
+
+- ✅ Amostra da voz original de cada personagem (voz isolada, ~12 s) para reconhecer quem é
+- ✅ Elenco automático: clone da voz original via VoiceStudio (`POST /profiles`, testado contra servidor simulado) ou voz do macOS pelo tom (autocorrelação, testado)
+- ⬜ Testar a clonagem com o VoiceStudio instalado de verdade
+
 ## Fase 5 — Automação 🟡
 
 - ✅ Biblioteca de pastas, status de tradução/dublagem por arquivo
@@ -74,7 +80,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 
 ## Testes atuais
 
-`swift test`: 93 testes em 6 alvos, todos passando em 26/10/2026 (os de diarização rodam quando os modelos estão em cache ou com `ALS_DIARIZATION=1`).
+`swift test`: 98 testes em 6 alvos, todos passando em 26/10/2026 (os de diarização rodam quando os modelos estão em cache ou com `ALS_DIARIZATION=1`).
 
 | Alvo | O que cobre |
 |---|---|

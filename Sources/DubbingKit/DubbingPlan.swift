@@ -13,6 +13,8 @@ public struct CastMember: Sendable, Hashable, Codable, Identifiable {
     public var speed: Double
     /// Speaker labels from diarization that belong to this character.
     public var speakerLabels: [String]
+    /// Engine that made `voiceID` (`system`, `voiceStudio`); voices are not portable between them.
+    public var engine: String?
 
     public init(id: UUID = UUID(), name: String, voiceID: String? = nil, style: String = "", speed: Double = 1, speakerLabels: [String] = []) {
         self.id = id

@@ -29,6 +29,9 @@ public struct MuxPlan: Sendable, Hashable, Codable {
     public var clearOtherDefaults: Bool
     /// Places each new track first among the tracks of its kind.
     public var placeNewTracksFirst: Bool
+    /// After the new file is verified, it takes the original's place and the original goes to
+    /// the Trash (recoverable). `output` is ignored.
+    public var replaceSource: Bool = false
 
     public init(source: MediaInfo, output: URL, newTracks: [NewTrack], clearOtherDefaults: Bool = true, placeNewTracksFirst: Bool = false) {
         self.source = source
@@ -76,11 +79,11 @@ public struct MKVMuxer: Sendable {
     public func mux(_ plan: MuxPlan, progress: (@Sendable (Double) -> Void)? = nil) async throws -> (url: URL, report: VerificationReport) {
         let fm = FileManager.default
         let mkvmerge = try tools.require(.mkvmerge)
-        guard plan.output.standardizedFileURL != plan.source.url.standardizedFileURL else { throw MuxError.outputIsSource }
+        guard plan.replaceSource || plan.output.standardizedFileURL != plan.source.url.standardizedFileURL else { throw MuxError.outputIsSource }
         for track in plan.newTracks where !fm.fileExists(atPath: track.file.path) {
             throw MuxError.missingInput(track.file.lastPathComponent)
         }
-        let directory = plan.output.deletingLastPathComponent()
+        let directory = (plan.replaceSource ? plan.source.url : plan.output).deletingLastPathComponent()
         try fm.createDirectory(at: directory, withIntermediateDirectories: true)
         let addedBytes = plan.newTracks.reduce(Int64(0)) { total, track in
             total + Int64((try? track.file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
@@ -91,7 +94,7 @@ public struct MKVMuxer: Sendable {
         }
 
         // Unique per run: two runs for the same episode never touch each other's partial file.
-        let partial = directory.appendingPathComponent(".\(plan.output.deletingPathExtension().lastPathComponent).\(UUID().uuidString.prefix(8)).partial.mkv")
+        let partial = directory.appendingPathComponent(".\((plan.replaceSource ? plan.source.url : plan.output).deletingPathExtension().lastPathComponent).\(UUID().uuidString.prefix(8)).partial.mkv")
         do {
             // mkvmerge exit codes: 0 success, 1 success with warnings, 2 error.
             try await ProcessRunner.runChecked(mkvmerge, Self.arguments(for: plan, output: partial), acceptedExitCodes: [0, 1]) { line in
@@ -99,8 +102,15 @@ public struct MKVMuxer: Sendable {
             }
             var report = try await IntegrityVerifier(tools: tools).verifyMux(plan: plan, output: partial)
             guard report.passed else { throw MuxError.verificationFailed(report.failures) }
-            let final = FileOps.uniqueURL(for: plan.output)
-            try fm.moveItem(at: partial, to: final)
+            let final: URL
+            if plan.replaceSource {
+                final = plan.source.url
+                try FileOps.trash(plan.source.url)
+                try fm.moveItem(at: partial, to: final)
+            } else {
+                final = FileOps.uniqueURL(for: plan.output)
+                try fm.moveItem(at: partial, to: final)
+            }
             report.outputInfo?.url = final
             progress?(1)
             return (final, report)

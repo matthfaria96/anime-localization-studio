@@ -63,7 +63,7 @@ comando. Nenhuma biblioteca deles é vinculada ao aplicativo.
 
 | Programa | Versão testada | Licença | Uso |
 |---|---|---|---|
-| MKVToolNix (`mkvmerge`, `mkvextract`) — Moritz Bunkus | 103.0 (Homebrew) | GPL-2.0-or-later | Inspeção de MKV, extração de legendas, criação do novo MKV sem recodificação |
+| MKVToolNix (`mkvmerge`, `mkvextract`, `mkvpropedit`) — Moritz Bunkus | 103.0 (Homebrew) | GPL-2.0-or-later | Inspeção de MKV, extração de legendas, criação do novo MKV sem recodificação |
 | FFmpeg (`ffmpeg`, `ffprobe`) | 9.0.2 (Homebrew) | LGPL-2.1-or-later; a build do Homebrew é GPL-3.0-or-later por incluir componentes GPL | Pré-visualização (remux para MP4), extração de áudio, comparação de pacotes de vídeo, inspeção de arquivos não Matroska |
 
 Se uma versão futura **distribuir** esses executáveis dentro do aplicativo, será preciso:

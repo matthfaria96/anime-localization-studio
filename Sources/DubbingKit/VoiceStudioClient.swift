@@ -85,6 +85,30 @@ public struct VoiceStudioClient: Sendable {
         return try await send(request)
     }
 
+    /// Creates a cloned voice from a reference clip (`POST /profiles`, `kind=clone`) and returns
+    /// its profile id. Clone only voices you have permission to use.
+    public func createCloneProfile(name: String, referenceAudio: URL, referenceText: String, language: String?) async throws -> String {
+        let boundary = "ALS-\(UUID().uuidString)"
+        var body = Data()
+        func field(_ key: String, _ value: String) {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(key)\"\r\n\r\n\(value)\r\n".utf8))
+        }
+        field("name", name)
+        field("kind", "clone")
+        field("ref_text", referenceText)
+        field("language", language ?? "Auto")
+        body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"ref_audio\"; filename=\"\(referenceAudio.lastPathComponent)\"\r\nContent-Type: audio/wav\r\n\r\n".utf8))
+        body.append(try Data(contentsOf: referenceAudio))
+        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        var request = makeRequest("/profiles", timeout: 300)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        struct Profile: Decodable { let id: String }
+        guard let profile = try? JSONDecoder().decode(Profile.self, from: try await send(request)) else { throw ClientError.badResponse }
+        return profile.id
+    }
+
     /// Transcribes a WAV file with segment timestamps.
     public func transcribe(_ file: URL, language: String? = nil) async throws -> [TranscriptSegment] {
         let boundary = "ALS-\(UUID().uuidString)"

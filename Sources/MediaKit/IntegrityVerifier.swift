@@ -96,7 +96,7 @@ public struct IntegrityVerifier: Sendable {
         return report
     }
 
-    static func sameTrack(_ a: MediaTrack, _ b: MediaTrack) -> Bool {
+    public static func sameTrack(_ a: MediaTrack, _ b: MediaTrack) -> Bool {
         a.kind == b.kind && a.codecID == b.codecID && a.language == b.language
             && (a.name ?? "") == (b.name ?? "") && a.width == b.width && a.height == b.height
             && a.channels == b.channels && a.sampleRate == b.sampleRate

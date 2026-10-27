@@ -81,6 +81,48 @@ struct MediaPipelineTests {
         #expect(second.lastPathComponent == "Episode 01 – teste ['$&] [PT-BR] (2).mkv")
     }
 
+    @Test func changesDefaultTracksInPlaceOrInACopy() async throws {
+        let dir = MediaFixtures.temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let episode = try await MediaFixtures.makeEpisode(in: dir)
+        let info = try await MediaInspector(tools: testTools).inspect(episode)
+        let english = info.tracks(.audio)[1]
+        let originalHash = try MediaFixtures.sha256(episode)
+        // Copy: the original keeps Japanese as default.
+        let copy = try await TrackFlagEditor(tools: testTools).apply(.init(audioTrackID: english.id, subtitleTrackID: -1), to: info,
+                                                                    copyTo: dir.appendingPathComponent("copy.mkv"))
+        #expect(try MediaFixtures.sha256(episode) == originalHash)
+        let copied = try await MediaInspector(tools: testTools).inspect(copy)
+        #expect(copied.tracks(.audio).filter(\.isDefault).map(\.id) == [english.id])
+        #expect(copied.tracks(.subtitles).allSatisfy { !$0.isDefault })
+        // In place.
+        try await TrackFlagEditor(tools: testTools).apply(.init(audioTrackID: english.id, subtitleTrackID: nil), to: info)
+        let edited = try await MediaInspector(tools: testTools).inspect(episode)
+        #expect(edited.tracks(.audio).filter(\.isDefault).map(\.id) == [english.id])
+        #expect(edited.tracks(.subtitles).first?.isDefault == true)
+        // Video untouched by a header edit.
+        #expect(try await IntegrityVerifier(tools: testTools).samePackets(copy, episode).0)
+    }
+
+    @Test func replacesTheSourceOnlyAfterVerification() async throws {
+        let dir = MediaFixtures.temporaryDirectory()
+        let trash = dir.appendingPathComponent("Trash")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        setenv("ALS_TRASH_DIR", trash.path, 1)
+        defer { unsetenv("ALS_TRASH_DIR") }
+        let episode = try await MediaFixtures.makeEpisode(in: dir)
+        let info = try await MediaInspector(tools: testTools).inspect(episode)
+        let subtitle = dir.appendingPathComponent("pt.ass")
+        try MediaFixtures.ass.write(to: subtitle, atomically: true, encoding: .utf8)
+        var plan = MuxPlan(source: info, output: episode, newTracks: [NewTrack(file: subtitle, kind: .subtitles, name: "Português (Brasil)")])
+        plan.replaceSource = true
+        let (output, report) = try await MKVMuxer(tools: testTools).mux(plan)
+        #expect(report.passed && output == episode)
+        let replaced = try await MediaInspector(tools: testTools).inspect(episode)
+        #expect(replaced.tracks(.subtitles).count == 2)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: trash.path) == [episode.lastPathComponent])
+    }
+
     @Test func verificationCatchesReencodedVideo() async throws {
         let dir = MediaFixtures.temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }

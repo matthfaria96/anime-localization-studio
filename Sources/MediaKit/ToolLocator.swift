@@ -1,13 +1,13 @@
 import Foundation
 
 public enum ExternalTool: String, CaseIterable, Sendable, Codable, Identifiable {
-    case mkvmerge, mkvextract, ffmpeg, ffprobe
+    case mkvmerge, mkvextract, mkvpropedit, ffmpeg, ffprobe
 
     public var id: String { rawValue }
 
     public var package: String {
         switch self {
-        case .mkvmerge, .mkvextract: "MKVToolNix"
+        case .mkvmerge, .mkvextract, .mkvpropedit: "MKVToolNix"
         case .ffmpeg, .ffprobe: "FFmpeg"
         }
     }
@@ -16,6 +16,7 @@ public enum ExternalTool: String, CaseIterable, Sendable, Codable, Identifiable 
         switch self {
         case .mkvmerge: "Inspecionar MKV e incorporar faixas sem recodificar"
         case .mkvextract: "Extrair legendas e áudio do MKV sem perdas"
+        case .mkvpropedit: "Trocar faixa padrão e nomes no próprio MKV, sem regravar"
         case .ffmpeg: "Pré-visualização, extração de áudio e verificação de quadros"
         case .ffprobe: "Inspecionar arquivos que não são Matroska"
         }
@@ -23,14 +24,14 @@ public enum ExternalTool: String, CaseIterable, Sendable, Codable, Identifiable 
 
     public var installCommand: String {
         switch self {
-        case .mkvmerge, .mkvextract: "brew install mkvtoolnix"
+        case .mkvmerge, .mkvextract, .mkvpropedit: "brew install mkvtoolnix"
         case .ffmpeg, .ffprobe: "brew install ffmpeg"
         }
     }
 
     var versionArguments: [String] {
         switch self {
-        case .mkvmerge, .mkvextract: ["--version"]
+        case .mkvmerge, .mkvextract, .mkvpropedit: ["--version"]
         case .ffmpeg, .ffprobe: ["-hide_banner", "-version"]
         }
     }
@@ -118,7 +119,7 @@ public struct ToolLocator: Sendable {
         // "mkvmerge v103.0 ('The Darkness') 64-bit" → "103.0"; "ffmpeg version 9.0.2 Copyright…" → "9.0.2"
         let words = line.split(separator: " ")
         switch tool {
-        case .mkvmerge, .mkvextract:
+        case .mkvmerge, .mkvextract, .mkvpropedit:
             return words.first { $0.hasPrefix("v") && $0.dropFirst().first?.isNumber == true }.map { String($0.dropFirst()) } ?? line
         case .ffmpeg, .ffprobe:
             if let i = words.firstIndex(of: "version"), i + 1 < words.count { return String(words[i + 1]) }

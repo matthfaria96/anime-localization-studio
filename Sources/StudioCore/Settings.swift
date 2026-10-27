@@ -31,8 +31,8 @@ public enum DubbingEngineChoice: String, Sendable, Codable, CaseIterable, Identi
     public var id: String { rawValue }
     public var label: String {
         switch self {
-        case .system: "Vozes do macOS (básicas, no Mac)"
-        case .voiceStudio: "VoiceStudio (vozes naturais e clonadas)"
+        case .system: "Vozes do macOS, escolhidas pelo tom"
+        case .voiceStudio: "Voz original clonada (VoiceStudio)"
         }
     }
 }
@@ -53,7 +53,7 @@ public struct AppSettings: Sendable, Hashable, Codable {
     public var dubbingEngine: DubbingEngineChoice = .system
     public var dubbingDefaultVoice: String? = "Luciana"
     public var dubbingMaxSpeedup: Double = 1.3
-    public var dubbingMode: DubbingMode = .voiceOver
+    public var dubbingMode: DubbingMode = .replaceDialogue
     /// Reading speed above which a line is flagged (characters per second).
     public var maxReadingSpeed: Double = 20
     /// Render ASS previews with libass (animations, karaoke, drawings, embedded fonts).

@@ -80,6 +80,18 @@ public enum FileOps {
         }
     }
 
+    /// Moves a file to the Trash (recoverable). `ALS_TRASH_DIR` redirects it, so tests do not
+    /// fill the user's Trash.
+    public static func trash(_ url: URL) throws {
+        if let directory = ProcessInfo.processInfo.environment["ALS_TRASH_DIR"] {
+            let folder = URL(fileURLWithPath: directory, isDirectory: true)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try FileManager.default.moveItem(at: url, to: uniqueURL(for: folder.appendingPathComponent(url.lastPathComponent)))
+        } else {
+            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+        }
+    }
+
     /// `Name.mkv` → `Name (2).mkv` … until the name is free. Existing files are never overwritten.
     public static func uniqueURL(for url: URL) -> URL {
         let fm = FileManager.default

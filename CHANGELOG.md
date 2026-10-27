@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0 — 26/10/2026
+
+### Adicionado
+- Faixas padrão: uma estrela em cada áudio e legenda escolhe qual abre ligada nos players; aplicar no próprio arquivo (instantâneo, `mkvpropedit`, sem regravar o vídeo) ou numa cópia.
+- "Incorporar ao MKV" pergunta onde gravar: novo arquivo ou o próprio arquivo (o novo é verificado antes e o original vai para a Lixeira).
+- Escolha manual da legenda original (qualquer faixa ou arquivo externo) e da tradução (vincular outra faixa do arquivo, um arquivo de legenda, ou começar do zero). Legendas com linhas diferentes são casadas pelo tempo.
+- Ao abrir um arquivo que já tem a faixa em português (por exemplo, um MKV incorporado antes), ela é carregada como tradução automaticamente.
+- Tudo é recarregado depois de importar uma legenda, incorporar ou mudar faixas; avisos com botão para abrir o arquivo criado.
+- Dublagem automática com a voz original: o app identifica quem fala (se preciso), separa a voz de cada personagem, clona com o VoiceStudio ou escolhe uma voz do macOS de tom parecido, e dubla tudo num clique. "Ouvir original" mostra quem é cada personagem; escolher vozes à mão é opcional.
+- Modo e motor de dublagem em cartões com explicação própria (antes a dica do "Substituir falas" repetia a do voice-over). "Substituir falas" passa a ser o modo padrão.
+
 ## 0.6.2 — 26/10/2026
 
 ### Melhorado

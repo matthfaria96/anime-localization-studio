@@ -28,6 +28,18 @@ struct WorkspaceView: View {
         .navigationTitle(workspace.title)
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
+        .confirmationDialog("Onde gravar a legenda traduzida?", isPresented: $workspace.askEmbedDestination) {
+            Button("Criar um novo arquivo") { workspace.embedTranslation(replaceOriginal: false) }
+            Button("Incorporar no próprio arquivo", role: .destructive) { workspace.embedTranslation(replaceOriginal: true) }
+        } message: {
+            Text("Novo arquivo: cria “\(workspace.title) [\(appTarget)].mkv” ao lado e não mexe no original.\nPróprio arquivo: o MKV é regravado com a nova faixa (o vídeo não é recodificado), conferido, e só então substitui o original, que vai para a Lixeira.")
+        }
+        .confirmationDialog("Onde gravar as faixas padrão?", isPresented: $workspace.askDefaultsDestination) {
+            Button("Alterar o próprio arquivo") { workspace.applyDefaults(inPlace: true) }
+            Button("Criar uma cópia") { workspace.applyDefaults(inPlace: false) }
+        } message: {
+            Text("No próprio arquivo a mudança é instantânea: só o cabeçalho do MKV muda, o vídeo e o áudio não são tocados. A cópia duplica o arquivo inteiro.")
+        }
         .confirmationDialog("Este episódio já tem tradução", isPresented: $confirmRetranslate) {
             Button("Traduzir só as falas que faltam") { workspace.translateEpisode(undoManager: undoManager) }
             Button("Traduzir tudo de novo", role: .destructive) { workspace.translateEpisode(undoManager: undoManager, retranslateAll: true) }
@@ -35,6 +47,9 @@ struct WorkspaceView: View {
             Text("Falas já traduzidas ou editadas à mão são mantidas, a menos que você escolha traduzir tudo de novo. Nesse caso, uma cópia da tradução atual fica salva no projeto e ⌘Z desfaz a troca.")
         }
     }
+
+    @Environment(AppModel.self) private var app
+    private var appTarget: String { app.settings.targetLanguage.uppercased() }
 
     private var subtitle: String {
         guard let info = workspace.info else { return "" }
@@ -82,7 +97,7 @@ struct WorkspaceView: View {
             Button("Exportar legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
                 .disabled(workspace.editor.translation == nil)
                 .hint("Exportar legenda", "Salva a tradução como um arquivo de legenda separado, ao lado do vídeo.")
-            Button("Incorporar ao MKV", systemImage: "film.stack") { workspace.embedTranslation() }
+            Button("Incorporar ao MKV", systemImage: "film.stack") { workspace.requestEmbed() }
                 .disabled(workspace.editor.translation == nil || workspace.isBusy)
                 .hint("Incorporar ao MKV", "Cria um novo arquivo MKV com a legenda traduzida como faixa extra. O original não é alterado e o vídeo não é recodificado.")
             Button("Traduzir episódio inteiro", systemImage: "translate") { requestTranslate() }

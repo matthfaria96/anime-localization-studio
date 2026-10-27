@@ -5,61 +5,45 @@ import StudioCore
 import SubtitleKit
 import SwiftUI
 
-/// Voice casting and the voice-over dub of the episode. Voices come from macOS (basic, always
-/// available) or from VoiceStudio (natural and cloned voices, installed separately).
+/// Automatic dub: the app finds who speaks, recreates each character's voice (a clone of the
+/// original with VoiceStudio, or a macOS voice of similar pitch) and dubs the whole episode.
+/// Choosing voices by hand is optional.
 struct DubbingView: View {
     @Bindable var workspace: WorkspaceModel
     @Environment(AppModel.self) private var app
-    @State private var connection: Connection = .checking
+    @Environment(\.undoManager) private var undoManager
+    @State private var studioConnected: Bool?
     @State private var studioVoices: [VoiceStudioClient.Voice] = []
     @State private var cast = VoiceCast()
     @State private var sampleState: [UUID: String] = [:]
     @State private var audioPlayer: AVAudioPlayer?
-    @Environment(\.undoManager) private var undoManager
+    @State private var showManualVoices = false
 
-    enum Connection: Equatable { case checking, connected, offline(String) }
-
-    private struct VoiceOption: Hashable, Identifiable { let id: String; let name: String }
-
-    private var voiceOptions: [VoiceOption] {
-        switch app.settings.dubbingEngine {
-        case .system:
-            let prefix = String(app.settings.targetLanguage.prefix(2))
-            return AVSpeechSynthesisVoice.speechVoices()
-                .filter { $0.language.hasPrefix(prefix) }
-                .map { VoiceOption(id: $0.name, name: "\($0.name) (\($0.language))") }
-        case .voiceStudio:
-            return studioVoices.map { VoiceOption(id: $0.voice_id, name: $0.name) }
-        }
-    }
-
-    private var engineReady: Bool { app.settings.dubbingEngine == .system || connection == .connected }
-
-    /// Lines to dub (from the translation) or, before translating, the original lines, so the
-    /// cast can be prepared early.
     private var segments: [DubSegment] {
         guard let document = workspace.editor.translation ?? workspace.editor.source else { return [] }
         return DubbingPlan.segments(from: document)
     }
-
     private var isTranslated: Bool { workspace.editor.translation != nil }
+    private var usesClones: Bool { app.settings.dubbingEngine == .voiceStudio }
+    private var engineReady: Bool { !usesClones || studioConnected == true }
 
     var body: some View {
-        @Bindable var app = app
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text("Dublagem").font(.largeTitle.weight(.semibold))
-                    Text("Escolha uma voz para cada personagem e gere uma faixa de áudio em português, por cima do original (voice-over) ou no lugar das falas originais. O elenco fica salvo na série e vale para os próximos episódios.")
+                    Text("Um clique: o app descobre quem fala, recria a voz de cada personagem e dubla o episódio inteiro em português.")
                         .foregroundStyle(.secondary)
                 }
                 if let operation = workspace.operation {
                     OperationProgress(message: operation.message, fraction: operation.fraction) { workspace.cancelOperation() }
                 }
-                if let notice = workspace.notice { InlineMessage(kind: notice.kind, text: notice.text) }
-                enginePanel
+                if let notice = workspace.notice {
+                    InlineMessage(kind: notice.kind, text: notice.text)
+                    if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
+                }
+                howPanel
                 castPanel
-                dubPanel
                 if let dub = workspace.lastDub { resultPanel(dub) }
             }
             .padding(Theme.Spacing.xl)
@@ -70,82 +54,92 @@ struct DubbingView: View {
         .task {
             cast = workspace.loadCast()
             rebuildCast()
-            await connect()
+            await checkStudio()
         }
-        .onChange(of: app.settings.dubbingEngine) { Task { await connect() } }
+        .onChange(of: app.settings.dubbingEngine) { Task { await checkStudio() } }
         .onChange(of: workspace.editor.revision) { rebuildCast() }
         .onChange(of: cast) { _, new in workspace.saveCast(new) }
         .modifier(SpeakerModelConsent(workspace: workspace))
     }
 
-    // MARK: Panels
+    // MARK: How to dub
 
-    private var enginePanel: some View {
+    private var howPanel: some View {
         @Bindable var app = app
         return Panel {
+            SectionLabel("Vozes", systemImage: "waveform.badge.mic")
             HStack(spacing: Theme.Spacing.m) {
-                Image(systemName: "waveform.badge.mic").font(.title).foregroundStyle(.tint)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Picker("Motor de voz", selection: $app.settings.dubbingEngine) {
-                        ForEach(DubbingEngineChoice.allCases) { Text($0.label).tag($0) }
-                    }
-                    .fixedSize()
-                    .hint("Motor de voz", "Vozes do macOS (prontas, robóticas) ou VoiceStudio (vozes naturais e clonadas, instalado à parte).")
-                    Text(engineStatus).font(.callout).foregroundStyle(engineReady ? Theme.translated : .secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                OptionCard(title: "Voz original clonada", systemImage: "person.wave.2.fill",
+                           detail: studioStatus, selected: usesClones) { app.settings.dubbingEngine = .voiceStudio }
+                    .hint("Voz original clonada", "Cada personagem fala português com a própria voz do episódio: o app tira um trecho da voz original e o VoiceStudio cria uma cópia dela. Precisa do VoiceStudio aberto (app gratuito, instalado à parte). Clone apenas vozes que você tem permissão de usar.")
+                OptionCard(title: "Vozes do macOS", systemImage: "desktopcomputer",
+                           detail: "Prontas, robóticas. O app escolhe uma voz grave ou aguda parecida com a original.", selected: !usesClones) {
+                    app.settings.dubbingEngine = .system
+                }
+                .hint("Vozes do macOS", "Usa as vozes do sistema, sem instalar nada. O app mede se a voz original é grave ou aguda e escolhe uma voz parecida e diferente para cada personagem. Servem para rascunho e conferência de tempo.")
+            }
+            SectionLabel("Modo", systemImage: "slider.horizontal.3")
+            HStack(spacing: Theme.Spacing.m) {
+                OptionCard(title: "Substituir falas", systemImage: "person.2.slash",
+                           detail: "As vozes originais saem e as novas entram no lugar, com a música e os efeitos.",
+                           selected: app.settings.dubbingMode == .replaceDialogue) { app.settings.dubbingMode = .replaceDialogue }
+                    .hint("Substituir falas", "Como uma dublagem de TV: o app separa as vozes originais da música e dos efeitos, tira as vozes e coloca as dubladas no lugar. A separação é feita no Mac e é aproximada: em cenas com muita música podem sobrar restos da voz original.")
+                OptionCard(title: "Voice-over", systemImage: "person.2.wave.2",
+                           detail: "A voz nova fala por cima; o áudio original abaixa enquanto ela fala.",
+                           selected: app.settings.dubbingMode == .voiceOver) { app.settings.dubbingMode = .voiceOver }
+                    .hint("Voice-over", "Como em documentários: o áudio original continua, só que mais baixo enquanto a voz em português fala por cima.")
+            }
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isTranslated ? "\(segments.count) falas para dublar" : "Traduza o episódio antes de dublar")
+                        .font(.headline)
+                    Text("Resultado: um novo “Nome [PT-BR DUB].mkv” com o áudio dublado e a legenda em português, mantendo o áudio e as legendas originais.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if app.settings.dubbingEngine == .voiceStudio {
-                    Button("Conectar de novo") { Task { await connect() } }
-                        .hint("Conectar de novo", "Procura de novo o VoiceStudio aberto neste Mac.")
+                Button {
+                    workspace.autoDub(cast: cast, undoManager: undoManager) { cast = $0 }
+                } label: {
+                    Label("Dublar episódio inteiro", systemImage: "waveform")
                 }
+                .buttonStyle(.glassProminent)
+                .controlSize(.large)
+                .disabled(!isTranslated || segments.isEmpty || !engineReady || workspace.isBusy)
+                .hintVerbatim("Dublar episódio inteiro", isTranslated
+                    ? "Faz tudo sozinho: identifica quem fala (se a legenda não disser), recria a voz de cada personagem, gera todas as falas, ajusta ao tempo, mixa e cria o novo MKV."
+                    : "A dublagem usa o texto traduzido. Traduza o episódio na aba Legendas primeiro.")
             }
-            if app.settings.dubbingEngine == .system {
-                Text("As vozes do macOS são robóticas: servem para rascunho, revisão de tempo e testes. Para vozes naturais ou clonadas, instale o VoiceStudio (voicestudio.sh, Apple silicon com Metal). Mais vozes do sistema: Ajustes do Sistema › Acessibilidade › Conteúdo Falado.")
-                    .font(.caption).foregroundStyle(.secondary)
-            } else if case .offline = connection {
-                Text("Instale o VoiceStudio e deixe-o aberto. Ele só baixa modelos com a sua confirmação, mostrando tamanho e licença de cada um. Clone vozes apenas com permissão de quem fala.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+            .padding(.top, Theme.Spacing.s)
         }
     }
 
-    private var engineStatus: String {
-        switch app.settings.dubbingEngine {
-        case .system: return "\(voiceOptions.count) vozes do sistema em \(app.settings.targetLanguage) neste Mac"
-        case .voiceStudio:
-            switch connection {
-            case .checking: return "Procurando o VoiceStudio em \(app.settings.voiceStudioURL.absoluteString)…"
-            case .connected: return "Conectado · \(studioVoices.count) vozes"
-            case .offline(let message): return message
-            }
+    private var studioStatus: String {
+        switch studioConnected {
+        case .none: "Procurando o VoiceStudio…"
+        case .some(true): "VoiceStudio conectado. Fala português com a voz de cada personagem."
+        case .some(false): "Precisa do VoiceStudio aberto (voicestudio.sh). Não encontrado neste Mac."
         }
     }
+
+    // MARK: Cast
 
     private var castPanel: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             HStack {
-                SectionLabel("Elenco", systemImage: "person.2")
+                SectionLabel("Personagens", systemImage: "person.2")
                 Spacer()
-                Picker("Voz para falas sem personagem", selection: Binding(get: { app.settings.dubbingDefaultVoice }, set: { app.settings.dubbingDefaultVoice = $0 })) {
-                    Text("Nenhuma (pular)").tag(String?.none)
-                    ForEach(voiceOptions) { Text($0.name).tag(Optional($0.id)) }
-                }
-                .fixedSize()
-                .controlSize(.small)
-                .hint("Voz padrão", "Voz usada nas falas sem personagem ou de personagens sem voz escolhida. “Nenhuma” pula essas falas.")
-            }
-            HStack {
                 Button("Identificar falantes no áudio", systemImage: "person.wave.2") { workspace.identifySpeakers(undoManager: undoManager) }
                     .disabled(workspace.isBusy || !workspace.editor.hasDocument || workspace.audioTracks.isEmpty)
-                    .hint("Identificar falantes no áudio", "Descobre pelo áudio quem fala em cada linha sem personagem e preenche “Falante 1”, “Falante 2”… Tudo no próprio Mac. ⌘Z desfaz.")
-                Text(workspace.speakerModelsInstalled ? "Modelos instalados" : "Na primeira vez baixa \(SpeakerDiarization.downloadSize) de modelos (com confirmação)")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .hint("Identificar falantes no áudio", "Descobre pelo áudio quem fala em cada linha sem personagem e preenche “Falante 1”, “Falante 2”… Tudo no Mac. ⌘Z desfaz. A dublagem automática faz isso sozinha quando precisa.")
+                Toggle("Escolher vozes manualmente", isOn: $showManualVoices)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .hint("Escolher vozes manualmente", "Mostra a escolha de voz de cada personagem. Desligado, o app escolhe sozinho ao dublar.")
             }
             if cast.members.isEmpty {
                 Text(workspace.editor.hasDocument
-                     ? "A legenda não indica personagens. Use “Identificar falantes no áudio” ou as falas usarão a voz padrão acima."
-                     : "Abra uma legenda para montar o elenco.")
+                     ? "A legenda ainda não diz quem fala. Ao dublar, o app identifica os falantes pelo áudio; ou clique em “Identificar falantes no áudio” para ver e renomear antes."
+                     : "Abra uma legenda para começar.")
                     .foregroundStyle(.secondary)
             }
             ForEach($cast.members) { $member in castRow($member) }
@@ -153,77 +147,60 @@ struct DubbingView: View {
     }
 
     private func castRow(_ member: Binding<CastMember>) -> some View {
-        let lines = segments.filter { $0.speaker == member.wrappedValue.name }
+        let name = member.wrappedValue.name
+        let lines = segments.filter { $0.speaker == name }
         return HStack(spacing: Theme.Spacing.m) {
             Image(systemName: "person.crop.circle.fill").font(.title2).foregroundStyle(.tint.opacity(0.8))
             VStack(alignment: .leading, spacing: 2) {
-                CastNameField(name: member.wrappedValue.name) { newName in
-                    let old = member.wrappedValue.name
-                    workspace.editor.renameActor(old, to: newName, undoManager: undoManager)
+                CastNameField(name: name) { newName in
+                    workspace.editor.renameActor(name, to: newName, undoManager: undoManager)
                     member.wrappedValue.name = newName
                 }
                 Text("\(lines.count) falas").font(.caption).foregroundStyle(.secondary)
             }
-            .frame(width: 150, alignment: .leading)
-            Picker("Voz", selection: member.voiceID) {
-                Text("Sem voz").tag(String?.none)
-                ForEach(voiceOptions) { Text($0.name).tag(Optional($0.id)) }
-            }
-            .frame(maxWidth: 230)
-            .disabled(!engineReady)
-            .hint("Voz", "Voz que dubla este personagem em todas as falas dele.")
-            if app.settings.dubbingEngine == .voiceStudio {
-                TextField("Estilo (ex.: jovem, enérgico)", text: member.style)
-                    .hint("Estilo da voz", "Instrução para o VoiceStudio de como falar, por exemplo “jovem, enérgico” ou “calmo, sussurrado”.")
+            .frame(width: 170, alignment: .leading)
+            Button("Ouvir original", systemImage: "ear") { Task { await playOriginal(name) } }
+                .disabled(workspace.isBusy && workspace.voiceSamples.isEmpty)
+                .hint("Ouvir a voz original", "Toca um trecho da voz deste personagem no episódio, sem a música, para você saber quem é.")
+            if showManualVoices {
+                Picker("Voz", selection: member.voiceID) {
+                    Text("Automática").tag(String?.none)
+                    ForEach(voiceOptions, id: \.id) { Text($0.name).tag(Optional($0.id)) }
+                }
+                .frame(maxWidth: 220)
+                .hint("Voz", "Voz que dubla este personagem. “Automática” deixa o app escolher (ou clonar a original) ao dublar.")
+                Stepper(value: member.speed, in: 0.7...1.5, step: 0.05) {
+                    Text(member.wrappedValue.speed, format: .number.precision(.fractionLength(2))).monospacedDigit().frame(width: 34)
+                }
+                .hint("Velocidade", "Deixa a voz deste personagem mais lenta (abaixo de 1) ou mais rápida (acima de 1).")
             } else {
-                Spacer()
+                Text(voiceLabel(member.wrappedValue)).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    .hint("Voz", "Escolhida pelo app ao dublar. Ligue “Escolher vozes manualmente” para trocar.")
             }
-            Stepper(value: member.speed, in: 0.7...1.5, step: 0.05) {
-                Text(member.wrappedValue.speed, format: .number.precision(.fractionLength(2))).monospacedDigit().frame(width: 34)
-            }
-            .hint("Velocidade", "Deixa a voz deste personagem mais lenta (abaixo de 1) ou mais rápida (acima de 1).")
-            Button("Ouvir", systemImage: "play.circle") { Task { await sample(member.wrappedValue, line: lines.first?.text) } }
+            Spacer()
+            Button("Ouvir dublada", systemImage: "play.circle") { Task { await sample(member.wrappedValue, line: lines.first?.text) } }
                 .disabled(member.wrappedValue.voiceID == nil || !engineReady)
-                .hint("Ouvir", "Toca uma amostra com a voz escolhida, usando uma fala deste personagem.")
+                .hint("Ouvir dublada", "Toca uma fala deste personagem em português com a voz escolhida. Depois da primeira dublagem automática, toca a voz que o app escolheu.")
             if let state = sampleState[member.wrappedValue.id] { Text(state).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
         }
         .padding(Theme.Spacing.s)
         .background(.background.secondary, in: .rect(cornerRadius: Theme.Radius.medium))
     }
 
-    private var dubPanel: some View {
-        Panel {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Dublar episódio inteiro").font(.headline)
-                    Text("\(segments.count) falas com tempo definido · \(segments.filter(\.isLikelyTooLong).count) provavelmente longas para o tempo (serão aceleradas até \(Int((app.settings.dubbingMaxSpeedup - 1) * 100))%)")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button {
-                    workspace.dubEpisode(cast: cast)
-                } label: {
-                    Label("Dublar episódio inteiro", systemImage: "waveform")
-                }
-                .buttonStyle(.glassProminent)
-                .controlSize(.large)
-                .disabled(segments.isEmpty || !engineReady || workspace.isBusy || !isTranslated)
-                .hintVerbatim("Dublar episódio inteiro", isTranslated ? "Gera a voz de cada fala traduzida, mixa com o áudio do episódio e cria um novo MKV com o áudio dublado e a legenda." : "Traduza o episódio antes de dublar: a dublagem usa o texto da tradução.")
-            }
-            Picker("Modo", selection: Bindable(app).settings.dubbingMode) {
-                ForEach(DubbingMode.allCases) { Text($0.label).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .fixedSize()
-            .hint("Modo de dublagem", "Voice-over: a voz nova fala por cima do original abaixado. Substituir falas: as vozes originais são retiradas e trocadas pelas novas.")
-            Text(app.settings.dubbingMode == .voiceOver
-                 ? "Voice-over: a voz nova fala por cima e o áudio original abaixa enquanto ela fala."
-                 : "Substituir falas: as vozes originais são separadas da música e dos efeitos no próprio Mac (isolamento de voz da Apple) e trocadas pelas novas. A separação é aproximada: cenas com muita música ou efeitos podem manter restos das falas originais.")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Text("Resultado: um novo “Nome [PT-BR DUB].mkv” com o áudio dublado e a legenda em português, mantendo o áudio, as legendas e as fontes originais. O original não é alterado.")
-                .font(.caption).foregroundStyle(.secondary)
-        }
+    private struct VoiceOption: Hashable { let id: String; let name: String }
+
+    private var voiceOptions: [VoiceOption] {
+        if usesClones { return studioVoices.map { VoiceOption(id: $0.voice_id, name: $0.name) } }
+        let prefix = String(app.settings.targetLanguage.prefix(2))
+        return AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix(prefix) }.map { VoiceOption(id: $0.name, name: $0.name) }
     }
+
+    private func voiceLabel(_ member: CastMember) -> String {
+        guard let voice = member.voiceID, member.engine == app.settings.dubbingEngine.rawValue || member.engine == nil else { return "Automática" }
+        return usesClones ? "Voz original clonada" : "Voz \(voice)"
+    }
+
+    // MARK: Result
 
     private func resultPanel(_ dub: (url: URL, report: DubbingReport, verification: VerificationReport)) -> some View {
         Panel {
@@ -232,20 +209,20 @@ struct DubbingView: View {
                 Spacer()
                 Button("Mostrar no Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([dub.url]) }
                     .buttonStyle(.link)
+                    .hint("Mostrar no Finder", "Abre a pasta do arquivo dublado com ele selecionado.")
             }
             let r = dub.report
-            Text("\(r.synthesized) vozes geradas, \(r.reusedClips) reaproveitadas · \(r.spedUp.count) aceleradas · \(r.overflowing.count) ainda longas · \(r.delayed.count) atrasadas para não sobrepor · \(r.failed.count) sem voz")
+            Text("\(r.synthesized) falas geradas, \(r.reusedClips) reaproveitadas · \(r.spedUp.count) aceleradas · \(r.overflowing.count) ainda longas · \(r.delayed.count) atrasadas para não sobrepor · \(r.failed.count) sem voz")
                 .font(.callout)
             let problems = r.problemLines.sorted()
             if !problems.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Para revisar").font(.caption.weight(.semibold))
                     ForEach(problems.prefix(12), id: \.self) { id in
-                        Button("Fala \(id + 1): \(segments.first { $0.id == id }?.text ?? "")") {
-                            workspace.select(id, seek: true)
-                        }
-                        .buttonStyle(.link)
-                        .lineLimit(1)
+                        Button("Fala \(id + 1): \(segments.first { $0.id == id }?.text ?? "")") { workspace.select(id, seek: true) }
+                            .buttonStyle(.link)
+                            .lineLimit(1)
+                            .hint("Ir para a fala", "Mostra esta fala no vídeo e no editor. Edite a tradução e dublar de novo refaz só as falas alteradas.")
                     }
                 }
             }
@@ -255,21 +232,28 @@ struct DubbingView: View {
 
     // MARK: Actions
 
-    private func connect() async {
-        guard app.settings.dubbingEngine == .voiceStudio else { connection = .connected; return }
-        connection = .checking
+    private func checkStudio() async {
+        guard usesClones else { return }
+        studioConnected = nil
         let client = VoiceStudioClient(baseURL: app.settings.voiceStudioURL)
         do {
             _ = try await client.capabilities()
             studioVoices = try await client.voices()
-            connection = .connected
+            studioConnected = true
         } catch {
-            connection = .offline(error.localizedDescription)
+            studioConnected = false
         }
     }
 
     private func rebuildCast() {
         cast.addMissing(from: DubbingPlan.speakers(in: segments).filter { $0 != "Desconhecido" })
+    }
+
+    private func playOriginal(_ speaker: String) async {
+        if workspace.voiceSamples[speaker] == nil { await workspace.prepareVoiceSamples() }
+        guard let url = workspace.voiceSamples[speaker], let data = try? Data(contentsOf: url) else { return }
+        audioPlayer = try? AVAudioPlayer(data: data)
+        audioPlayer?.play()
     }
 
     private func sample(_ member: CastMember, line: String?) async {
@@ -286,6 +270,40 @@ struct DubbingView: View {
         } catch {
             sampleState[member.id] = error.localizedDescription
         }
+    }
+}
+
+/// A large selectable choice with its own explanation (unlike a segmented control, each
+/// option can carry its own hover hint).
+private struct OptionCard: View {
+    let title: String
+    let systemImage: String
+    let detail: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: Theme.Spacing.s) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+                    .font(.title3)
+                VStack(alignment: .leading, spacing: 2) {
+                    Label(title, systemImage: systemImage).font(.headline)
+                    Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(Theme.Spacing.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(selected ? AnyShapeStyle(Color.accentColor.opacity(0.12)) : AnyShapeStyle(.background.secondary),
+                        in: .rect(cornerRadius: Theme.Radius.medium))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.medium).strokeBorder(selected ? Color.accentColor.opacity(0.6) : .clear))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
