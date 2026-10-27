@@ -34,7 +34,7 @@ final class WorkspaceModel {
     var lastMux: (url: URL, report: VerificationReport)?
     var overlayMode: OverlayMode = .translation
     var previewAudioTrackID: Int?
-    @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored var task: Task<Void, Never>?
     @ObservationIgnored private var editorLoadedSource: SubtitleDocument?
     /// libass renderers for the faithful preview (nil if libass could not start).
     @ObservationIgnored let originalRenderer = try? ASSRenderer()
@@ -49,6 +49,8 @@ final class WorkspaceModel {
         self.app = app
         project = ProjectStore(paths: app.paths).project(for: url)
         lastReport = project.lastReport
+        overlayMode = project.subtitleTask == .edit ? .original : .translation
+        editor.editsOriginal = project.subtitleTask == .edit
         editor.onChange = { [weak self] source, translation in self?.writeWorkingFiles(source: source, translation: translation) }
         editor.spellingLanguage = app.settings.targetLanguage.replacingOccurrences(of: "-", with: "_")
         editor.maxReadingSpeed = app.settings.maxReadingSpeed
@@ -58,9 +60,9 @@ final class WorkspaceModel {
     var audioTracks: [MediaTrack] { info?.tracks(.audio) ?? [] }
     var subtitleTracks: [MediaTrack] { info?.tracks(.subtitles) ?? [] }
     var isBusy: Bool { operation != nil }
-    private var store: ProjectStore { ProjectStore(paths: app.paths) }
+    var store: ProjectStore { ProjectStore(paths: app.paths) }
 
-    private func workflow() -> EpisodeWorkflow {
+    func workflow() -> EpisodeWorkflow {
         EpisodeWorkflow(paths: app.paths, settings: app.settings, engine: app.makeEngine(), glossary: app.glossary(for: project.seriesID))
     }
 
@@ -97,11 +99,11 @@ final class WorkspaceModel {
             try? store.save(project)
             app.refreshRecents()
             // A file muxed before already carries the translation as a track: use it.
-            if editor.translation == nil, let info, let existing = workflow().existingTranslationTrack(in: info, project: project),
+            if editor.translation == nil, project.subtitleTask != .edit, let info, let existing = workflow().existingTranslationTrack(in: info, project: project),
                let (linked, result) = try? await workflow().linkTranslation(project, track: existing) {
                 project = linked
                 editor.load(source: source, translation: result.document)
-                notice = (.info, "A faixa “\(existing.name ?? existing.displayLanguage)” do arquivo foi carregada como tradução. Troque em Tradução, no inspetor.")
+                notice = (.info, "A faixa “\(existing.name ?? existing.displayLanguage)” do arquivo foi carregada como tradução. Troque em “Tradução”, à direita.")
             }
         } catch WorkflowError.noTextSubtitle {
             editor.load(source: nil, translation: nil)
@@ -212,6 +214,10 @@ final class WorkspaceModel {
     var pendingDefaults: TrackFlagEditor.Defaults?
     /// Asks “new file or replace the original?” before muxing.
     var askEmbedDestination = false
+    /// Same question before saving an edited subtitle back into the MKV.
+    var askSaveEditedDestination = false
+    /// Glossaries and series notes, opened from Legendar.
+    var showSeries = false
     /// Asks “this file or a copy?” before writing default-track changes.
     var askDefaultsDestination = false
     /// Optional button shown with the notice (e.g. open the file just created).
@@ -327,13 +333,13 @@ final class WorkspaceModel {
     // MARK: Translate
 
     /// Claims the project for a long operation, or explains why it cannot start.
-    private func claim(_ description: String) -> Bool {
+    func claim(_ description: String) -> Bool {
         if app.activity.begin(project.id, description) { return true }
         notice = (.warning, "Este episódio já está sendo processado (\(app.activity.activity(for: project.id) ?? "outra tarefa")). Aguarde terminar.")
         return false
     }
 
-    private func release() { app.activity.end(project.id) }
+    func release() { app.activity.end(project.id) }
 
     func translateEpisode(undoManager: UndoManager?, retranslateAll: Bool = false) {
         guard !isBusy, claim("Tradução no estúdio") else { return }
@@ -531,199 +537,14 @@ final class WorkspaceModel {
         }
     }
 
-    // MARK: Automatic dub with the original voices
-
-    var voiceModelsInstalled: Bool { ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels).modelsInstalled }
-
-    /// Lines already synthesized for this episode (reused by the next dub).
-    var cachedDubLines: Int {
-        let clips = store.directory(for: project.id).appendingPathComponent("Dub/clips", isDirectory: true)
-        return ((try? FileManager.default.contentsOfDirectory(atPath: clips.path)) ?? []).filter { $0.hasSuffix(".wav") && !$0.contains(".fit.") }.count
-    }
+    // MARK: Dub state (actions in WorkspaceModel+Dubbing.swift)
 
     /// Clips of each speaker's original voice, for “Ouvir original”.
     var voiceSamples: [String: URL] = [:]
-
-    func prepareVoiceSamples() async {
-        guard voiceSamples.isEmpty, claim("Amostras das vozes originais") else { return }
-        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Separando as vozes originais…")
-        defer { release(); operation = nil }
-        do {
-            let samples = try await workflow().voiceSamples(project) { step in
-                Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
-            }
-            voiceSamples = Dictionary(samples.map { ($0.speaker, $0.url) }, uniquingKeysWith: { a, _ in a })
-        } catch {
-            notice = (.error, LogRedactor.redact(error.localizedDescription))
-        }
-    }
-
-    /// The guided dub window: confirm → running (with steps) → done or failed.
-    struct DubSession {
-        enum Phase {
-            case confirm
-            case running
-            case done(url: URL, report: DubbingReport, verification: VerificationReport, replaced: Bool)
-            case failed(String)
-        }
-        var phase: Phase = .confirm
-        var replaceOriginal = false
-    }
-
-    enum DubStage: Int, CaseIterable {
-        case speakers, voices, speech, mix, file
-
-        var title: String {
-            switch self {
-            case .speakers: "Identificar quem fala"
-            case .voices: "Preparar a voz de cada personagem"
-            case .speech: "Gerar as falas em português"
-            case .mix: "Mixar com a música e os efeitos"
-            case .file: "Gravar e verificar o MKV"
-            }
-        }
-
-        /// Where each stage sits in the overall progress of `autoDub`.
-        static func at(_ fraction: Double) -> DubStage {
-            switch fraction {
-            case ..<0.2: .speakers
-            case ..<0.4: .voices
-            case ..<0.85: .speech
-            case ..<0.94: .mix
-            default: .file
-            }
-        }
-    }
-
     var dubSession: DubSession?
-
-    func startDubSession() {
-        guard !isBusy, editor.translation != nil else { return }
-        dubSession = DubSession()
-    }
-
-    /// Identifies who speaks (when the subtitle does not say), gives each character a voice (a
-    /// clone of the original, or a similar macOS voice), dubs every line and writes the MKV.
-    func autoDub(cast: VoiceCast, allowDiarizationDownload: Bool = false, undoManager: UndoManager?, onCast: @escaping (VoiceCast) -> Void) {
-        guard !isBusy, editor.translation != nil, claim("Dublagem automática") else { return }
-        let replaceOriginal = dubSession?.replaceOriginal ?? false
-        dubSession?.phase = .running
-        editor.flush()
-        notice = nil
-        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando a dublagem…")
-        let workflow = workflow()
-        let systemVoices = Set(AVSpeechSynthesisVoice.speechVoices().map(\.name))
-        let engine = app.settings.dubbingEngine.label, mode = app.settings.dubbingMode.label
-        AppLog.shared.info("Dublagem iniciada: \(project.title) · \(engine) · \(mode) · \(replaceOriginal ? "no próprio arquivo" : "novo arquivo")")
-        task = Task {
-            do {
-                var project = project
-                if let document = editor.translation, DubbingPlan.segments(from: document).allSatisfy({ $0.speaker == "Desconhecido" }) {
-                    let speakers = try await workflow.identifySpeakers(in: document, of: project, allowModelDownload: allowDiarizationDownload) { step in
-                        Task { @MainActor in self.operation?.fraction = step.fraction * 0.2; self.operation?.message = step.message }
-                    }
-                    editor.setActors(speakers, undoManager: undoManager)
-                    editor.flush()
-                }
-                let filled = try await workflow.automaticCast(project, cast: cast, systemVoices: systemVoices) { step in
-                    Task { @MainActor in self.operation?.fraction = 0.2 + step.fraction * 0.2; self.operation?.message = step.message }
-                }
-                onCast(filled)
-                saveCast(filled)
-                if app.settings.dubbingEngine == .original {
-                    operation?.message = voiceModelsInstalled ? "Carregando o modelo de voz…" : "Baixando os modelos de voz (\(ClonedVoiceSynthesizer.downloadSize))…"
-                    try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels).prepare()
-                }
-                let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
-                let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled,
-                                                                                    replaceOriginal: replaceOriginal) { step in
-                    Task { @MainActor in self.operation?.fraction = 0.4 + step.fraction * 0.6; self.operation?.message = step.message }
-                }
-                project = updated
-                self.project = updated
-                lastDub = (output, report, verification)
-                lastMux = (output, verification)
-                dubSession?.phase = .done(url: output, report: report, verification: verification, replaced: replaceOriginal)
-                AppLog.shared.info("Dublagem concluída: \(output.path)")
-                release()
-                operation = nil
-                if replaceOriginal { await reload() }
-                return
-            } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
-                dubSession?.phase = .confirm
-                pendingDiarizationDownload = { self.autoDub(cast: cast, allowDiarizationDownload: true, undoManager: undoManager, onCast: onCast) }
-            } catch is CancellationError {
-                dubSession?.phase = .failed("Dublagem cancelada. As falas já geradas ficam guardadas e serão reaproveitadas na próxima vez. Nenhum arquivo foi criado ou alterado.")
-            } catch {
-                let message = Self.explainDubError(error)
-                AppLog.shared.error("Dublagem falhou: \(message)")
-                dubSession?.phase = .failed(message)
-            }
-            release()
-            operation = nil
-        }
-    }
-
-    /// Turns technical failures into what happened and what to do.
-    static func explainDubError(_ error: Error) -> String {
-        if case VoiceStudioClient.ClientError.notRunning = error {
-            return "O VoiceStudio não está aberto, então as vozes originais não puderam ser clonadas. Abra o VoiceStudio e tente de novo, ou escolha “Vozes do macOS”. Nenhum arquivo foi criado ou alterado."
-        }
-        if case SynthesisError.engineUnavailable = error {
-            return "O motor de voz parou de responder no meio da dublagem. Nenhum arquivo foi criado ou alterado; as falas já geradas serão reaproveitadas."
-        }
-        return LogRedactor.redact(error.localizedDescription) + " Nenhum arquivo foi criado ou alterado."
-    }
-
-    // MARK: Dub
-
     var lastDub: (url: URL, report: DubbingReport, verification: VerificationReport)?
-
-    /// The cast of the series (shared by its episodes) or, without a series, of this project.
-    func loadCast() -> VoiceCast {
-        if let id = project.seriesID, let series = app.series.first(where: { $0.id == id }) { return series.cast ?? VoiceCast() }
-        return project.cast ?? VoiceCast()
-    }
-
-    func saveCast(_ cast: VoiceCast) {
-        if let id = project.seriesID, var series = app.series.first(where: { $0.id == id }) {
-            series.cast = cast
-            app.saveSeries(series)
-        } else {
-            project.cast = cast
-            try? store.save(project)
-        }
-    }
-
-    func dubEpisode(cast: VoiceCast) {
-        guard !isBusy, editor.translation != nil, claim("Dublagem no estúdio") else { return }
-        editor.flush()
-        saveCast(cast)
-        notice = nil
-        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando dublagem…")
-        let workflow = workflow()
-        let project = project
-        let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
-        task = Task {
-            do {
-                let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: cast) { step in
-                    Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
-                }
-                self.project = updated
-                lastDub = (output, report, verification)
-                lastMux = (output, verification)
-                notice = report.failed.isEmpty
-                    ? (.success, "Dublagem pronta: \(output.lastPathComponent). O áudio e a legenda originais continuam no arquivo.")
-                    : (.warning, "Dublagem criada com \(report.failed.count) falas sem voz. Veja a lista de revisão.")
-            } catch is CancellationError {
-                notice = (.info, "Dublagem cancelada. As vozes já geradas ficam guardadas e serão reaproveitadas.")
-            } catch {
-                notice = (.error, LogRedactor.redact(error.localizedDescription))
-            }
-            release()
-            operation = nil
-        }
-    }
+    /// Size of this episode's dub work files, refreshed after dubbing or clearing.
+    var dubStorageBytes: Int64 = 0
 
     func exportTranslation() {
         guard let translation = editor.translation, let format = project.sourceFormat else { return }
@@ -788,7 +609,7 @@ final class WorkspaceModel {
         }
     }
 
-    /// UI test hooks, inert unless set: `ALS_SELECT=<line>`, `ALS_SEEK=<ms>`, `ALS_TRANSLATE=1`, `ALS_DUB=1`, `ALS_IDENTIFY=1`.
+    /// UI test hooks, inert unless set: `ALS_SELECT=<line>`, `ALS_SEEK=<ms>`, `ALS_TASK=edit|translate`, `ALS_TRANSLATE=1`, `ALS_DUB=1`, `ALS_IDENTIFY=1`.
     /// Used to capture the real window without driving the mouse or keyboard.
     private func applyTestHooks() {
         let env = ProcessInfo.processInfo.environment
@@ -799,6 +620,7 @@ final class WorkspaceModel {
                 player.seek(to: ms)
             }
         }
+        if let task = env["ALS_TASK"].flatMap(SubtitleTask.init(rawValue:)) { chooseSubtitleTask(task) }
         if env["ALS_TRANSLATE"] == "1" { translateEpisode(undoManager: nil) }
         if env["ALS_DUB"] == "1" || env["ALS_DUB"] == "run" { startDubSession() }
         if env["ALS_DUB"] == "run" { autoDub(cast: loadCast(), undoManager: nil) { [weak self] in self?.saveCast($0) } }

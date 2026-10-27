@@ -7,7 +7,8 @@
   e carimba o SDK real com `vtool` — sem isso não há Liquid Glass.
 - Interface: confira por captura da janela real com `Scripts/ui-capture.sh` (pasta pessoal
   temporária via `CFFIXED_USER_HOME`; ganchos `ALS_OPEN`, `ALS_SELECT`, `ALS_SEEK`,
-  `ALS_TRANSLATE=1`, `ALS_DUB=1|run`, `ALS_IDENTIFY=1`, `ALS_MODE=dubbing`, `APPEARANCE=light|dark`). Não use os dados reais do usuário.
+  `ALS_TRANSLATE=1`, `ALS_DUB=1|run`, `ALS_IDENTIFY=1`, `ALS_MODE=subtitles|dubbing` (sem ele abre a Visão geral),
+  `ALS_TASK=edit|translate`, `ALS_SIZE=LxA`, `APPEARANCE=light|dark`). Não use os dados reais do usuário.
 - Regras que não podem quebrar: o arquivo original nunca é escrito; documentos ASS não editados
   fazem round-trip byte a byte; tradução só altera o campo `Text` (`StructureCheck`); mux grava
   em parcial, verifica e renomeia sem sobrescrever.
@@ -18,3 +19,4 @@
 - Todo botão, ícone, seletor e campo da interface precisa de explicação ao passar o mouse com `.hint("Título", "o que faz")` (balão de `DesignSystem/HoverHint.swift`, o mesmo do Wineup), nunca `.help` — o usuário pediu isso explicitamente. Ícones sem texto são prioridade.
 - `Scripts/ui-capture.sh` captura só as janelas do processo que ele abriu (filtra por PID): o usuário costuma estar com o app instalado aberto. Janelas extras (sheets) saem como `OUT-2.png`…
 - UX que o usuário rejeitou: alternar Legendas/Dublagem por um seletor no topo (usar o menu lateral) e operações longas que rodam sem perguntar o destino e sem mostrar onde gravaram (usar janela guiada: confirmar → etapas → resultado com o arquivo).
+- Também rejeitado: Diagnóstico e Séries no menu lateral (o menu é só Visão geral/Legendar/Dublar do episódio, Abrir episódio, Biblioteca, Fila, Recentes), estrelas para faixa padrão (usar "Tornar padrão" na Visão geral) e menus que escondem qual legenda é a base (usar lista de opções). Legendar sempre separa "editar existente" de "criar tradução"; Dublar sempre diz o áudio de base, que o texto vem da legenda traduzida e o idioma do resultado.

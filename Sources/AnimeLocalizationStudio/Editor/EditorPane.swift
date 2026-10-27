@@ -127,7 +127,7 @@ private struct EditorToolbar: View {
 
     private var filterPicker: some View {
         Picker("Filtro", selection: $editor.filter) {
-            ForEach(LineFilter.allCases) { Text($0.label).tag($0) }
+            ForEach(editor.availableFilters) { Text($0.label).tag($0) }
         }
         .labelsHidden()
         .fixedSize()
@@ -137,7 +137,7 @@ private struct EditorToolbar: View {
     private var filterMenu: some View {
         Menu {
             Picker("Filtro", selection: $editor.filter) {
-                ForEach(LineFilter.allCases) { Text($0.label).tag($0) }
+                ForEach(editor.availableFilters) { Text($0.label).tag($0) }
             }
             .pickerStyle(.inline)
         } label: {
@@ -171,12 +171,14 @@ private struct EditorToolbar: View {
 
     @ViewBuilder
     private var replaceControls: some View {
-        Picker("Onde", selection: $editor.searchSide) {
-            ForEach(DocumentSide.allCases) { Text($0.label).tag($0) }
+        if !editor.editsOriginal {
+            Picker("Onde", selection: $editor.searchSide) {
+                ForEach(DocumentSide.allCases) { Text($0.label).tag($0) }
+            }
+            .labelsHidden()
+            .fixedSize()
+            .hint("Onde substituir", "Escolhe se “Substituir tudo” altera a tradução ou a legenda original.")
         }
-        .labelsHidden()
-        .fixedSize()
-        .hint("Onde substituir", "Escolhe se “Substituir tudo” altera a tradução ou a legenda original.")
         Toggle("Aa", isOn: $editor.caseSensitive)
             .toggleStyle(.button)
             .hint("Maiúsculas e minúsculas", "Ligado: a busca diferencia “Kirito” de “kirito”. Desligado: encontra os dois.")
@@ -238,15 +240,17 @@ struct LinesTable: View {
                     }
                 }
                 .width(min: 60, ideal: 90, max: 180)
-                TableColumn("Original") { row in
+                TableColumn(editor.editsOriginal ? "Texto" : "Original") { row in
                     Text(row.original.replacingOccurrences(of: "\n", with: " ⏎ "))
                         .lineLimit(2)
                         .foregroundStyle(row.isComment ? .tertiary : .primary)
                         .italic(row.isComment)
                 }
                 .width(min: 80, ideal: 220)
-                TableColumn("Tradução") { row in TranslationCell(row: row, maxReadingSpeed: editor.maxReadingSpeed) }
-                    .width(min: 80, ideal: 220)
+                if !editor.editsOriginal {
+                    TableColumn("Tradução") { row in TranslationCell(row: row, maxReadingSpeed: editor.maxReadingSpeed) }
+                        .width(min: 80, ideal: 220)
+                }
             }
             .tableStyle(.inset(alternatesRowBackgrounds: true))
             .contextMenu(forSelectionType: Int.self) { ids in

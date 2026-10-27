@@ -1,10 +1,8 @@
 import SwiftUI
 
 enum WorkspaceMode: String, CaseIterable, Identifiable {
-    case subtitles, dubbing
+    case overview, subtitles, dubbing
     var id: String { rawValue }
-    var label: String { self == .subtitles ? "Legendas" : "Dublagem" }
-    var systemImage: String { self == .subtitles ? "captions.bubble" : "waveform.and.person.filled" }
 }
 
 struct WorkspaceView: View {
@@ -23,13 +21,16 @@ struct WorkspaceView: View {
                 EmptyStateView(title: "Não foi possível abrir o arquivo", message: LocalizedStringKey(error), systemImage: "exclamationmark.triangle") {
                     Button("Tentar de novo") { workspace.loadError = nil; Task { await workspace.load() } }
                 }
-            } else if mode == .subtitles {
-                subtitles
             } else {
-                DubbingView(workspace: workspace)
+                switch mode {
+                case .overview: OverviewView(workspace: workspace)
+                case .subtitles:
+                    if workspace.project.subtitleTask == nil { SubtitleTaskChooser(workspace: workspace) } else { subtitles }
+                case .dubbing: DubbingView(workspace: workspace)
+                }
             }
         }
-        .navigationTitle(mode == .dubbing ? "Dublar · \(workspace.title)" : workspace.title)
+        .navigationTitle(navigationTitle)
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
         .confirmationDialog("Onde gravar a legenda traduzida?", isPresented: $workspace.askEmbedDestination) {
@@ -37,6 +38,20 @@ struct WorkspaceView: View {
             Button("Incorporar no próprio arquivo", role: .destructive) { workspace.embedTranslation(replaceOriginal: true) }
         } message: {
             Text("Novo arquivo: cria “\(workspace.title) [\(appTarget)].mkv” ao lado e não mexe no original.\nPróprio arquivo: o MKV é regravado com a nova faixa (o vídeo não é recodificado), conferido, e só então substitui o original, que vai para a Lixeira.")
+        }
+        .confirmationDialog("Onde gravar a legenda corrigida?", isPresented: $workspace.askSaveEditedDestination) {
+            Button("Criar um novo arquivo") { workspace.saveEditedSubtitle(replaceOriginal: false) }
+            Button("Gravar no próprio arquivo", role: .destructive) { workspace.saveEditedSubtitle(replaceOriginal: true) }
+        } message: {
+            Text("A legenda corrigida entra no lugar da faixa de onde veio, com o mesmo idioma, nome e flags; as outras faixas não mudam e o vídeo não é recodificado.\nNovo arquivo: cria “\(workspace.title) [editado].mkv” ao lado.\nPróprio arquivo: o MKV é regravado, conferido, e só então substitui o original, que vai para a Lixeira.")
+        }
+        .sheet(isPresented: $workspace.showSeries) {
+            VStack(spacing: 0) {
+                SeriesView().frame(minWidth: 760, minHeight: 480)
+                Divider()
+                HStack { Spacer(); Button("Fechar") { workspace.showSeries = false }.keyboardShortcut(.defaultAction) }
+                    .padding(Theme.Spacing.m)
+            }
         }
         .confirmationDialog("Onde gravar as faixas padrão?", isPresented: $workspace.askDefaultsDestination) {
             Button("Alterar o próprio arquivo") { workspace.applyDefaults(inPlace: true) }
@@ -54,6 +69,14 @@ struct WorkspaceView: View {
 
     @Environment(AppModel.self) private var app
     private var appTarget: String { app.settings.targetLanguage.uppercased() }
+
+    private var navigationTitle: String {
+        switch mode {
+        case .overview: workspace.title
+        case .subtitles: "Legendar · \(workspace.title)"
+        case .dubbing: "Dublar · \(workspace.title)"
+        }
+    }
 
     private var subtitle: String {
         guard let info = workspace.info else { return "" }
@@ -124,7 +147,17 @@ struct WorkspaceView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        if mode == .subtitles {
+        if mode == .subtitles && workspace.isEditingOriginal {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("Salvar no MKV…", systemImage: "square.and.arrow.down.on.square") { workspace.requestSaveEdited() }
+                    .buttonStyle(.glassProminent)
+                    .disabled(!workspace.editor.hasDocument || workspace.isBusy)
+                    .hint("Salvar no MKV", "Grava a legenda corrigida no lugar da faixa original. Antes você escolhe entre um novo arquivo e o próprio arquivo.")
+                Button("Inspetor", systemImage: "sidebar.trailing") { toggleInspector() }
+                    .keyboardShortcut("i", modifiers: [.command, .option])
+                    .hint("Mostrar ou esconder o painel (⌥⌘I)", "O painel da direita com a legenda escolhida e como salvá-la. Em janelas estreitas ele se recolhe sozinho e este botão o abre por cima.")
+            }
+        } else if mode == .subtitles && workspace.project.subtitleTask == .translate {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Traduzir episódio inteiro", systemImage: "translate") { requestTranslate() }
                     .buttonStyle(.glassProminent)
@@ -142,12 +175,14 @@ struct WorkspaceView: View {
                     Label("Arquivo", systemImage: "ellipsis.circle")
                 }
                 .hint("Arquivo", "Abrir uma legenda externa, exportar a tradução como arquivo ou incorporá-la ao MKV.")
-                Button("Inspetor", systemImage: "sidebar.trailing") {
-                    if isDocked { showInspector.toggle(); inspectorChosen = true } else { drawerOpen.toggle() }
-                }
+                Button("Inspetor", systemImage: "sidebar.trailing") { toggleInspector() }
                     .keyboardShortcut("i", modifiers: [.command, .option])
-                    .hint("Mostrar ou esconder o inspetor (⌥⌘I)", "O painel da direita com as faixas, a tradução e o novo MKV. Em janelas estreitas ele se recolhe sozinho e este botão o abre por cima.")
+                    .hint("Mostrar ou esconder o painel (⌥⌘I)", "O painel da direita com a legenda base, a tradução e o novo MKV. Em janelas estreitas ele se recolhe sozinho e este botão o abre por cima.")
             }
         }
+    }
+
+    private func toggleInspector() {
+        if isDocked { showInspector.toggle(); inspectorChosen = true } else { drawerOpen.toggle() }
     }
 }

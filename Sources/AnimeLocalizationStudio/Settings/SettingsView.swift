@@ -9,9 +9,11 @@ struct SettingsView: View {
             Tab("Geral", systemImage: "gearshape") { GeneralSettings() }
             Tab("Tradução", systemImage: "translate") { TranslationSettings() }
             Tab("Ferramentas", systemImage: "wrench.and.screwdriver") { ToolSettings() }
+            Tab("Armazenamento", systemImage: "internaldrive") { StorageSettings() }
+            Tab("Diagnóstico", systemImage: "stethoscope") { DiagnosticsView() }
             Tab("Sobre", systemImage: "info.circle") { AboutSettings() }
         }
-        .frame(width: 620)
+        .frame(width: 660, height: 560)
         .scenePadding()
     }
 }
@@ -48,7 +50,7 @@ private struct GeneralSettings: View {
                 TextField("Nome da faixa", text: $app.settings.trackName)
                 Toggle("Definir como faixa padrão", isOn: $app.settings.makeDefault)
                 Toggle("Colocar antes das outras faixas do mesmo tipo", isOn: $app.settings.placeNewTrackFirst)
-                Text("O resultado é sempre um arquivo novo ao lado do original (“Nome [PT-BR].mkv”), nunca uma substituição.")
+                Text("Antes de gravar, o app sempre pergunta: um arquivo novo ao lado do original (“Nome [PT-BR].mkv”) ou o próprio arquivo.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

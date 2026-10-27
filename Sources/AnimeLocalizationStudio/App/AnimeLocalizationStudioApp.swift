@@ -29,6 +29,8 @@ struct AnimeLocalizationStudioApp: App {
                 }
         }
         .defaultSize(width: 1_440, height: 900)
+        // The window cannot get smaller than its content needs, so nothing is clipped.
+        .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Abrir vídeo…") { app.presentOpenPanel() }.keyboardShortcut("o")

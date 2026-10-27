@@ -32,6 +32,11 @@ public struct MuxPlan: Sendable, Hashable, Codable {
     /// After the new file is verified, it takes the original's place and the original goes to
     /// the Trash (recoverable). `output` is ignored.
     public var replaceSource: Bool = false
+    /// Tracks of the source left out of the result (an edited subtitle replaces its old version).
+    public var excludedTrackIDs: Set<Int> = []
+
+    /// Source tracks that stay in the result.
+    public var keptTracks: [MediaTrack] { source.tracks.filter { !excludedTrackIDs.contains($0.id) } }
 
     public init(source: MediaInfo, output: URL, newTracks: [NewTrack], clearOtherDefaults: Bool = true, placeNewTracksFirst: Bool = false) {
         self.source = source
@@ -125,10 +130,14 @@ public struct MKVMuxer: Sendable {
         var args = ["--gui-mode", "--output", output.path]
         let newDefaultKinds = Set(plan.newTracks.filter(\.isDefault).map(\.kind))
         if plan.clearOtherDefaults {
-            for track in plan.source.tracks where newDefaultKinds.contains(track.kind) && track.isDefault {
+            for track in plan.keptTracks where newDefaultKinds.contains(track.kind) && track.isDefault {
                 args += ["--default-track-flag", "\(track.id):0"]
             }
         }
+        let excludedSubtitles = plan.source.tracks(.subtitles).filter { plan.excludedTrackIDs.contains($0.id) }.map { String($0.id) }
+        if !excludedSubtitles.isEmpty { args += ["--subtitle-tracks", "!" + excludedSubtitles.joined(separator: ",")] }
+        let excludedAudio = plan.source.tracks(.audio).filter { plan.excludedTrackIDs.contains($0.id) }.map { String($0.id) }
+        if !excludedAudio.isEmpty { args += ["--audio-tracks", "!" + excludedAudio.joined(separator: ",")] }
         args.append(plan.source.url.path)
         for track in plan.newTracks {
             args += ["--language", "0:\(track.language)",
@@ -150,7 +159,7 @@ public struct MKVMuxer: Sendable {
     static func trackOrder(for plan: MuxPlan) -> String {
         var order: [String] = []
         for kind in [MediaTrack.Kind.video, .audio, .subtitles, .other] {
-            let existing = plan.source.tracks(kind).map { "0:\($0.id)" }
+            let existing = plan.source.tracks(kind).filter { !plan.excludedTrackIDs.contains($0.id) }.map { "0:\($0.id)" }
             let added = plan.newTracks.enumerated().filter { $0.element.kind == kind }.map { "\($0.offset + 1):0" }
             order += plan.placeNewTracksFirst ? added + existing : existing + added
         }

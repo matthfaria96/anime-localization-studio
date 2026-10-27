@@ -288,11 +288,12 @@ public struct EpisodeWorkflow: Sendable {
     }
 
     /// Clips of each speaker's original voice (isolated from music), cached in the project.
-    public func voiceSamples(_ project: StudioProject, progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> [OriginalVoices.Sample] {
+    public func voiceSamples(_ project: StudioProject, audioTrackID: Int? = nil, progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> [OriginalVoices.Sample] {
         let (_, info, sourceURL) = try await prepareSource(project)
         let source = try SubtitleDocument.load(sourceURL)
         let translation = store.translationURL(for: project, language: settings.targetLanguage).flatMap { try? SubtitleDocument.load($0) }
-        guard let audio = info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first else { throw WorkflowError.noAudio }
+        guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
+        else { throw WorkflowError.noAudio }
         let lines = DubbingPlan.segments(from: translation ?? source)
             .filter { $0.speaker != "Desconhecido" }
             .map { OriginalVoices.Line(id: $0.id, start: $0.start, end: $0.end, speaker: $0.speaker, text: source.plainText(at: $0.id)) }
@@ -305,9 +306,9 @@ public struct EpisodeWorkflow: Sendable {
 
     /// Gives every speaker without a voice one automatically: a clone of the original voice
     /// (VoiceStudio) or a macOS voice of similar pitch. Voices made by another engine are replaced.
-    public func automaticCast(_ project: StudioProject, cast: VoiceCast, systemVoices: Set<String>,
+    public func automaticCast(_ project: StudioProject, cast: VoiceCast, systemVoices: Set<String>, audioTrackID: Int? = nil,
                               progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> VoiceCast {
-        let samples = try await voiceSamples(project, progress: progress)
+        let samples = try await voiceSamples(project, audioTrackID: audioTrackID, progress: progress)
         var cast = cast
         cast.addMissing(from: samples.map(\.speaker))
         let engine = settings.dubbingEngine.rawValue
@@ -337,17 +338,50 @@ public struct EpisodeWorkflow: Sendable {
         return cast
     }
 
+    /// Writes the edited original subtitle back into the MKV in place of its old version
+    /// (same language, name and flags), in a new file or in the file itself.
+    public func saveEditedSubtitle(_ project: StudioProject, replaceOriginal: Bool,
+                                   progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> (StudioProject, URL, VerificationReport) {
+        var project = project
+        guard let sourceURL = store.sourceSubtitleURL(for: project), FileManager.default.fileExists(atPath: sourceURL.path) else { throw WorkflowError.noTextSubtitle }
+        let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
+        let old = project.sourceTrackID.flatMap { id in info.tracks.first { $0.id == id } }
+        let track = NewTrack(file: sourceURL, kind: .subtitles, language: old?.languageIETF ?? old?.language ?? settings.targetLanguage,
+                             name: old?.name ?? sourceURL.deletingPathExtension().lastPathComponent, isDefault: old?.isDefault ?? false, isForced: old?.isForced ?? false)
+        var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "editado"),
+                           newTracks: [track], clearOtherDefaults: track.isDefault, placeNewTracksFirst: false)
+        if let old { plan.excludedTrackIDs = [old.id] }
+        plan.replaceSource = replaceOriginal
+        let (url, report) = try await MKVMuxer(tools: tools).mux(plan) { value in
+            progress(WorkflowStep(fraction: value, message: value < 0.9 ? "Gravando o MKV…" : "Verificando integridade…"))
+        }
+        if replaceOriginal {
+            project.sourceTrackID = report.outputInfo?.tracks(.subtitles).first { $0.name == track.name && ($0.languageIETF == track.language || $0.language == old?.language) }?.id
+            project.mediaFingerprint = Self.fingerprint(of: url)
+        }
+        project.lastOutputPath = url.path
+        project.lastVerification = report
+        try store.save(project)
+        return (project, url, report)
+    }
+
+    /// Work files of the episode's dub (synthesized lines, voices, separated audio).
+    public func dubWorkDirectory(_ project: StudioProject) -> URL {
+        store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
+    }
+
     /// Voice-over dub: synthesizes the translated lines with the cast, mixes them over the
     /// original audio, and writes a new MKV with the dubbed audio and the translated subtitle
     /// added (all original tracks kept, video not re-encoded).
-    public func dub(_ project: StudioProject, synthesizer: any SpeechSynthesizer, cast: VoiceCast, replaceOriginal: Bool = false,
+    public func dub(_ project: StudioProject, synthesizer: any SpeechSynthesizer, cast: VoiceCast, replaceOriginal: Bool = false, audioTrackID: Int? = nil,
                     progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> (StudioProject, URL, DubbingReport, VerificationReport) {
         var project = project
         guard let translationURL = store.translationURL(for: project, language: settings.targetLanguage),
               let translation = try? SubtitleDocument.load(translationURL) else { throw WorkflowError.notTranslated }
         progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
-        guard let audio = info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first else { throw WorkflowError.noAudio }
+        guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
+        else { throw WorkflowError.noAudio }
         let segments = DubbingPlan.segments(from: translation)
         let work = store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
         let dubAudio = store.directory(for: project.id).appendingPathComponent("dub.\(settings.targetLanguage).m4a")

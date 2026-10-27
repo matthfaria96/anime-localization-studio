@@ -267,3 +267,24 @@ struct OtherVolumeMuxTests {
         #expect(leftovers.isEmpty)
     }
 }
+
+@Suite("Replacing a track", .enabled(if: hasMediaTools))
+struct ReplaceTrackTests {
+    @Test func editedSubtitleTakesThePlaceOfTheOldOne() async throws {
+        let dir = MediaFixtures.temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let episode = try await MediaFixtures.makeEpisode(in: dir)
+        let info = try await MediaInspector(tools: testTools).inspect(episode)
+        let old = try #require(info.tracks(.subtitles).first)
+        let edited = dir.appendingPathComponent("edited.ass")
+        try MediaFixtures.ass.replacingOccurrences(of: "my friends", with: "my dear friends").write(to: edited, atomically: true, encoding: .utf8)
+        var plan = MuxPlan(source: info, output: dir.appendingPathComponent("out.mkv"),
+                           newTracks: [NewTrack(file: edited, kind: .subtitles, language: old.languageIETF ?? old.language, name: old.name ?? "", isDefault: old.isDefault)],
+                           clearOtherDefaults: false)
+        plan.excludedTrackIDs = [old.id]
+        let (_, report) = try await MKVMuxer(tools: testTools).mux(plan)
+        #expect(report.passed, "\(report.failures)")
+        let subs = try #require(report.outputInfo).tracks(.subtitles)
+        #expect(subs.count == 1 && subs[0].name == "English (Full)")
+    }
+}

@@ -78,16 +78,25 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ⬜ Assinatura com Developer ID, notarização, Sparkle (padrão dos outros apps witchmymac)
 - ⬜ Instalação em ambiente limpo
 
+## Interface (0.10.0)
+
+- ✅ Menu lateral: Visão geral, Legendar e Dublar sob o episódio; Abrir episódio, Biblioteca, Fila, Recentes
+- ✅ Visão geral com dados do arquivo, faixas, faixas padrão e extração de faixas
+- ✅ Legendar pergunta "editar existente" ou "criar tradução"; edição salva no lugar da faixa original
+- ✅ Dublar mostra áudio de base, origem do texto e idioma do resultado; "gerar tudo do zero"
+- ✅ Ajustes › Armazenamento com limpeza por tipo
+- ⬜ Editar uma legenda em imagem (PGS) e gravá-la de volta como imagem
+
 ## Testes atuais
 
-`swift test`: 98 testes em 6 alvos, todos passando em 26/10/2026 (os de diarização rodam quando os modelos estão em cache ou com `ALS_DIARIZATION=1`).
+`swift test`: cerca de 105 testes em 6 alvos, todos passando em 27/10/2026 (os de diarização rodam quando os modelos estão em cache ou com `ALS_DIARIZATION=1`).
 
 | Alvo | O que cobre |
 |---|---|
 | SubtitleKitTests (27) | Round-trip byte a byte (BOM + CRLF), SSA, campos com vírgula, tags, desenho, karaokê, marcadores, fallback por partes, quebra de linha, SRT, busca/substituição, deslocamento, verificação de estrutura, `\r` solto que não quebra a linha |
 | MediaKitTests (11) | MKV real gerado no teste: inspeção, extração, mux pt-BR com verificação, original inalterado (SHA-256), não sobrescrita, detecção de vídeo recodificado, prévia, cancelamento de processo |
 | TranslationKitTests (13) | Contexto e glossário por lote, traduções existentes preservadas, queda do servidor interrompe sem multiplicar pedidos, fallback de marcadores, isolamento de fala com erro, checkpoint/retomada, cancelamento, **tradução real com a Apple Translation** |
-| StudioCoreTests (8) | **Dublagem de ponta a ponta num MKV real** (2 áudios, 2 legendas, verificação, original intacto); Fila em ordem, persistência, interrupção e retomada, cancelamento, redação de segredos, projetos, séries, ajustes tolerantes |
+| StudioCoreTests (10) | **Dublagem de ponta a ponta num MKV real** (2 áudios, 2 legendas, verificação, original intacto); **legenda editada substitui a faixa antiga** num MKV real; inventário e limpeza do armazenamento; Fila em ordem, persistência, interrupção e retomada, cancelamento, redação de segredos, projetos, séries, ajustes tolerantes |
 | ASSRenderingTests (5) | libass real: `\fad` muda a opacidade, `\move` muda a posição, desenho vetorial em escala, karaokê muda a cor das sílabas, nada fora do tempo |
 | DubbingKitTests (9) | Plano de segmentos, elenco, cliente VoiceStudio contra servidor simulado, **dublagem real com voz do sistema + FFmpeg** (aceleração, cache, falas sem voz, sobreposição) |
 

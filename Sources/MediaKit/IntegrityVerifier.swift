@@ -42,14 +42,14 @@ public struct IntegrityVerifier: Sendable {
             return report
         }
 
-        let expected = plan.source.tracks.count + plan.newTracks.count
+        let expected = plan.keptTracks.count + plan.newTracks.count
         report.add("Número de faixas", info.tracks.count == expected, "\(info.tracks.count) de \(expected) esperadas")
 
         // Original tracks, matched in order within each kind.
         var missing: [String] = []
         for kind in MediaTrack.Kind.allCases {
             var remaining = info.tracks(kind)
-            for original in plan.source.tracks(kind) {
+            for original in plan.keptTracks.filter({ $0.kind == kind }) {
                 if let match = remaining.firstIndex(where: { Self.sameTrack(original, $0) }) {
                     remaining.remove(at: match)
                 } else {

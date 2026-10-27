@@ -3,12 +3,15 @@ import StudioCore
 import SwiftUI
 import TranslationKit
 
-/// Right column of the episode: tracks, translation and the new MKV.
+/// Right column of Legendar. Its sections follow the chosen task: which subtitle is edited and
+/// how to save it back, or which subtitle is the base, the translation and the new track.
 struct InspectorView: View {
     @Bindable var workspace: WorkspaceModel
     let requestTranslate: () -> Void
     @Environment(AppModel.self) private var app
     @Environment(\.undoManager) private var undoManager
+
+    private var isEditing: Bool { workspace.isEditingOriginal }
 
     var body: some View {
         ScrollView {
@@ -21,10 +24,14 @@ struct InspectorView: View {
                     InlineMessage(kind: notice.kind, text: notice.text)
                     if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
                 }
-                tracksSection
-                subtitleRolesSection
-                translationSection
-                muxSection
+                taskHeader
+                baseSection
+                if isEditing {
+                    saveEditedSection
+                } else {
+                    translationSection
+                    muxSection
+                }
             }
             .padding(Theme.Spacing.l)
             .animation(.smooth(duration: 0.25), value: workspace.operation)
@@ -32,91 +39,70 @@ struct InspectorView: View {
         .scrollContentBackground(.hidden)
     }
 
-    // MARK: Tracks
+    // MARK: Task
 
-    private var tracksSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel("Faixas do arquivo", systemImage: "list.bullet.rectangle")
-            if let info = workspace.info {
-                ForEach(info.tracks(.video)) { TrackRow(track: $0, role: nil, isDefault: $0.isDefault, onDefault: nil) }
-                ForEach(info.tracks(.audio)) { track in
-                    TrackRow(track: track, role: nil, isDefault: workspace.effectiveDefaults.audioTrackID == track.id) { workspace.chooseDefault(track) }
-                }
-                ForEach(info.tracks(.subtitles)) { track in
-                    TrackRow(track: track, role: role(of: track), isDefault: workspace.effectiveDefaults.subtitleTrackID == track.id) { workspace.chooseDefault(track) }
-                }
-                if workspace.hasPendingDefaults {
-                    HStack {
-                        Button("Aplicar faixas padrão…") { workspace.askDefaultsDestination = true }
-                            .buttonStyle(.glassProminent)
-                            .hint("Aplicar faixas padrão", "Grava no arquivo qual áudio e qual legenda abrem ligados nos players. Você escolhe entre alterar o próprio arquivo (instantâneo, sem regravar o vídeo) ou criar uma cópia.")
-                        Button("Descartar") { workspace.pendingDefaults = nil }
-                            .hint("Descartar", "Volta às faixas padrão que o arquivo já tem.")
-                    }
-                    .controlSize(.small)
-                }
-                if !info.attachments.isEmpty || info.chapterCount > 0 {
-                    HStack(spacing: Theme.Spacing.s) {
-                        if !info.attachments.isEmpty { Label("\(info.attachments.filter(\.isFont).count) fontes anexadas", systemImage: "textformat") }
-                        if info.chapterCount > 0 { Label("\(info.chapterCount) capítulos", systemImage: "bookmark") }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-            } else {
-                Text("Analisando…").foregroundStyle(.secondary)
-            }
+    private var taskHeader: some View {
+        HStack(alignment: .top) {
+            Label(isEditing ? "Editando uma legenda" : "Criando uma tradução", systemImage: isEditing ? "pencil.line" : "translate")
+                .font(.headline)
+            Spacer()
+            Button("Trocar") { workspace.chooseSubtitleTask(nil) }
+                .controlSize(.small)
+                .disabled(workspace.isBusy)
+                .hint("Trocar de tarefa", "Volta à escolha entre editar uma legenda existente e criar uma tradução. Nada do que você fez é perdido.")
         }
     }
 
-    private func role(of track: MediaTrack) -> String? {
-        if track.id == workspace.project.sourceTrackID && workspace.project.externalSubtitlePath == nil { return "Original" }
-        return nil
-    }
+    // MARK: Which subtitle
 
-    // MARK: Which subtitles are edited
-
-    private var subtitleRolesSection: some View {
+    private var baseSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel("Legenda", systemImage: "captions.bubble")
-            let textTracks = workspace.subtitleTracks.filter { $0.textSubtitleExtension != nil }
-            Menu {
-                ForEach(textTracks) { track in
-                    Button("\(track.displayLanguage.uppercased()) · \(track.name ?? track.codec)") { workspace.selectSourceTrack(track.id) }
+            SectionLabel(isEditing ? "Legenda que você está editando" : "Legenda base (o original)", systemImage: "captions.bubble")
+            ForEach(workspace.subtitleTracks) { track in
+                ChoiceRow(title: track.name ?? track.displayLanguage, detail: "\(track.displayLanguage.uppercased()) · \(track.codec)\(track.isBitmapSubtitle ? " · imagem" : "")",
+                          selected: track.id == workspace.project.sourceTrackID && workspace.project.externalSubtitlePath == nil,
+                          enabled: track.textSubtitleExtension != nil && !workspace.isBusy) {
+                    workspace.selectSourceTrack(track.id)
                 }
-                Divider()
-                Button("Arquivo externo…") { workspace.openExternalSubtitle() }
-            } label: {
-                LabeledContent("Original") { Text(originalName).lineLimit(1) }
+                .hintVerbatim(track.name ?? track.displayLanguage, track.textSubtitleExtension != nil
+                              ? (isEditing ? "Edita esta faixa. Ao salvar, a versão corrigida entra no lugar dela." : "Usa esta faixa como o texto a traduzir.")
+                              : "Legenda em imagem: para editar, transforme em texto com “Reconhecer texto (OCR)” no editor vazio.")
             }
-            .disabled(workspace.isBusy)
-            .hint("Legenda original", "A legenda que serve de base: escolha qualquer faixa do arquivo (inglês, espanhol, japonês…) ou um arquivo externo.")
-            Menu {
-                ForEach(workspace.linkableTracks) { track in
-                    Button("Vincular \(track.displayLanguage.uppercased()) · \(track.name ?? track.codec)") { workspace.linkTranslation(track: track, undoManager: undoManager) }
-                }
-                Button("Vincular arquivo externo…") { workspace.linkTranslationFile(undoManager: undoManager) }
-                Divider()
-                Button("Começar uma tradução do zero") { workspace.editor.startManualTranslation() }
-                    .disabled(workspace.editor.translation != nil)
-            } label: {
-                LabeledContent("Tradução") { Text(translationName).lineLimit(1) }
+            if workspace.project.externalSubtitlePath != nil {
+                ChoiceRow(title: "Arquivo externo", detail: workspace.project.sourceFormat?.fileExtension.uppercased() ?? "", selected: true, enabled: true) {}
             }
-            .disabled(workspace.isBusy || !workspace.editor.hasDocument)
-            .hint("Tradução", "O texto editado ao lado do original. Vincule uma faixa já traduzida do arquivo ou um arquivo de legenda: as falas são casadas pelo tempo.")
+            Button("Abrir um arquivo de legenda…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
+                .buttonStyle(.link)
+                .disabled(workspace.isBusy)
+                .hint("Abrir um arquivo de legenda", "Usa um arquivo ASS, SSA ou SRT do disco no lugar das faixas do arquivo.")
         }
     }
 
-    private var originalName: String {
-        if workspace.project.externalSubtitlePath != nil { return "Arquivo externo" }
-        guard let track = workspace.subtitleTracks.first(where: { $0.id == workspace.project.sourceTrackID }) else { return "Nenhuma" }
-        return "\(track.displayLanguage.uppercased()) · \(track.name ?? track.codec)"
-    }
+    // MARK: Saving an edited subtitle
 
-    private var translationName: String {
-        let editor = workspace.editor
-        guard editor.translation != nil else { return "Nenhuma" }
-        return "\(app.settings.targetLanguage) · \(editor.translatedCount) de \(editor.translatableCount) falas"
+    private var saveEditedSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            SectionLabel("Salvar", systemImage: "square.and.arrow.down")
+            Text("A legenda corrigida entra no MKV no lugar da faixa original, com o mesmo idioma, nome e flags. As outras faixas não mudam e o vídeo não é recodificado. Você escolhe entre um novo arquivo e o próprio arquivo.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Button { workspace.requestSaveEdited() } label: {
+                Label("Salvar no MKV…", systemImage: "square.and.arrow.down.on.square").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .disabled(!workspace.editor.hasDocument || workspace.isBusy)
+            .hint("Salvar no MKV", "Grava a legenda corrigida no arquivo de vídeo, no lugar da antiga, e confere o resultado.")
+            Button("Salvar como arquivo de legenda…", systemImage: "square.and.arrow.up") { workspace.exportSource() }
+                .buttonStyle(.link)
+                .disabled(!workspace.editor.hasDocument)
+                .hint("Salvar como arquivo", "Salva a legenda corrigida como um arquivo ASS/SRT separado, sem mexer no vídeo.")
+            Text("As correções ficam guardadas no projeto enquanto você edita; nada vai para o vídeo até você salvar.")
+                .font(.caption).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+            if let mux = workspace.lastMux {
+                VerificationList(report: mux.report)
+                Button("Mostrar no Finder", systemImage: "folder") { workspace.revealOutput() }.buttonStyle(.link)
+            }
+        }
     }
 
     // MARK: Translation
@@ -124,7 +110,7 @@ struct InspectorView: View {
     private var translationSection: some View {
         @Bindable var app = app
         return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel("Tradução", systemImage: "translate")
+            SectionLabel("Tradução para \(targetName)", systemImage: "translate")
             let editor = workspace.editor
             if editor.hasDocument {
                 HStack {
@@ -139,6 +125,22 @@ struct InspectorView: View {
                     }
                 }
             }
+            Menu {
+                ForEach(workspace.linkableTracks) { track in
+                    Button("Faixa \(track.displayLanguage.uppercased()) · \(track.name ?? track.codec)") { workspace.linkTranslation(track: track, undoManager: undoManager) }
+                }
+                Button("Arquivo de legenda…") { workspace.linkTranslationFile(undoManager: undoManager) }
+                Divider()
+                Button("Começar uma tradução vazia, à mão") { workspace.editor.startManualTranslation() }
+                    .disabled(editor.translation != nil)
+            } label: {
+                Label("Usar uma tradução que já existe", systemImage: "link")
+            }
+            .menuStyle(.button)
+            .buttonStyle(.link)
+            .fixedSize()
+            .disabled(workspace.isBusy || !editor.hasDocument)
+            .hint("Usar uma tradução que já existe", "Carrega para revisar uma faixa já traduzida do arquivo ou um arquivo de legenda: as falas são casadas pelo tempo. Ou comece vazia para traduzir à mão.")
             Picker("Motor", selection: $app.settings.engine) {
                 ForEach(EngineChoice.allCases) { Text($0.label).tag($0) }
             }
@@ -149,6 +151,9 @@ struct InspectorView: View {
                 ForEach(app.series) { Text($0.name).tag(Optional($0.id)) }
             }
             .hint("Série / glossário", "Liga o episódio a uma série: o glossário, as notas e o elenco de vozes dela são usados na tradução e na dublagem.")
+            Button("Editar séries e glossários…", systemImage: "books.vertical") { workspace.showSeries = true }
+                .buttonStyle(.link)
+                .hint("Editar séries e glossários", "Termos que devem ser traduzidos sempre do mesmo jeito (nomes, golpes, lugares) e notas de estilo da série.")
             Button(action: requestTranslate) {
                 Label("Traduzir episódio inteiro", systemImage: "sparkles").frame(maxWidth: .infinity)
             }
@@ -160,29 +165,33 @@ struct InspectorView: View {
         }
     }
 
+    private var targetName: String {
+        Locale.current.localizedString(forIdentifier: app.settings.targetLanguage) ?? app.settings.targetLanguage
+    }
+
     // MARK: Mux
 
     private var muxSection: some View {
         @Bindable var app = app
         return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel("Novo MKV", systemImage: "film.stack")
+            SectionLabel("Gravar no MKV", systemImage: "film.stack")
+            Text("A tradução vira uma faixa nova; a legenda original continua no arquivo.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             TextField("Nome da faixa", text: $app.settings.trackName)
                 .hint("Nome da faixa", "Nome que os players mostram no menu de legendas, por exemplo “Português (Brasil)”.")
             Toggle("Definir como legenda padrão", isOn: $app.settings.makeDefault)
                 .hint("Legenda padrão", "Os players abrem o arquivo já com esta legenda ligada.")
             Toggle("Colocar antes das outras legendas", isOn: $app.settings.placeNewTrackFirst)
                 .hint("Colocar primeiro", "A nova faixa aparece no topo da lista de legendas do player.")
-            Text("O original não é alterado. O vídeo e os áudios são copiados sem recodificação, e o resultado é verificado antes de ser salvo.")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Button {
                 workspace.requestEmbed()
             } label: {
-                Label("Incorporar ao MKV", systemImage: "square.and.arrow.down.on.square").frame(maxWidth: .infinity)
+                Label("Incorporar ao MKV…", systemImage: "square.and.arrow.down.on.square").frame(maxWidth: .infinity)
             }
             .buttonStyle(.glass)
             .controlSize(.large)
             .disabled(workspace.editor.translation == nil || workspace.isBusy)
-            .hint("Incorporar ao MKV", "Cria um novo MKV com a legenda traduzida, verifica o resultado e mantém todas as faixas originais. O original não é alterado.")
+            .hint("Incorporar ao MKV", "Grava a tradução como nova faixa e confere o resultado. Antes você escolhe entre um novo arquivo e o próprio arquivo. O vídeo não é recodificado.")
             if let mux = workspace.lastMux {
                 VerificationList(report: mux.report)
                 Button("Mostrar no Finder", systemImage: "folder") { workspace.revealOutput() }
@@ -193,56 +202,32 @@ struct InspectorView: View {
     }
 }
 
-private struct TrackRow: View {
-    let track: MediaTrack
-    let role: String?
-    let isDefault: Bool
-    let onDefault: (() -> Void)?
+/// A radio-style row: one of several choices, with a short description.
+struct ChoiceRow: View {
+    let title: String
+    let detail: String
+    let selected: Bool
+    let enabled: Bool
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.s) {
-            Image(systemName: icon).frame(width: 18).foregroundStyle(role != nil ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(track.name ?? track.kind.label).font(.callout).lineLimit(1)
-                Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            }
-            Spacer(minLength: 4)
-            if let role { Tag(text: role, tint: .accentColor) }
-            Tag(text: track.displayLanguage.uppercased())
-            if let onDefault {
-                Button(action: onDefault) {
-                    Image(systemName: isDefault ? "star.fill" : "star")
-                        .foregroundStyle(isDefault ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+        Button(action: action) {
+            HStack(spacing: Theme.Spacing.s) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(.callout).lineLimit(1)
+                    Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(isDefault ? "Faixa padrão" : "Tornar padrão")
-                .hintVerbatim(isDefault ? "Faixa padrão" : "Tornar padrão",
-                              track.kind == .audio
-                                ? "A estrela marca o áudio que os players tocam ao abrir o arquivo. Clique para escolher outro; depois use “Aplicar faixas padrão”."
-                                : "A estrela marca a legenda que abre ligada. Clique de novo para nenhuma legenda abrir ligada; depois use “Aplicar faixas padrão”.")
-            } else if track.isForced {
-                Tag(text: "Forçada", tint: Theme.warning)
+                Spacer(minLength: 0)
             }
+            .padding(.vertical, 3)
+            .contentShape(.rect)
         }
-        .hintVerbatim(track.name ?? track.kind.label, "\(track.kind.label) · \(track.codec) · idioma \(track.displayLanguage)\(role == "Original" ? " · usada como legenda original" : "")")
-    }
-
-    private var icon: String {
-        switch track.kind {
-        case .video: "film"
-        case .audio: "waveform"
-        case .subtitles: role != nil ? "captions.bubble.fill" : "captions.bubble"
-        case .other: "doc"
-        }
-    }
-
-    private var detail: String {
-        switch track.kind {
-        case .video: [track.codec, track.width.map { "\($0)×\(track.height ?? 0)" }].compactMap { $0 }.joined(separator: " · ")
-        case .audio: [track.codec, track.channels.map { "\($0) canais" }].compactMap { $0 }.joined(separator: " · ")
-        case .subtitles: track.isBitmapSubtitle ? "\(track.codec) · imagem (use OCR)" : track.codec
-        case .other: track.codec
-        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.5)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

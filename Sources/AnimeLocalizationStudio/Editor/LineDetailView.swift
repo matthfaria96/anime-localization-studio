@@ -19,8 +19,12 @@ struct LineDetailView: View {
                     VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                         header(cue)
                         timing(cue, index: index)
-                        textEditor("Tradução", text: Bindable(editor).translationDraft, side: .translation, index: index, prominent: true)
-                        textEditor("Original", text: Bindable(editor).originalDraft, side: .original, index: index, prominent: false)
+                        if editor.editsOriginal {
+                            textEditor("Texto", text: Bindable(editor).originalDraft, side: .original, index: index, prominent: true)
+                        } else {
+                            textEditor("Tradução", text: Bindable(editor).translationDraft, side: .translation, index: index, prominent: true)
+                            textEditor("Original", text: Bindable(editor).originalDraft, side: .original, index: index, prominent: false)
+                        }
                         warnings(cue)
                     }
                     .padding(Theme.Spacing.l)

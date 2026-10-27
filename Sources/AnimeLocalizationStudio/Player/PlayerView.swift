@@ -165,13 +165,15 @@ private struct TransportBar: View {
                 .foregroundStyle(.secondary)
                 .frame(minWidth: 52, alignment: .leading)
 
-            Picker("Legenda no vídeo", selection: $workspace.overlayMode) {
-                ForEach(OverlayMode.allCases) { Text($0.label).tag($0) }
+            if !workspace.isEditingOriginal {
+                Picker("Legenda no vídeo", selection: $workspace.overlayMode) {
+                    ForEach(OverlayMode.allCases) { Text($0.label).tag($0) }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(minWidth: 70, maxWidth: 170)
+                .hint("Legenda no vídeo", "Escolhe o que aparece sobre o vídeo: a tradução, o original, os dois ao mesmo tempo ou nada.")
             }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .frame(minWidth: 70, maxWidth: 170)
-            .hint("Legenda no vídeo", "Escolhe o que aparece sobre o vídeo: a tradução, o original, os dois ao mesmo tempo ou nada.")
 
             if workspace.audioTracks.count > 1 {
                 Picker("Áudio", selection: Binding(get: { workspace.previewAudioTrackID }, set: { workspace.selectPreviewAudio($0) })) {

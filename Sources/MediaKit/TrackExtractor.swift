@@ -36,9 +36,21 @@ public struct TrackExtractor: Sendable {
     }
 
     /// Any track in its native format (fonts and other attachments are not tracks).
-    public func extractRaw(_ track: MediaTrack, from info: MediaInfo, to destination: URL) async throws -> URL {
+    public func extractRaw(_ track: MediaTrack, from info: MediaInfo, to destination: URL,
+                           progress: (@Sendable (Double) -> Void)? = nil) async throws -> URL {
         let mkvextract = try tools.require(.mkvextract)
-        try await ProcessRunner.runChecked(mkvextract, [info.url.path, "tracks", "\(track.id):\(destination.path)"], acceptedExitCodes: [0, 1])
+        let partial = destination.deletingLastPathComponent()
+            .appendingPathComponent(".\(destination.lastPathComponent).\(UUID().uuidString.prefix(8)).partial")
+        defer { try? FileManager.default.removeItem(at: partial) }
+        try await ProcessRunner.runChecked(mkvextract, ["--gui-mode", info.url.path, "tracks", "\(track.id):\(partial.path)"],
+                                           acceptedExitCodes: [0, 1]) { line in
+            if let value = MKVMuxer.parseGUIProgress(line) { progress?(value) }
+        }
+        guard FileManager.default.fileExists(atPath: partial.path) else {
+            throw MediaInspectionError.unreadable("A extração não produziu um arquivo.")
+        }
+        try FileOps.replaceItem(at: destination, with: partial)
+        progress?(1)
         return destination
     }
 

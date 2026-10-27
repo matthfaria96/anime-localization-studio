@@ -1,0 +1,299 @@
+import MediaKit
+import StudioCore
+import SwiftUI
+
+/// First page of an episode: what the file is (size, codecs, tracks), which tracks open by
+/// default, extracting tracks, and the way into Legendar and Dublar.
+struct OverviewView: View {
+    @Bindable var workspace: WorkspaceModel
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                header
+                if let operation = workspace.operation {
+                    let cancel: (() -> Void)? = operation.kind == .loading ? nil : { workspace.cancelOperation() }
+                    OperationProgress(message: operation.message, fraction: operation.fraction, onCancel: cancel)
+                }
+                if let notice = workspace.notice {
+                    HStack {
+                        InlineMessage(kind: notice.kind, text: notice.text)
+                        if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
+                    }
+                }
+                if let info = workspace.info {
+                    actions
+                    FileFacts(info: info)
+                    tracks(info)
+                } else if workspace.operation == nil {
+                    Text("Não foi possível ler as faixas.").foregroundStyle(.secondary)
+                }
+            }
+            .padding(Theme.Spacing.xl)
+            .frame(maxWidth: 980)
+            .frame(maxWidth: .infinity)
+        }
+        .paneBackground()
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(workspace.title).font(.largeTitle.weight(.semibold)).lineLimit(2)
+            HStack(spacing: Theme.Spacing.s) {
+                Text(workspace.url.path).font(.callout).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                Button("Mostrar no Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([workspace.url]) }
+                    .buttonStyle(.link)
+                    .hint("Mostrar no Finder", "Abre a pasta do arquivo com ele selecionado.")
+            }
+        }
+    }
+
+    // MARK: Legendar / Dublar
+
+    private var actions: some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.l) {
+            ActionCard(title: "Legendar", systemImage: "captions.bubble",
+                       detail: "Corrija uma legenda do arquivo ou crie uma tradução a partir dela.",
+                       status: subtitleStatus) { app.selection = .subtitles }
+                .hint("Legendar", "Você escolhe entre editar uma legenda existente ou criar uma tradução nova com base nela.")
+            ActionCard(title: "Dublar", systemImage: "waveform.and.person.filled",
+                       detail: "Transforme a legenda traduzida numa faixa de áudio com as vozes dos personagens.",
+                       status: dubStatus) { app.selection = .dubbing }
+                .hint("Dublar", "A dublagem lê o texto da legenda traduzida. O áudio original serve de base para as vozes e para a música e os efeitos.")
+        }
+    }
+
+    private var subtitleStatus: String {
+        switch workspace.project.subtitleTask {
+        case .edit: "Em andamento: editando a legenda “\(baseName)”."
+        case .translate: "Em andamento: tradução com \(workspace.editor.translatedCount) de \(workspace.editor.translatableCount) falas."
+        case nil: workspace.subtitleTracks.isEmpty ? "Sem legendas no arquivo: abra uma ou transcreva o áudio." : workspace.subtitleTracks.count == 1 ? "1 legenda no arquivo." : "\(workspace.subtitleTracks.count) legendas no arquivo."
+        }
+    }
+
+    private var dubStatus: String {
+        guard workspace.editor.translation != nil else { return "Precisa de uma legenda traduzida: crie em Legendar." }
+        return "Pronto para dublar: \(workspace.editor.translatedCount) falas traduzidas."
+    }
+
+    private var baseName: String {
+        workspace.subtitleTracks.first { $0.id == workspace.project.sourceTrackID }.map(WorkspaceModel.describe) ?? "arquivo externo"
+    }
+
+    // MARK: Tracks
+
+    private func tracks(_ info: MediaInfo) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+            if !info.tracks(.video).isEmpty {
+                Panel {
+                    SectionLabel("Vídeo", systemImage: "film")
+                    ForEach(info.tracks(.video)) { track in
+                        TrackLine(track: track, detail: videoDetail(track)) { extractButton(track) }
+                    }
+                }
+            }
+            Panel {
+                HStack {
+                    SectionLabel("Áudio", systemImage: "waveform")
+                    Spacer()
+                    Text("Padrão = o áudio que os players tocam ao abrir o arquivo.").font(.caption).foregroundStyle(.secondary)
+                }
+                if info.tracks(.audio).isEmpty { Text("Sem faixas de áudio.").foregroundStyle(.secondary) }
+                ForEach(info.tracks(.audio)) { track in
+                    TrackLine(track: track, detail: audioDetail(track)) {
+                        defaultButton(isDefault: workspace.effectiveDefaults.audioTrackID == track.id) {
+                            var defaults = workspace.effectiveDefaults
+                            defaults.audioTrackID = track.id
+                            workspace.pendingDefaults = defaults
+                        }
+                        extractButton(track)
+                    }
+                }
+            }
+            Panel {
+                HStack {
+                    SectionLabel("Legendas", systemImage: "captions.bubble")
+                    Spacer()
+                    Text("Padrão = a legenda que abre ligada.").font(.caption).foregroundStyle(.secondary)
+                }
+                if info.tracks(.subtitles).isEmpty { Text("Sem faixas de legenda.").foregroundStyle(.secondary) }
+                ForEach(info.tracks(.subtitles)) { track in
+                    TrackLine(track: track, detail: subtitleDetail(track)) {
+                        defaultButton(isDefault: workspace.effectiveDefaults.subtitleTrackID == track.id) { setDefaultSubtitle(track.id) }
+                        extractButton(track)
+                    }
+                }
+                if !info.tracks(.subtitles).isEmpty {
+                    HStack {
+                        Image(systemName: "captions.bubble").foregroundStyle(.tertiary).frame(width: 20)
+                        Text("Nenhuma legenda ligada ao abrir").foregroundStyle(.secondary)
+                        Spacer()
+                        defaultButton(isDefault: workspace.effectiveDefaults.subtitleTrackID == -1) { setDefaultSubtitle(-1) }
+                        Color.clear.frame(width: 96, height: 1)
+                    }
+                    .padding(.vertical, Theme.Spacing.xxs)
+                }
+            }
+            if workspace.hasPendingDefaults {
+                HStack {
+                    InlineMessage(kind: .info, text: "Faixas padrão alteradas, ainda não gravadas no arquivo.")
+                    Spacer()
+                    Button("Descartar") { workspace.pendingDefaults = nil }
+                        .hint("Descartar", "Volta às faixas padrão que o arquivo já tem.")
+                    Button("Gravar faixas padrão…") { workspace.askDefaultsDestination = true }
+                        .buttonStyle(.glassProminent)
+                        .disabled(workspace.isBusy)
+                        .hint("Gravar faixas padrão", "Você escolhe entre alterar o próprio arquivo (instantâneo, só o cabeçalho do MKV muda) ou criar uma cópia.")
+                }
+            }
+            if !info.attachments.isEmpty {
+                Panel {
+                    SectionLabel("Anexos", systemImage: "paperclip")
+                    Text("\(info.attachments.filter(\.isFont).count) fontes e \(info.attachments.filter { !$0.isFont }.count) outros anexos. São mantidos em tudo o que o app grava.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func setDefaultSubtitle(_ id: Int) {
+        var defaults = workspace.effectiveDefaults
+        defaults.subtitleTrackID = id
+        workspace.pendingDefaults = defaults
+    }
+
+    private func defaultButton(isDefault: Bool, action: @escaping () -> Void) -> some View {
+        Group {
+            if isDefault {
+                Label("Padrão", systemImage: "checkmark.circle.fill").foregroundStyle(.tint).font(.callout.weight(.medium))
+                    .frame(width: 120, alignment: .leading)
+                    .hint("Faixa padrão", "Esta faixa abre ligada nos players.")
+            } else {
+                Button("Tornar padrão", action: action)
+                    .controlSize(.small)
+                    .frame(width: 120, alignment: .leading)
+                    .disabled(workspace.isBusy)
+                    .hint("Tornar padrão", "Marca esta faixa para abrir ligada. A mudança só vai para o arquivo quando você clicar em “Gravar faixas padrão”.")
+            }
+        }
+    }
+
+    private func extractButton(_ track: MediaTrack) -> some View {
+        Button("Extrair…", systemImage: "square.and.arrow.up") { workspace.extractTrack(track) }
+            .controlSize(.small)
+            .frame(width: 96, alignment: .trailing)
+            .disabled(workspace.isBusy)
+            .hint("Extrair faixa", "Salva esta faixa como um arquivo separado (.\(track.nativeFileExtension)), sem converter. O arquivo original não muda.")
+    }
+
+    private func videoDetail(_ track: MediaTrack) -> String {
+        [track.codec, track.width.map { "\($0)×\(track.height ?? 0)" }].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private func audioDetail(_ track: MediaTrack) -> String {
+        let channels: String? = track.channels.map {
+            switch $0 {
+            case 1: "mono"
+            case 2: "estéreo"
+            case 6: "5.1"
+            case 8: "7.1"
+            default: "\($0) canais"
+            }
+        }
+        let rate = track.sampleRate.map { "\(($0 + 500) / 1_000) kHz" }
+        return [track.codec, channels, rate].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private func subtitleDetail(_ track: MediaTrack) -> String {
+        var parts = [track.codec, track.isBitmapSubtitle ? "imagem (OCR para editar)" : "texto"]
+        if track.isForced { parts.append("forçada") }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// One track: icon, name, language and codec, then its buttons.
+private struct TrackLine<Trailing: View>: View {
+    let track: MediaTrack
+    let detail: String
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Text("\(track.id)").font(.caption.monospacedDigit()).foregroundStyle(.tertiary).frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Text(track.name ?? track.kind.label).lineLimit(1)
+                    Tag(text: track.displayLanguage.uppercased())
+                }
+                Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: Theme.Spacing.s)
+            trailing
+        }
+        .padding(.vertical, Theme.Spacing.xxs)
+        .hintVerbatim(track.name ?? track.kind.label, "Faixa \(track.id) · \(track.kind.label) · \(track.codec) · idioma \(track.displayLanguage)")
+    }
+}
+
+/// Size, length and what the file contains, at a glance.
+private struct FileFacts: View {
+    let info: MediaInfo
+
+    var body: some View {
+        Panel {
+            SectionLabel("Arquivo", systemImage: "doc")
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .topLeading)], alignment: .leading, spacing: Theme.Spacing.m) {
+                fact("Tamanho", ByteCountFormatter.string(fromByteCount: info.fileSize, countStyle: .file))
+                fact("Duração", info.durationMilliseconds.map { Duration.milliseconds($0).formatted(.time(pattern: .hourMinuteSecond)) } ?? "—")
+                fact("Contêiner", info.container)
+                if let video = info.tracks(.video).first {
+                    fact("Vídeo", [video.codec, video.width.map { "\($0)×\(video.height ?? 0)" }].compactMap { $0 }.joined(separator: " · "))
+                }
+                fact("Áudios", "\(info.tracks(.audio).count)")
+                fact("Legendas", "\(info.tracks(.subtitles).count)")
+                fact("Capítulos", "\(info.chapterCount)")
+                fact("Fontes anexadas", "\(info.attachments.filter(\.isFont).count)")
+            }
+        }
+    }
+
+    private func fact(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.callout.weight(.medium)).lineLimit(2).textSelection(.enabled)
+        }
+    }
+}
+
+/// Big button that leads to one of the episode's pages.
+private struct ActionCard: View {
+    let title: String
+    let systemImage: String
+    let detail: String
+    let status: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: Theme.Spacing.m) {
+                Image(systemName: systemImage).font(.system(size: 26)).foregroundStyle(.tint).frame(width: 34)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text(title).font(.title3.weight(.semibold))
+                    Text(detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
+                    Text(status).font(.caption).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+            }
+            .padding(Theme.Spacing.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.background.secondary, in: .rect(cornerRadius: Theme.Radius.large))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.large).strokeBorder(.separator))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+    }
+}

@@ -4,7 +4,7 @@
 #
 #   Scripts/ui-capture.sh <media file> <output.png> [seconds to wait]
 #
-# Hooks (optional env): ALS_SELECT=<line> ALS_SEEK=<ms> ALS_TRANSLATE=1 ALS_MODE=dubbing
+# Hooks (optional env): ALS_SELECT=<line> ALS_SEEK=<ms> ALS_TRANSLATE=1 ALS_MODE=subtitles|dubbing ALS_TASK=edit|translate ALS_SIZE=WxH
 # APPEARANCE=light|dark (default: the system's). HOME_DIR=<dir> reuses a test home.
 set -euo pipefail
 cd "${0:A:h}/.."

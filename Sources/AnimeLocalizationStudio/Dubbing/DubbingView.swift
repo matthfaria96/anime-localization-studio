@@ -33,7 +33,7 @@ struct DubbingView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text("Dublagem").font(.largeTitle.weight(.semibold))
-                    Text("Um clique: o app descobre quem fala, recria a voz de cada personagem e dubla o episódio inteiro em português.")
+                    Text("O app lê em voz alta a legenda traduzida, no tempo de cada fala, com a voz de cada personagem recriada a partir do áudio original.")
                         .foregroundStyle(.secondary)
                 }
                 if let operation = workspace.operation {
@@ -43,8 +43,10 @@ struct DubbingView: View {
                     InlineMessage(kind: notice.kind, text: notice.text)
                     if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
                 }
+                sourcePanel
                 howPanel
                 castPanel
+                storagePanel
                 if let dub = workspace.lastDub { resultPanel(dub) }
             }
             .padding(Theme.Spacing.xl)
@@ -53,6 +55,7 @@ struct DubbingView: View {
         }
         .paneBackground()
         .task {
+            workspace.refreshDubStorage()
             cast = workspace.loadCast()
             rebuildCast()
             await checkStudio(force: true)
@@ -66,6 +69,83 @@ struct DubbingView: View {
     }
 
     private var isDubRunning: Bool { if case .running = workspace.dubSession?.phase { true } else { false } }
+
+    // MARK: What is dubbed
+
+    private var targetName: String {
+        Locale.current.localizedString(forIdentifier: app.settings.targetLanguage) ?? app.settings.targetLanguage
+    }
+
+    private var sourcePanel: some View {
+        Panel {
+            SectionLabel("O que vai ser dublado", systemImage: "arrow.triangle.branch")
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.l, verticalSpacing: Theme.Spacing.m) {
+                GridRow {
+                    Label("Áudio de base", systemImage: "waveform").foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        if workspace.audioTracks.count > 1 {
+                            Picker("Áudio de base", selection: Binding(get: { workspace.dubAudioTrack?.id ?? -1 }, set: { workspace.selectDubAudio($0) })) {
+                                ForEach(workspace.audioTracks) { Text(WorkspaceModel.describe($0)).tag($0.id) }
+                            }
+                            .labelsHidden()
+                            .fixedSize()
+                            .disabled(workspace.isBusy)
+                            .hint("Áudio de base", "A faixa de onde saem as vozes originais (para recriar cada personagem) e a música e os efeitos que ficam por baixo. Trocar apaga as vozes e o fundo já preparados desta dublagem.")
+                        } else {
+                            Text(workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "O arquivo não tem áudio")
+                        }
+                        Text("As vozes dos personagens e a música e os efeitos saem desta faixa. Use o áudio no idioma original (geralmente o japonês).")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                GridRow {
+                    Label("Texto falado", systemImage: "text.bubble").foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        if isTranslated {
+                            Text("A legenda traduzida para \(targetName): \(segments.count) falas")
+                        } else {
+                            HStack {
+                                Text("Ainda não há legenda traduzida.")
+                                Button("Ir para Legendar") { app.selection = .subtitles }
+                                    .buttonStyle(.link)
+                                    .hint("Ir para Legendar", "Crie a tradução lá; ela é o texto que a dublagem fala.")
+                            }
+                        }
+                        Text("O áudio não é interpretado nem traduzido: o app fala o texto da tradução, no tempo de cada fala. Corrigir a tradução muda o que é dito.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                GridRow {
+                    Label("Resultado", systemImage: "square.and.arrow.down").foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Uma nova faixa de áudio em \(targetName), marcada como padrão")
+                        Text("O áudio original e as legendas continuam no arquivo. Antes de começar você escolhe entre um novo arquivo e o próprio arquivo.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Stored files
+
+    private var storagePanel: some View {
+        Panel {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    SectionLabel("Arquivos guardados desta dublagem", systemImage: "internaldrive")
+                    Text(workspace.dubStorageBytes > 0
+                         ? "\(ByteCountFormatter.string(fromByteCount: workspace.dubStorageBytes, countStyle: .file)) em falas geradas, vozes separadas e música de fundo. Eles deixam a próxima dublagem mais rápida: só o que mudou é gerado de novo."
+                         : "Nada guardado ainda. As falas geradas ficam aqui para a próxima dublagem ser mais rápida.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Button("Apagar", systemImage: "trash") { workspace.clearDubFiles() }
+                    .disabled(workspace.dubStorageBytes == 0 || workspace.isBusy)
+                    .hint("Apagar os arquivos desta dublagem", "Libera o espaço. A próxima dublagem gera tudo do zero. O arquivo de vídeo já dublado não é apagado. Para ver tudo o que o app guarda, abra Ajustes › Armazenamento.")
+            }
+        }
+    }
 
     // MARK: How to dub
 
@@ -110,7 +190,7 @@ struct DubbingView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(isTranslated ? "\(segments.count) falas para dublar" : "Traduza o episódio antes de dublar")
                         .font(.headline)
-                    Text("Antes de começar você escolhe onde gravar: um novo arquivo ou o próprio arquivo. O áudio e as legendas originais são mantidos.")
+                    Text("A próxima janela mostra o resumo, pergunta onde gravar e permite gerar tudo do zero.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -124,7 +204,7 @@ struct DubbingView: View {
                 .disabled(!isTranslated || segments.isEmpty || workspace.isBusy)
                 .hintVerbatim("Dublar episódio inteiro", isTranslated
                     ? "Abre uma janela que mostra o que vai acontecer e pergunta onde gravar (novo arquivo ou o próprio). Depois faz tudo sozinho e mostra o resultado."
-                    : "A dublagem usa o texto traduzido. Traduza o episódio na aba Legendas primeiro.")
+                    : "A dublagem fala o texto traduzido. Crie a tradução em Legendar primeiro.")
             }
             .padding(.top, Theme.Spacing.s)
         }
@@ -291,40 +371,6 @@ struct DubbingView: View {
         } catch {
             sampleState[member.id] = error.localizedDescription
         }
-    }
-}
-
-/// A large selectable choice with its own explanation (unlike a segmented control, each
-/// option can carry its own hover hint).
-private struct OptionCard: View {
-    let title: String
-    let systemImage: String
-    let detail: String
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: Theme.Spacing.s) {
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
-                    .font(.title3)
-                VStack(alignment: .leading, spacing: 2) {
-                    Label(title, systemImage: systemImage).font(.headline)
-                    Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(Theme.Spacing.m)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(selected ? AnyShapeStyle(Color.accentColor.opacity(0.12)) : AnyShapeStyle(.background.secondary),
-                        in: .rect(cornerRadius: Theme.Radius.medium))
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.medium).strokeBorder(selected ? Color.accentColor.opacity(0.6) : .clear))
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

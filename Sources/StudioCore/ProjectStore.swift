@@ -5,6 +5,14 @@ import MediaKit
 import SubtitleKit
 import TranslationKit
 
+/// What the person is doing with the subtitles of this episode.
+public enum SubtitleTask: String, Sendable, Codable {
+    /// Fix an existing subtitle (timing, typos…) and save it back.
+    case edit
+    /// Translate an existing subtitle into the target language.
+    case translate
+}
+
 public enum WorkStatus: String, Sendable, Codable, CaseIterable {
     case new, extracted, translating, translated, reviewed, muxed, failed
 
@@ -42,6 +50,9 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     public var mediaFingerprint: String?
     /// Voice cast for films and episodes that are not part of a series.
     public var cast: VoiceCast?
+    public var subtitleTask: SubtitleTask?
+    /// Audio track the dub is based on (voices and background); nil = the default one.
+    public var dubAudioTrackID: Int?
     public var createdAt: Date
     public var updatedAt: Date
 

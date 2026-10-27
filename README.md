@@ -10,12 +10,16 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
 
 ## O que já funciona
 
-- **Abrir e inspecionar** MKV, MP4 e MOV: faixas de vídeo, áudio e legenda, idiomas, flags
-  padrão/forçada, fontes anexadas e capítulos.
+- **Abrir e inspecionar** MKV, MP4 e MOV na Visão geral: tamanho, duração, codecs, faixas de
+  vídeo, áudio e legenda, idiomas, fontes anexadas e capítulos. Escolha o áudio e a legenda
+  padrão e extraia qualquer faixa como arquivo, sem converter. Daqui você vai para Legendar ou
+  Dublar.
+- **Editar uma legenda existente**: corrija texto, tempos e estilos e grave a versão corrigida
+  no MKV, no lugar da faixa original (novo arquivo ou o próprio).
 - **Assistir** dentro do app com a legenda original, a tradução ou as duas sobre o vídeo, com
   renderização fiel de ASS pelo libass (animações, karaokê, desenhos e as fontes do MKV). MKVs
   são reproduzidos por uma cópia de pré-visualização em cache, feita sem recodificar o vídeo.
-- **Editar** falas, tempos, estilos e personagens, com original e tradução lado a lado, busca e
+- **Criar uma tradução** a partir de uma legenda: falas, tempos, estilos e personagens, com original e tradução lado a lado, busca e
   substituição que nunca altera tags `{\…}`, deslocamento de tempos, filtro de falas sem
   tradução ou com leitura rápida demais, e ⌘Z/⇧⌘Z.
 - **Traduzir o episódio inteiro** com um clique, preservando cabeçalhos, estilos, tempos,
@@ -28,7 +32,7 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
   compara os pacotes de vídeo com o original.
 - **Temporadas**: biblioteca de pastas e fila persistente para traduzir (e incorporar) vários
   episódios, que continua de onde parou se o app for fechado.
-- **Dublar episódio inteiro**: uma voz por personagem (vozes do macOS ou do VoiceStudio), cada
+- **Dublar episódio inteiro** a partir da legenda traduzida, com o áudio de base escolhido: uma voz por personagem (clone da voz original no Mac, vozes do macOS ou do VoiceStudio), cada
   fala ajustada ao seu tempo, em dois modos: *voice-over* (por cima do original, que abaixa) ou
   *substituir falas* (as vozes originais são separadas da trilha no próprio Mac e trocadas). O
   resultado é um novo `Nome [PT-BR DUB].mkv` com o áudio dublado e a legenda em português. O
@@ -57,14 +61,15 @@ Detalhes e próximos passos em [ROADMAP.md](ROADMAP.md).
   ```
 
   O app encontra os programas no Homebrew, MacPorts ou no `MKVToolNix.app`; outro caminho
-  pode ser indicado em Ajustes › Ferramentas. A tela **Diagnóstico** mostra o que falta.
+  pode ser indicado em Ajustes › Ferramentas. Ajustes › **Diagnóstico** mostra o que falta e
+  Ajustes › **Armazenamento** mostra e limpa o que o app guarda.
 - Para compilar: `brew install libass` (o build copia o libass e as dependências para dentro
   do app) e Xcode 27 (as macros do SwiftUI e do Foundation Models não funcionam só com as
   Command Line Tools).
 
 ## Motores de tradução
 
-Escolha em Ajustes › Tradução ou no inspetor do episódio.
+Escolha em Ajustes › Tradução ou no painel da direita de Legendar.
 
 | Motor | Onde roda | Contexto e glossário | Observações |
 |---|---|---|---|

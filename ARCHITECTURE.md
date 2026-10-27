@@ -29,7 +29,18 @@ AnimeLocalizationStudio (SwiftUI, isolamento padrão MainActor)
 | 11. Job Queue | `StudioCore/JobQueue.swift` | Pronto (persistente, retomada) |
 | 12. Project Storage | `StudioCore/ProjectStore.swift`, `AppPaths.swift` | Pronto (JSON atômico) |
 | 13. Settings | `StudioCore/Settings.swift`, `App/Settings/SettingsView.swift` | Pronto |
-| 14. Logging and Diagnostics | `StudioCore/AppLog.swift`, `App/Diagnostics/DiagnosticsView.swift` | Pronto |
+| 14. Logging and Diagnostics | `StudioCore/AppLog.swift`, `App/Diagnostics/DiagnosticsView.swift` (em Ajustes), `StudioCore/StorageInventory.swift` | Pronto |
+
+## Navegação
+
+O menu lateral (`App/RootView.swift`) tem, sob o episódio aberto, três páginas de
+`Workspace/WorkspaceView.swift`: **Visão geral** (`Overview/OverviewView.swift`: dados do arquivo,
+faixas, faixas padrão via `TrackFlagEditor`, extração), **Legendar** (primeiro
+`SubtitleTaskChooser`, depois o editor; `StudioProject.subtitleTask` guarda a escolha:
+`.edit` mostra uma coluna e salva com `EpisodeWorkflow.saveEditedSubtitle`, que usa
+`MuxPlan.excludedTrackIDs` para tirar a faixa antiga; `.translate` mostra original e tradução) e
+**Dublar** (`Dubbing/DubbingView.swift`; `StudioProject.dubAudioTrackID` escolhe o áudio de base).
+Diagnóstico e Armazenamento ficam em Ajustes; Séries e glossários abre como folha a partir de Legendar.
 
 ## Decisões principais
 

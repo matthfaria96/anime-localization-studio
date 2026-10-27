@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0 — 27/10/2026
+
+### Mudou
+- Menu lateral simplificado: sob o episódio aberto, **Visão geral**, **Legendar** e **Dublar**; depois Abrir episódio, Biblioteca, Fila e Recentes. Diagnóstico foi para Ajustes › Diagnóstico e Séries e glossários abre por "Editar séries e glossários…" em Legendar.
+- Nova **Visão geral** do episódio: tamanho, duração, contêiner, codecs e resolução; faixas de vídeo, áudio e legenda listadas com clareza; "Tornar padrão" em cada áudio e legenda (sem estrelas), gravado no próprio arquivo ou numa cópia; **Extrair…** salva qualquer faixa como arquivo separado, sem converter.
+- **Legendar** começa perguntando o que fazer: **editar uma legenda existente** (uma coluna só, sem tradução; "Salvar no MKV…" grava a versão corrigida no lugar da faixa original, com o mesmo idioma, nome e flags, num arquivo novo ou no próprio) ou **criar uma tradução** (original e tradução lado a lado, como antes). O painel da direita foi refeito: legenda base em lista de opções, tradução, motor, glossário e gravação; "Trocar" volta à escolha.
+- **Dublar** diz o que vai acontecer: qual **áudio de base** é usado (escolhível quando há mais de um; as vozes e o fundo saem dele), que o **texto falado** é a legenda traduzida (o áudio não é interpretado) e qual o **idioma do resultado**.
+- A janela não encolhe mais do que o conteúdo precisa (o menu lateral não se desmonta em janelas baixas).
+
+### Adicionado
+- "Gerar tudo do zero" na janela de dublagem: apaga as falas, vozes e fundo já gerados e refaz tudo, inclusive a escolha das vozes.
+- Tamanho dos arquivos guardados de cada dublagem, com botão para apagar.
+- Ajustes › **Armazenamento**: tamanho de pré-visualizações, fontes extraídas, temporários, arquivos de dublagem, projetos e modelos baixados, cada um com "Apagar" (episódios abertos ou em processamento são pulados).
+
+### Corrigido
+- Os Recentes no menu lateral não respondiam ao clique; agora abrem o episódio (e avisam se o arquivo sumiu).
+
 ## 0.9.0 — 27/10/2026
 
 ### Adicionado

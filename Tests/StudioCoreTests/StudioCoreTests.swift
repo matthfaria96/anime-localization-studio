@@ -131,3 +131,34 @@ struct SeasonReportTests {
         #expect(!LogRedactor.redact("failed with AIzaUnprefixedKey123456").contains("Unprefixed"))
     }
 }
+
+@Suite("Storage inventory")
+struct StorageInventoryTests {
+    @Test func measuresAndClearsEachKindSeparately() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("ALSStorage-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let paths = AppPaths(root: base.appendingPathComponent("Support"), caches: base.appendingPathComponent("Caches"))
+        let inventory = StorageInventory(paths: paths)
+        func write(_ url: URL, bytes: Int) throws {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data(repeating: 7, count: bytes).write(to: url)
+        }
+        try write(paths.previews.appendingPathComponent("a.mp4"), bytes: 200_000)
+        try write(paths.projects.appendingPathComponent("p1/project.json"), bytes: 10_000)
+        try write(paths.projects.appendingPathComponent("p1/Dub/clips/1.wav"), bytes: 300_000)
+        try write(paths.projects.appendingPathComponent("p2/Dub/background-1.wav"), bytes: 300_000)
+
+        let sizes = Dictionary(uniqueKeysWithValues: inventory.entries().map { ($0.kind, $0.bytes) })
+        #expect(sizes[.previews]! >= 200_000)
+        #expect(sizes[.dubs]! >= 600_000)
+        #expect(sizes[.projects]! < 100_000, "dub files are not counted twice")
+
+        try inventory.clear(.dubs, except: ["p2"])
+        #expect(!FileManager.default.fileExists(atPath: paths.projects.appendingPathComponent("p1/Dub").path))
+        #expect(FileManager.default.fileExists(atPath: paths.projects.appendingPathComponent("p1/project.json").path), "only the dub files go")
+        #expect(FileManager.default.fileExists(atPath: paths.projects.appendingPathComponent("p2/Dub").path), "a busy episode is skipped")
+
+        try inventory.clear(.previews)
+        #expect(StorageInventory.size(of: paths.previews) == 0)
+    }
+}

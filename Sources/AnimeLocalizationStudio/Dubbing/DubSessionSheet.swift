@@ -42,16 +42,26 @@ struct DubSessionSheet: View {
         return VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             Text("Dublar “\(workspace.title)”").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                summary("waveform", "Áudio de base", workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "—")
+                summary("text.bubble", "Texto falado", "legenda traduzida, \(segmentCount) falas")
+                summary("globe", "Idioma do resultado", Locale.current.localizedString(forIdentifier: app.settings.targetLanguage) ?? app.settings.targetLanguage)
                 summary("waveform.badge.mic", "Vozes", app.settings.dubbingEngine.label)
                 summary("slider.horizontal.3", "Modo", app.settings.dubbingMode.label)
                 summary("person.2", "Personagens", speakers > 0 ? "\(speakers) na legenda" : "serão identificados pelo áudio")
-                summary("text.bubble", "Falas", "\(segmentCount) falas traduzidas")
             }
             if app.settings.dubbingEngine == .original && !workspace.voiceModelsInstalled {
                 InlineMessage(kind: .info, text: "Ao começar, o app baixa os modelos de voz uma única vez (\(ClonedVoiceSynthesizer.downloadSize); \(ClonedVoiceSynthesizer.modelCredits)). Tudo roda no Mac; o áudio não sai do computador.")
             }
-            if workspace.cachedDubLines > 0 {
-                InlineMessage(kind: .info, text: "\(workspace.cachedDubLines) falas já geradas deste episódio serão reaproveitadas; só o que falta ou mudou é gerado de novo.")
+            if workspace.cachedDubLines > 0 || workspace.dubStorageBytes > 0 {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Toggle("Gerar tudo do zero", isOn: Binding(get: { workspace.dubSession?.regenerate ?? false },
+                                                                set: { workspace.dubSession?.regenerate = $0 }))
+                        .hint("Gerar tudo do zero", "Apaga as falas, as vozes e a música de fundo já geradas deste episódio e faz tudo de novo, inclusive a escolha das vozes. Use quando o resultado anterior saiu errado.")
+                    Text(workspace.dubSession?.regenerate == true
+                         ? "As falas, vozes e o fundo já preparados serão apagados e refeitos."
+                         : "\(workspace.cachedDubLines) falas já geradas serão reaproveitadas; só o que falta ou mudou é gerado de novo.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             if app.settings.dubbingEngine == .original {
                 Text("Com a voz original, cada fala leva menos de um segundo no Mac; um episódio inteiro leva alguns minutos (mais na primeira vez, para baixar e preparar os modelos). Você pode continuar usando o app.")

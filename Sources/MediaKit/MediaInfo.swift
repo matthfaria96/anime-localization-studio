@@ -68,6 +68,19 @@ public struct MediaTrack: Sendable, Hashable, Codable, Identifiable {
     }
 
     /// Image-based subtitles (PGS, VobSub) cannot be translated without OCR.
+    /// File extension of the track as `mkvextract` writes it (no conversion).
+    public var nativeFileExtension: String {
+        let id = codecID.uppercased()
+        let table: [(String, String)] = [
+            ("A_AAC", "aac"), ("A_AC3", "ac3"), ("A_EAC3", "eac3"), ("A_DTS", "dts"), ("A_FLAC", "flac"), ("A_OPUS", "opus"),
+            ("A_VORBIS", "ogg"), ("A_TRUEHD", "thd"), ("A_PCM", "wav"), ("A_MPEG/L3", "mp3"), ("A_MPEG/L2", "mp2"),
+            ("V_MPEG4/ISO/AVC", "h264"), ("V_MPEGH/ISO/HEVC", "h265"), ("V_AV1", "ivf"), ("V_VP8", "ivf"), ("V_VP9", "ivf"),
+            ("S_TEXT/ASS", "ass"), ("S_TEXT/SSA", "ssa"), ("S_TEXT/UTF8", "srt"), ("S_TEXT/WEBVTT", "vtt"),
+            ("S_HDMV/PGS", "sup"), ("S_VOBSUB", "sub")
+        ]
+        return table.first { id.hasPrefix($0.0) }?.1 ?? textSubtitleExtension ?? (kind == .audio ? "mka" : kind == .video ? "mkv" : "bin")
+    }
+
     public var isBitmapSubtitle: Bool {
         kind == .subtitles && ["S_HDMV/PGS", "S_VOBSUB", "HDMV_PGS_SUBTITLE", "DVD_SUBTITLE"].contains(codecID.uppercased())
     }

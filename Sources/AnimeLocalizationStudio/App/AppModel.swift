@@ -6,14 +6,19 @@ import TranslationKit
 import UniformTypeIdentifiers
 
 enum SidebarItem: Hashable {
-    case workspace, dubbing, library, queue, series, diagnostics
+    /// The open episode: its file and tracks, then the two things to do with it.
+    case overview, subtitles, dubbing
+    case library, queue
+    /// Rows that act instead of showing a page (selecting them opens something).
+    case openEpisode
+    case recent(String)
 }
 
 /// App-wide state: settings, stores, the job queue and the episode currently open.
 @Observable
 final class AppModel {
     let paths = AppPaths()
-    var selection: SidebarItem? = .workspace
+    var selection: SidebarItem? = .overview
     var workspace: WorkspaceModel?
     var series: [Series] = []
     var toolStatuses: [ToolStatus] = []
@@ -71,8 +76,13 @@ final class AppModel {
 
     func open(_ url: URL) {
         let workspace = WorkspaceModel(url: url, app: self)
+        self.workspace?.close()
         self.workspace = workspace
-        selection = ProcessInfo.processInfo.environment["ALS_MODE"] == "dubbing" ? .dubbing : .workspace
+        switch ProcessInfo.processInfo.environment["ALS_MODE"] {
+        case "dubbing": selection = .dubbing
+        case "subtitles": selection = .subtitles
+        default: selection = .overview
+        }
         Task { await workspace.load() }
     }
 
