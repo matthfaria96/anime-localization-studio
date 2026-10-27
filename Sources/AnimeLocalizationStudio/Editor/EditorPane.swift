@@ -49,7 +49,7 @@ struct EditorPane: View {
                 }
                 .fixedSize()
                 .disabled(workspace.isBusy || workspace.audioTracks.isEmpty)
-                .help("Reconhecimento de fala da Apple, no dispositivo")
+                .hint("Transcrever o áudio", "Cria a legenda a partir da fala do vídeo, no próprio Mac. Escolha o idioma falado; a primeira opção também descobre quem fala em cada linha.")
                 if !workspace.bitmapSubtitleTracks.isEmpty {
                     Menu("Reconhecer texto (OCR)") {
                         ForEach(TranscriptionLanguage.all, id: \.code) { language in
@@ -58,7 +58,7 @@ struct EditorPane: View {
                     }
                     .fixedSize()
                     .disabled(workspace.isBusy)
-                    .help("Lê as legendas em imagem (PGS) com o reconhecimento de texto da Apple, no dispositivo")
+                    .hint("Reconhecer texto (OCR)", "Lê as legendas em imagem de Blu-ray (PGS) e as transforma em texto editável, no próprio Mac. Escolha o idioma da legenda.")
                 }
             }
             .modifier(SpeakerModelConsent(workspace: workspace))
@@ -90,6 +90,7 @@ private struct EditorToolbar: View {
             }
             .labelsHidden()
             .fixedSize()
+            .hint("Filtro", "Mostra todas as falas, só as que ainda não foram traduzidas, as que não são traduzíveis (karaokê, desenhos, comentários), as rápidas demais para ler ou as com possíveis erros de ortografia.")
 
             HStack(spacing: Theme.Spacing.xs) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
@@ -97,10 +98,12 @@ private struct EditorToolbar: View {
                     .textFieldStyle(.plain)
                     .focused($searchFocused)
                     .frame(minWidth: 120)
+                    .hint("Buscar (⌘F)", "Filtra a lista pelas falas que contêm este texto, no original, na tradução ou no nome do personagem.")
                 Image(systemName: "arrow.right").foregroundStyle(.tertiary).imageScale(.small)
                 TextField("Substituir por", text: $editor.replacement)
                     .textFieldStyle(.plain)
                     .frame(minWidth: 100)
+                    .hint("Substituir por", "Texto que entra no lugar do que foi buscado quando você clica em “Substituir tudo”.")
             }
             .padding(.horizontal, Theme.Spacing.s)
             .padding(.vertical, 5)
@@ -111,32 +114,33 @@ private struct EditorToolbar: View {
             }
             .labelsHidden()
             .fixedSize()
+            .hint("Onde substituir", "Escolhe se “Substituir tudo” altera a tradução ou a legenda original.")
             Toggle("Aa", isOn: $editor.caseSensitive)
                 .toggleStyle(.button)
-                .help("Diferenciar maiúsculas e minúsculas")
+                .hint("Maiúsculas e minúsculas", "Ligado: a busca diferencia “Kirito” de “kirito”. Desligado: encontra os dois.")
             Button("Substituir tudo") { lastReplaceCount = editor.replaceAll(undoManager: undoManager) }
                 .disabled(editor.searchQuery.isEmpty)
-                .help("Substitui só no texto visível; tags {\\…} nunca são alteradas")
+                .hint("Substituir tudo", "Troca o texto buscado em todas as falas de uma vez. Só mexe no texto visível; tags de formatação {\\…} nunca são alteradas. ⌘Z desfaz.")
             if let count = lastReplaceCount {
                 Text("\(count) falas alteradas").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             Toggle(isOn: $editor.followPlayback) { Image(systemName: "dot.radiowaves.forward") }
                 .toggleStyle(.button)
-                .help("Acompanhar o vídeo: seleciona a fala que está tocando")
+                .hint("Acompanhar o vídeo", "Ligado: durante a reprodução, a lista seleciona sozinha a fala que está aparecendo na tela.")
             Button("Inserir fala", systemImage: "plus") {
                 if let id = editor.selection.max() ?? editor.rows.last?.id { editor.insertLine(after: id, undoManager: undoManager) }
             }
             .labelStyle(.iconOnly)
-            .help("Inserir uma fala depois da selecionada (⌫ exclui as selecionadas)")
+            .hint("Inserir fala", "Cria uma fala vazia logo depois da selecionada, no intervalo até a próxima. Para excluir falas, selecione e aperte ⌫.")
             .disabled(editor.rows.isEmpty)
             Button("Deslocar tempos…", systemImage: "clock.arrow.2.circlepath") { showShift = true }
                 .labelStyle(.iconOnly)
-                .help("Sincronizar: mover todas as falas ou as selecionadas")
+                .hint("Deslocar tempos", "Adianta ou atrasa todas as falas (ou só as selecionadas) por alguns milissegundos, para sincronizar a legenda com o vídeo.")
             if !editor.styleNames.isEmpty {
                 Button("Estilos…", systemImage: "paintpalette") { showStyles = true }
                     .labelStyle(.iconOnly)
-                    .help("Editar estilos ASS")
+                    .hint("Estilos", "Edita os estilos da legenda ASS: fonte, tamanho, cores, contorno, sombra, alinhamento e margem. Vale para todas as falas daquele estilo.")
             }
         }
         .controlSize(.small)
@@ -215,7 +219,7 @@ private struct TranslationCell: View {
                 if row.readingSpeed > maxReadingSpeed {
                     Image(systemName: "gauge.with.dots.needle.67percent")
                         .foregroundStyle(Theme.warning)
-                        .help("Leitura rápida: \(Int(row.readingSpeed)) caracteres por segundo")
+                        .hintVerbatim("Leitura rápida demais", "\(Int(row.readingSpeed)) caracteres por segundo. Fica difícil ler a tempo; encurte a frase ou aumente a duração da fala.")
                 }
             } else {
                 Text("Sem tradução").foregroundStyle(.tertiary).italic()

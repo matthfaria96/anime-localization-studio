@@ -24,7 +24,9 @@ struct LibraryView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Adicionar pasta…", systemImage: "folder.badge.plus", action: addFolder)
+                    .hint("Adicionar pasta", "Adiciona a pasta de uma série, temporada ou coleção de filmes à biblioteca.")
                 Button("Atualizar", systemImage: "arrow.clockwise") { Task { await library.scan() } }
+                    .hint("Atualizar", "Procura de novo os vídeos nas pastas da biblioteca.")
                     .disabled(library.isScanning)
             }
         }
@@ -78,24 +80,26 @@ struct LibraryView: View {
                 ForEach(app.series) { Text($0.name).tag(Optional($0.id)) }
             }
             .fixedSize()
-            .help("O glossário e as notas dessa série serão usados em todos os episódios")
+            .hint("Série", "O glossário, as notas e o elenco de vozes dessa série são usados em todos os episódios selecionados.")
             Button("Traduzir \(library.selection.count) selecionados") {
                 app.queue.enqueue(.translate, mediaURLs: library.selectedURLs, seriesID: seriesID)
                 app.selection = .queue
             }
             .disabled(library.selection.isEmpty)
+            .hint("Traduzir selecionados", "Coloca os episódios selecionados na fila para traduzir. A fila continua mesmo se o app for fechado.")
             Button("Traduzir e dublar") {
                 app.queue.enqueue(.dub, mediaURLs: library.selectedURLs, seriesID: seriesID)
                 app.selection = .queue
             }
             .disabled(library.selection.isEmpty)
-            .help("Usa o elenco de vozes da série escolhida")
+            .hint("Traduzir e dublar", "Coloca os episódios selecionados na fila: traduz o que falta e dubla com o elenco da série escolhida.")
             Button("Traduzir e incorporar") {
                 app.queue.enqueue(.translateAndMux, mediaURLs: library.selectedURLs, seriesID: seriesID)
                 app.selection = .queue
             }
             .buttonStyle(.glassProminent)
             .disabled(library.selection.isEmpty)
+            .hint("Traduzir e incorporar", "Traduz os episódios selecionados e cria para cada um o MKV com a legenda em português.")
         }
         .padding(Theme.Spacing.m)
     }

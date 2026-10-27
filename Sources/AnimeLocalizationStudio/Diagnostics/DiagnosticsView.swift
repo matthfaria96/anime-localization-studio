@@ -47,6 +47,7 @@ struct DiagnosticsView: View {
                     HStack {
                         pathButton(app.paths.previews)
                         Button("Limpar") { try? PreviewProxy(tools: app.tools, cacheDirectory: app.paths.previews).clearCache() }
+                            .hint("Limpar pré-visualizações", "Apaga as cópias de pré-visualização em cache. Elas são refeitas quando você abrir o episódio de novo.")
                     }
                 }
                 LabeledContent("Registros") { pathButton(app.paths.logs) }
@@ -56,6 +57,7 @@ struct DiagnosticsView: View {
         .navigationTitle("Diagnóstico")
         .toolbar {
             Button("Verificar de novo", systemImage: "arrow.clockwise") { Task { await check() } }.disabled(checking)
+                .hint("Verificar de novo", "Procura outra vez as ferramentas, os motores de tradução e o VoiceStudio.")
         }
         .task { await check() }
     }
@@ -115,7 +117,7 @@ private struct ToolRow: View {
                         NSPasteboard.general.setString(status.tool.installCommand, forType: .string)
                     }
                     .labelStyle(.iconOnly)
-                    .help("Copiar o comando de instalação")
+                    .hint("Copiar comando", "Copia o comando de instalação para colar no Terminal.")
                 }
             }
         } label: {

@@ -31,7 +31,7 @@ struct RootView: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                            .help(project.mediaPath)
+                            .hintVerbatim(project.title, project.mediaPath)
                         }
                     }
                 }

@@ -30,12 +30,16 @@ struct QueueView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Retomar interrompidos", systemImage: "arrow.clockwise.circle") { queue.resumeInterrupted() }
+                    .hint("Retomar", "Recoloca na fila os trabalhos interrompidos, com falha ou cancelados. A tradução continua do ponto salvo.")
                     .disabled(!queue.jobs.contains { [.interrupted, .failed, .cancelled].contains($0.status) })
                 Button("Cancelar todos", systemImage: "stop.circle") { queue.cancelAll() }
+                    .hint("Cancelar todos", "Para o trabalho em andamento e cancela os que estão esperando.")
                     .disabled(queue.pendingCount == 0)
                 Button("Exportar relatório…", systemImage: "doc.text") { exportReport() }
+                    .hint("Exportar relatório", "Salva um resumo em Markdown com o estado de cada episódio: tradução, dublagem, verificação e arquivo gerado.")
                     .disabled(queue.jobs.isEmpty)
                 Button("Limpar concluídos", systemImage: "trash") { queue.removeFinished() }
+                    .hint("Limpar concluídos", "Tira da lista os trabalhos já terminados. Os arquivos gerados não são apagados.")
                     .disabled(!queue.jobs.contains { $0.status.isFinished })
             }
         }

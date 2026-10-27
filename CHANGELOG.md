@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2 — 26/10/2026
+
+### Melhorado
+- Todos os botões, ícones, seletores e campos mostram uma explicação ao passar o mouse (título e o que fazem), num balão próprio que aparece rápido — inclusive os ícones da barra do editor e do painel da fala selecionada.
+
 ## 0.6.1 — 26/10/2026
 
 ### Corrigido

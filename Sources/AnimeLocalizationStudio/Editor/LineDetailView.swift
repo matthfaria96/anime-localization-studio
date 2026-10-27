@@ -59,7 +59,7 @@ struct LineDetailView: View {
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
                 .font(.title3)
-                .help("Reproduzir só esta fala")
+                .hint("Reproduzir esta fala", "Toca o vídeo do início ao fim desta fala e pausa, para conferir o tempo e o texto.")
         }
     }
 
@@ -81,11 +81,11 @@ struct LineDetailView: View {
                 Button("Início no vídeo") {
                     editor.setTiming(start: workspace.player.currentTime, end: max(cue.end, workspace.player.currentTime + 500), index: index, undoManager: undoManager)
                 }
-                .help("Usar a posição atual do vídeo como início")
+                .hint("Início no vídeo", "Faz a fala começar exatamente onde o vídeo está parado agora.")
                 Button("Fim no vídeo") {
                     editor.setTiming(start: cue.start, end: max(cue.start, workspace.player.currentTime), index: index, undoManager: undoManager)
                 }
-                .help("Usar a posição atual do vídeo como fim")
+                .hint("Fim no vídeo", "Faz a fala terminar exatamente onde o vídeo está parado agora.")
             }
             .controlSize(.small)
             if !editor.styleNames.isEmpty {
@@ -94,7 +94,9 @@ struct LineDetailView: View {
                         ForEach(editor.styleNames, id: \.self) { Text($0).tag($0) }
                         if !editor.styleNames.contains(cue.style) { Text(cue.style).tag(cue.style) }
                     }
+                    .hint("Estilo", "Estilo ASS desta fala (fonte, cor, posição). Os estilos são editados no botão de paleta da barra.")
                     TextField("Personagem", text: Binding(get: { cue.actor }, set: { editor.setActor($0, index: index, undoManager: undoManager) }))
+                        .hint("Personagem", "Quem diz esta fala. Usado no contexto da tradução e para escolher a voz na dublagem.")
                 }
             }
         }
@@ -109,11 +111,13 @@ struct LineDetailView: View {
                 .frame(width: 104)
                 .onSubmit(commit)
                 .labelsHidden()
+                .hint("Tempo", "Digite o tempo (ex.: 0:01:23.45) e aperte Return para aplicar.")
         }
     }
 
     private func nudge(_ title: String, start: Int, end: Int, index: Int, cue: SubtitleCue) -> some View {
         Button(title) { editor.setTiming(start: cue.start + start, end: cue.end + end, index: index, undoManager: undoManager) }
+            .hintVerbatim(title, start < 0 ? "Adianta a fala inteira (início e fim) em 0,1 segundo." : "Atrasa a fala inteira (início e fim) em 0,1 segundo.")
     }
 
     private func textEditor(_ title: LocalizedStringKey, text: Binding<String>, side: DocumentSide, index: Int, prominent: Bool) -> some View {
@@ -125,7 +129,7 @@ struct LineDetailView: View {
                     Button("Aplicar") { editor.commitDrafts() }
                         .controlSize(.small)
                         .keyboardShortcut(.return, modifiers: .command)
-                        .help("Aplicar a alteração (⌘↩)")
+                        .hint("Aplicar (⌘↩)", "Grava o texto que você digitou nesta fala. Trocar de fala também aplica.")
                 }
             }
             TextEditor(text: text)

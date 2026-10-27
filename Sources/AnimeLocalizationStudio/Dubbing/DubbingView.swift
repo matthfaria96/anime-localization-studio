@@ -90,12 +90,14 @@ struct DubbingView: View {
                         ForEach(DubbingEngineChoice.allCases) { Text($0.label).tag($0) }
                     }
                     .fixedSize()
+                    .hint("Motor de voz", "Vozes do macOS (prontas, robóticas) ou VoiceStudio (vozes naturais e clonadas, instalado à parte).")
                     Text(engineStatus).font(.callout).foregroundStyle(engineReady ? Theme.translated : .secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 if app.settings.dubbingEngine == .voiceStudio {
                     Button("Conectar de novo") { Task { await connect() } }
+                        .hint("Conectar de novo", "Procura de novo o VoiceStudio aberto neste Mac.")
                 }
             }
             if app.settings.dubbingEngine == .system {
@@ -131,11 +133,12 @@ struct DubbingView: View {
                 }
                 .fixedSize()
                 .controlSize(.small)
+                .hint("Voz padrão", "Voz usada nas falas sem personagem ou de personagens sem voz escolhida. “Nenhuma” pula essas falas.")
             }
             HStack {
                 Button("Identificar falantes no áudio", systemImage: "person.wave.2") { workspace.identifySpeakers(undoManager: undoManager) }
                     .disabled(workspace.isBusy || !workspace.editor.hasDocument || workspace.audioTracks.isEmpty)
-                    .help("Descobre quem fala em cada linha sem personagem, no próprio Mac, e preenche o campo Personagem")
+                    .hint("Identificar falantes no áudio", "Descobre pelo áudio quem fala em cada linha sem personagem e preenche “Falante 1”, “Falante 2”… Tudo no próprio Mac. ⌘Z desfaz.")
                 Text(workspace.speakerModelsInstalled ? "Modelos instalados" : "Na primeira vez baixa \(SpeakerDiarization.downloadSize) de modelos (com confirmação)")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -168,17 +171,20 @@ struct DubbingView: View {
             }
             .frame(maxWidth: 230)
             .disabled(!engineReady)
+            .hint("Voz", "Voz que dubla este personagem em todas as falas dele.")
             if app.settings.dubbingEngine == .voiceStudio {
                 TextField("Estilo (ex.: jovem, enérgico)", text: member.style)
+                    .hint("Estilo da voz", "Instrução para o VoiceStudio de como falar, por exemplo “jovem, enérgico” ou “calmo, sussurrado”.")
             } else {
                 Spacer()
             }
             Stepper(value: member.speed, in: 0.7...1.5, step: 0.05) {
                 Text(member.wrappedValue.speed, format: .number.precision(.fractionLength(2))).monospacedDigit().frame(width: 34)
             }
-            .help("Velocidade da fala")
+            .hint("Velocidade", "Deixa a voz deste personagem mais lenta (abaixo de 1) ou mais rápida (acima de 1).")
             Button("Ouvir", systemImage: "play.circle") { Task { await sample(member.wrappedValue, line: lines.first?.text) } }
                 .disabled(member.wrappedValue.voiceID == nil || !engineReady)
+                .hint("Ouvir", "Toca uma amostra com a voz escolhida, usando uma fala deste personagem.")
             if let state = sampleState[member.wrappedValue.id] { Text(state).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
         }
         .padding(Theme.Spacing.s)
@@ -202,13 +208,14 @@ struct DubbingView: View {
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
                 .disabled(segments.isEmpty || !engineReady || workspace.isBusy || !isTranslated)
-                .help(isTranslated ? "Gera a faixa dublada e o novo MKV" : "Traduza o episódio antes de dublar")
+                .hintVerbatim("Dublar episódio inteiro", isTranslated ? "Gera a voz de cada fala traduzida, mixa com o áudio do episódio e cria um novo MKV com o áudio dublado e a legenda." : "Traduza o episódio antes de dublar: a dublagem usa o texto da tradução.")
             }
             Picker("Modo", selection: Bindable(app).settings.dubbingMode) {
                 ForEach(DubbingMode.allCases) { Text($0.label).tag($0) }
             }
             .pickerStyle(.segmented)
             .fixedSize()
+            .hint("Modo de dublagem", "Voice-over: a voz nova fala por cima do original abaixado. Substituir falas: as vozes originais são retiradas e trocadas pelas novas.")
             Text(app.settings.dubbingMode == .voiceOver
                  ? "Voice-over: a voz nova fala por cima e o áudio original abaixa enquanto ela fala."
                  : "Substituir falas: as vozes originais são separadas da música e dos efeitos no próprio Mac (isolamento de voz da Apple) e trocadas pelas novas. A separação é aproximada: cenas com muita música ou efeitos podem manter restos das falas originais.")
@@ -295,6 +302,6 @@ private struct CastNameField: View {
             .onAppear { draft = name }
             .onChange(of: name) { draft = name }
             .onSubmit { if draft != name { rename(draft) } }
-            .help("Renomeie o falante (ex.: Falante 1 → Kirito); todas as falas dele mudam")
+            .hint("Nome do personagem", "Digite o nome e aperte Return (ex.: Falante 1 → Kirito). Todas as falas desse falante passam a usar o nome.")
     }
 }

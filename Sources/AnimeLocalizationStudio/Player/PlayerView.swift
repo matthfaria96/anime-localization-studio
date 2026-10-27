@@ -137,15 +137,15 @@ private struct TransportBar: View {
             HStack(spacing: Theme.Spacing.xs) {
                 Button("Fala anterior", systemImage: "backward.end.fill") { workspace.jumpLine(by: -1) }
                     .keyboardShortcut(.upArrow, modifiers: [.option])
-                    .help("Fala anterior (⌥↑)")
+                    .hint("Fala anterior (⌥↑)", "Seleciona a fala anterior e leva o vídeo até ela.")
                 Button(player.isPlaying ? "Pausar" : "Reproduzir", systemImage: player.isPlaying ? "pause.fill" : "play.fill") { player.togglePlay() }
                     .keyboardShortcut(.space, modifiers: [.option])
-                    .help("Reproduzir ou pausar (⌥Espaço)")
+                    .hint("Reproduzir ou pausar (⌥Espaço)", "Toca ou pausa o vídeo. Clicar no vídeo também funciona.")
                     .font(.title3)
                     .frame(width: 30)
                 Button("Próxima fala", systemImage: "forward.end.fill") { workspace.jumpLine(by: 1) }
                     .keyboardShortcut(.downArrow, modifiers: [.option])
-                    .help("Próxima fala (⌥↓)")
+                    .hint("Próxima fala (⌥↓)", "Seleciona a próxima fala e leva o vídeo até ela.")
             }
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
@@ -159,6 +159,7 @@ private struct TransportBar: View {
             }
             .controlSize(.small)
             .accessibilityLabel("Posição")
+            .hint("Posição no vídeo", "Arraste para ir a outro ponto do episódio.")
             Text(SubtitleTime.formatDisplay(player.duration))
                 .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)
@@ -170,7 +171,7 @@ private struct TransportBar: View {
             .labelsHidden()
             .pickerStyle(.menu)
             .fixedSize()
-            .help("O que mostrar sobre o vídeo")
+            .hint("Legenda no vídeo", "Escolhe o que aparece sobre o vídeo: a tradução, o original, os dois ao mesmo tempo ou nada.")
 
             if workspace.audioTracks.count > 1 {
                 Picker("Áudio", selection: Binding(get: { workspace.previewAudioTrackID }, set: { workspace.selectPreviewAudio($0) })) {
@@ -181,7 +182,7 @@ private struct TransportBar: View {
                 .labelsHidden()
                 .pickerStyle(.menu)
                 .fixedSize()
-                .help("Faixa de áudio da pré-visualização")
+                .hint("Áudio da pré-visualização", "Escolhe qual faixa de áudio do arquivo você ouve aqui. Não muda nada no arquivo.")
             }
         }
         .padding(.horizontal, Theme.Spacing.m)

@@ -50,6 +50,7 @@ struct SeriesView: View {
                 Section {
                     TextField("Nome", text: binding.name)
                     Toggle("Manter honoríficos (-san, -kun, -chan, -senpai…)", isOn: binding.glossary.keepHonorifics)
+                        .hint("Honoríficos", "Ligado: a tradução mantém -san, -kun, -chan… como no original. Desligado: adapta para o português.")
                 } header: { Text("Série") }
                 Section {
                     TextEditor(text: binding.glossary.notes)
@@ -83,10 +84,12 @@ struct SeriesView: View {
                             entrySelection = []
                         }
                         .disabled(entrySelection.isEmpty)
+                        .hint("Remover", "Apaga do glossário os termos selecionados.")
                         Spacer()
                         Button("Salvar") { save() }
                             .buttonStyle(.glassProminent)
                             .keyboardShortcut("s", modifiers: .command)
+                            .hint("Salvar (⌘S)", "Grava o glossário e as notas. Eles passam a valer nas próximas traduções desta série.")
                             .disabled(binding.wrappedValue == app.series.first { $0.id == draft?.id })
                     }
                 } header: {

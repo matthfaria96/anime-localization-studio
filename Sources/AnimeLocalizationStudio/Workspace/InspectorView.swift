@@ -48,6 +48,7 @@ struct InspectorView: View {
                         ForEach(textTracks) { Text("\($0.id) · \($0.displayLanguage) · \($0.name ?? $0.codec)").tag($0.id) }
                     }
                     .disabled(workspace.isBusy)
+                    .hint("Legenda de origem", "Qual faixa de legenda do arquivo é o original a traduzir.")
                 }
                 if workspace.project.externalSubtitlePath != nil {
                     Label("Usando legenda externa", systemImage: "doc.text").font(.caption).foregroundStyle(.secondary)
@@ -81,17 +82,20 @@ struct InspectorView: View {
             Picker("Motor", selection: $app.settings.engine) {
                 ForEach(EngineChoice.allCases) { Text($0.label).tag($0) }
             }
+            .hint("Motor de tradução", "Quem traduz: a tradução da Apple (rápida, sem contexto), a Apple Intelligence (usa contexto e glossário) ou um servidor como Ollama ou LM Studio.")
             Text(app.settings.engine.summary).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Picker("Série / glossário", selection: Binding(get: { workspace.project.seriesID }, set: { workspace.assignSeries($0) })) {
                 Text("Nenhuma").tag(UUID?.none)
                 ForEach(app.series) { Text($0.name).tag(Optional($0.id)) }
             }
+            .hint("Série / glossário", "Liga o episódio a uma série: o glossário, as notas e o elenco de vozes dela são usados na tradução e na dublagem.")
             Button(action: requestTranslate) {
                 Label("Traduzir episódio inteiro", systemImage: "sparkles").frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
             .controlSize(.large)
             .disabled(!workspace.editor.hasDocument || workspace.isBusy)
+            .hint("Traduzir episódio inteiro", "Traduz todas as falas mantendo estilos, tempos e tags. Se já houver tradução, você escolhe entre completar o que falta ou refazer tudo.")
             if let report = workspace.lastReport { ReportSummary(report: report) }
         }
     }
@@ -103,8 +107,11 @@ struct InspectorView: View {
         return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             SectionLabel("Novo MKV", systemImage: "film.stack")
             TextField("Nome da faixa", text: $app.settings.trackName)
+                .hint("Nome da faixa", "Nome que os players mostram no menu de legendas, por exemplo “Português (Brasil)”.")
             Toggle("Definir como legenda padrão", isOn: $app.settings.makeDefault)
+                .hint("Legenda padrão", "Os players abrem o arquivo já com esta legenda ligada.")
             Toggle("Colocar antes das outras legendas", isOn: $app.settings.placeNewTrackFirst)
+                .hint("Colocar primeiro", "A nova faixa aparece no topo da lista de legendas do player.")
             Text("O original não é alterado. O vídeo e os áudios são copiados sem recodificação, e o resultado é verificado antes de ser salvo.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Button {
@@ -115,10 +122,12 @@ struct InspectorView: View {
             .buttonStyle(.glass)
             .controlSize(.large)
             .disabled(workspace.editor.translation == nil || workspace.isBusy)
+            .hint("Incorporar ao MKV", "Cria um novo MKV com a legenda traduzida, verifica o resultado e mantém todas as faixas originais. O original não é alterado.")
             if let mux = workspace.lastMux {
                 VerificationList(report: mux.report)
                 Button("Mostrar no Finder", systemImage: "folder") { workspace.revealOutput() }
                     .buttonStyle(.link)
+                    .hint("Mostrar no Finder", "Abre a pasta do novo arquivo com ele selecionado.")
             }
         }
     }
@@ -141,7 +150,7 @@ private struct TrackRow: View {
             if track.isForced { Tag(text: "Forçada", tint: Theme.warning) }
         }
         .accessibilityElement(children: .combine)
-        .help(isSource ? "Legenda usada como origem da tradução" : track.codec)
+        .hintVerbatim(track.name ?? track.kind.label, isSource ? "Esta é a legenda usada como original para traduzir. Formato: \(track.codec)." : "\(track.kind.label) · \(track.codec) · idioma \(track.displayLanguage)\(track.isDefault ? " · faixa padrão" : "")")
     }
 
     private var icon: String {

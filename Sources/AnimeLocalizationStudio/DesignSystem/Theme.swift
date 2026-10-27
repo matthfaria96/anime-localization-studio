@@ -138,7 +138,7 @@ struct OperationProgress: View {
                         .labelStyle(.iconOnly)
                         .buttonStyle(.borderless)
                         .foregroundStyle(.secondary)
-                        .help("Cancelar")
+                        .hint("Cancelar", "Interrompe a operação. O progresso de traduções é salvo e pode ser retomado.")
                 }
             }
             if let fraction { ProgressView(value: fraction).progressViewStyle(.linear) } else { ProgressView().progressViewStyle(.linear) }

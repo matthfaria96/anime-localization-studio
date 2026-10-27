@@ -74,21 +74,22 @@ struct WorkspaceView: View {
             .pickerStyle(.segmented)
             .labelStyle(.titleAndIcon)
             .fixedSize()
+            .hint("Legendas ou Dublagem", "Alterna entre editar e traduzir a legenda e montar a dublagem deste episódio.")
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Button("Abrir legenda externa…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
-                .help("Usar uma legenda ASS, SSA ou SRT de fora do vídeo")
+                .hint("Abrir legenda externa", "Usa um arquivo de legenda ASS, SSA ou SRT de fora do vídeo como legenda original.")
             Button("Exportar legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
                 .disabled(workspace.editor.translation == nil)
-                .help("Salvar a tradução como arquivo separado")
+                .hint("Exportar legenda", "Salva a tradução como um arquivo de legenda separado, ao lado do vídeo.")
             Button("Incorporar ao MKV", systemImage: "film.stack") { workspace.embedTranslation() }
                 .disabled(workspace.editor.translation == nil || workspace.isBusy)
-                .help("Criar um novo MKV com a faixa em português, sem alterar o original")
+                .hint("Incorporar ao MKV", "Cria um novo arquivo MKV com a legenda traduzida como faixa extra. O original não é alterado e o vídeo não é recodificado.")
             Button("Traduzir episódio inteiro", systemImage: "translate") { requestTranslate() }
                 .buttonStyle(.glassProminent)
                 .disabled(!workspace.editor.hasDocument || workspace.isBusy)
                 .keyboardShortcut("t", modifiers: [.command, .shift])
-                .help("Traduz todas as falas preservando estilos e tags (⇧⌘T)")
+                .hint("Traduzir episódio inteiro (⇧⌘T)", "Traduz todas as falas com o motor escolhido, mantendo estilos, tempos e tags. Falas já traduzidas são mantidas.")
         }
     }
 }
