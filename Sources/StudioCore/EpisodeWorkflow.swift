@@ -322,6 +322,9 @@ public struct EpisodeWorkflow: Sendable {
             progress(WorkflowStep(fraction: 0.95, message: "Clonando as vozes originais no VoiceStudio…"))
             assigned = try await AutoCasting.clonedVoices(for: needing, client: VoiceStudioClient(baseURL: settings.voiceStudioURL),
                                                           prefix: project.title, language: settings.sourceLanguage)
+        case .original:
+            // The voice is the character's own clip: PocketTTS clones it on the Mac.
+            assigned = Dictionary(needing.map { ($0.speaker, $0.url.path) }, uniquingKeysWith: { a, _ in a })
         case .system:
             assigned = AutoCasting.systemVoices(for: needing, available: systemVoices)
         }

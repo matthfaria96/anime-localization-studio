@@ -124,7 +124,11 @@ public struct AudioMixer: Sendable {
         let partial = output.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString.prefix(8)).partial.m4a")
         defer { try? FileManager.default.removeItem(at: partial) }
         try await ProcessRunner.runChecked(ffmpeg, ["-nostdin", "-v", "error", "-y", "-progress", "pipe:1", "-nostats"] + inputs
-                                           + ["-filter_complex", graph, "-map", "[out]", "-c:a", "aac", "-b:a", "192k", partial.path]) { line in
+                                           + ["-filter_complex", graph, "-map", "[out]",
+                                              // FFmpeg would copy the video's chapters and tags into the audio file, and mkvmerge
+                                              // would then add them to the episode a second time.
+                                              "-map_chapters", "-1", "-map_metadata", "-1",
+                                              "-c:a", "aac", "-b:a", "192k", partial.path]) { line in
             if let value = FFmpegProgressLine.fraction(line, durationMilliseconds: duration) { progress?(value) }
         }
         try FileOps.replaceItem(at: output, with: partial)

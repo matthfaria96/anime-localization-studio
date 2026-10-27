@@ -11,6 +11,10 @@ struct WorkspaceView: View {
     @Bindable var workspace: WorkspaceModel
     let mode: WorkspaceMode
     @State private var confirmRetranslate = false
+    @AppStorage("inspectorShown") private var showInspector = true
+    @AppStorage("inspectorChosen") private var inspectorChosen = false
+    @State private var isDocked = true
+    @State private var drawerOpen = false
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -59,21 +63,59 @@ struct WorkspaceView: View {
         return parts.joined(separator: " · ")
     }
 
+    /// The inspector sits beside the editor when both fit (editor ≥ 600 pt); in narrower windows
+    /// it opens as a drawer over the trailing edge instead of squeezing everything.
+    private static let inspectorWidth: CGFloat = 320
+    private static let editorMinimum: CGFloat = 540
+
     private var subtitles: some View {
-        VSplitView {
-            HStack(alignment: .top, spacing: 0) {
-                PlayerView(workspace: workspace)
-                    .padding(Theme.Spacing.l)
-                    .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
-                Divider()
-                InspectorView(workspace: workspace, requestTranslate: requestTranslate)
-                    .frame(width: 340)
+        GeometryReader { proxy in
+            let docked = proxy.size.width >= Self.editorMinimum + Self.inspectorWidth
+            let _ = updateDocked(docked)
+            HStack(spacing: 0) {
+                editorArea
+                    .frame(maxWidth: .infinity)
+                if showInspector && docked {
+                    Divider()
+                    inspector.frame(width: Self.inspectorWidth)
+                }
             }
-            .frame(minHeight: 320, idealHeight: 470)
-            EditorPane(workspace: workspace)
-                .frame(minHeight: 240, idealHeight: 360)
+            .overlay(alignment: .trailing) {
+                if drawerOpen && !docked {
+                    inspector
+                        .frame(width: min(Self.inspectorWidth, proxy.size.width - 40))
+                        .background(.regularMaterial)
+                        .shadow(color: .black.opacity(0.25), radius: 12, x: -2)
+                        .transition(.move(edge: .trailing))
+                }
+            }
+            .animation(.smooth(duration: 0.2), value: docked)
         }
         .paneBackground()
+        .onAppear { if !inspectorChosen { showInspector = true } }
+    }
+
+    /// Narrow windows collapse the inspector automatically; the toolbar button opens it as a drawer.
+    private func updateDocked(_ docked: Bool) {
+        guard docked != isDocked else { return }
+        Task { @MainActor in
+            isDocked = docked
+            drawerOpen = false
+        }
+    }
+
+    private var editorArea: some View {
+        VSplitView {
+            PlayerView(workspace: workspace)
+                .padding(Theme.Spacing.l)
+                .frame(minHeight: 220, idealHeight: 460, maxHeight: .infinity)
+            EditorPane(workspace: workspace)
+                .frame(minHeight: 220, idealHeight: 360)
+        }
+    }
+
+    private var inspector: some View {
+        InspectorView(workspace: workspace, requestTranslate: requestTranslate)
     }
 
     private func requestTranslate() {
@@ -84,19 +126,27 @@ struct WorkspaceView: View {
     private var toolbar: some ToolbarContent {
         if mode == .subtitles {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button("Abrir legenda externa…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
-                    .hint("Abrir legenda externa", "Usa um arquivo de legenda ASS, SSA ou SRT de fora do vídeo como legenda original.")
-                Button("Exportar legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
-                    .disabled(workspace.editor.translation == nil)
-                    .hint("Exportar legenda", "Salva a tradução como um arquivo de legenda separado, ao lado do vídeo.")
-                Button("Incorporar ao MKV", systemImage: "film.stack") { workspace.requestEmbed() }
-                    .disabled(workspace.editor.translation == nil || workspace.isBusy)
-                    .hint("Incorporar ao MKV", "Cria um novo arquivo MKV com a legenda traduzida como faixa extra. O original não é alterado e o vídeo não é recodificado.")
                 Button("Traduzir episódio inteiro", systemImage: "translate") { requestTranslate() }
                     .buttonStyle(.glassProminent)
                     .disabled(!workspace.editor.hasDocument || workspace.isBusy)
                     .keyboardShortcut("t", modifiers: [.command, .shift])
                     .hint("Traduzir episódio inteiro (⇧⌘T)", "Traduz todas as falas com o motor escolhido, mantendo estilos, tempos e tags. Falas já traduzidas são mantidas.")
+                Menu {
+                    Button("Abrir legenda externa…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
+                    Button("Exportar legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
+                        .disabled(workspace.editor.translation == nil)
+                    Divider()
+                    Button("Incorporar ao MKV…", systemImage: "film.stack") { workspace.requestEmbed() }
+                        .disabled(workspace.editor.translation == nil || workspace.isBusy)
+                } label: {
+                    Label("Arquivo", systemImage: "ellipsis.circle")
+                }
+                .hint("Arquivo", "Abrir uma legenda externa, exportar a tradução como arquivo ou incorporá-la ao MKV.")
+                Button("Inspetor", systemImage: "sidebar.trailing") {
+                    if isDocked { showInspector.toggle(); inspectorChosen = true } else { drawerOpen.toggle() }
+                }
+                    .keyboardShortcut("i", modifiers: [.command, .option])
+                    .hint("Mostrar ou esconder o inspetor (⌥⌘I)", "O painel da direita com as faixas, a tradução e o novo MKV. Em janelas estreitas ele se recolhe sozinho e este botão o abre por cima.")
             }
         }
     }

@@ -26,13 +26,16 @@ public enum EngineChoice: String, Sendable, Codable, CaseIterable, Identifiable 
 }
 
 public enum DubbingEngineChoice: String, Sendable, Codable, CaseIterable, Identifiable {
-    case system, voiceStudio
+    /// Clone of each character's original voice, made on the Mac (PocketTTS).
+    case original
+    case voiceStudio, system
 
     public var id: String { rawValue }
     public var label: String {
         switch self {
-        case .system: "Vozes do macOS, escolhidas pelo tom"
-        case .voiceStudio: "Voz original clonada (VoiceStudio)"
+        case .original: "Voz original (no Mac)"
+        case .system: "Vozes do macOS (rascunho)"
+        case .voiceStudio: "Voz original pelo VoiceStudio"
         }
     }
 }
@@ -50,7 +53,7 @@ public struct AppSettings: Sendable, Hashable, Codable {
     public var placeNewTrackFirst: Bool = false
     public var toolPaths: [String: String] = [:]
     public var voiceStudioURL: URL = URL(string: "http://127.0.0.1:3900")!
-    public var dubbingEngine: DubbingEngineChoice = .system
+    public var dubbingEngine: DubbingEngineChoice = .original
     public var dubbingDefaultVoice: String? = "Luciana"
     public var dubbingMaxSpeedup: Double = 1.3
     public var dubbingMode: DubbingMode = .replaceDialogue
@@ -73,8 +76,9 @@ public struct AppSettings: Sendable, Hashable, Codable {
         TranslationOptions(sourceLanguage: sourceLanguage, targetLanguage: targetLanguage, contextLines: contextLines, translateKaraoke: translateKaraoke)
     }
 
-    public func makeSynthesizer() -> any SpeechSynthesizer {
+    public func makeSynthesizer(paths: AppPaths = AppPaths()) -> any SpeechSynthesizer {
         switch dubbingEngine {
+        case .original: ClonedVoiceSynthesizer(modelsDirectory: paths.voiceModels)
         case .system: SystemVoiceSynthesizer()
         case .voiceStudio: VoiceStudioSynthesizer(client: VoiceStudioClient(baseURL: voiceStudioURL))
         }

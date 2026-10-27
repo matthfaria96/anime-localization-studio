@@ -138,6 +138,8 @@ public struct MKVMuxer: Sendable {
             if track.kind == .subtitles, ["srt", "ass", "ssa"].contains(track.file.pathExtension.lowercased()) {
                 args += ["--sub-charset", "0:UTF-8"]
             }
+            // Added files contribute one track only: never their chapters, tags or attachments.
+            args += ["--no-chapters", "--no-global-tags", "--no-attachments"]
             args.append(track.file.path)
         }
         args += ["--track-order", trackOrder(for: plan)]

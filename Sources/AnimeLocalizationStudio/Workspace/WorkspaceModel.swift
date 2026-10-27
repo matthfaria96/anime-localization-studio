@@ -533,6 +533,14 @@ final class WorkspaceModel {
 
     // MARK: Automatic dub with the original voices
 
+    var voiceModelsInstalled: Bool { ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels).modelsInstalled }
+
+    /// Lines already synthesized for this episode (reused by the next dub).
+    var cachedDubLines: Int {
+        let clips = store.directory(for: project.id).appendingPathComponent("Dub/clips", isDirectory: true)
+        return ((try? FileManager.default.contentsOfDirectory(atPath: clips.path)) ?? []).filter { $0.hasSuffix(".wav") && !$0.contains(".fit.") }.count
+    }
+
     /// Clips of each speaker's original voice, for “Ouvir original”.
     var voiceSamples: [String: URL] = [:]
 
@@ -622,7 +630,11 @@ final class WorkspaceModel {
                 }
                 onCast(filled)
                 saveCast(filled)
-                let synthesizer = app.settings.makeSynthesizer()
+                if app.settings.dubbingEngine == .original {
+                    operation?.message = voiceModelsInstalled ? "Carregando o modelo de voz…" : "Baixando os modelos de voz (\(ClonedVoiceSynthesizer.downloadSize))…"
+                    try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels).prepare()
+                }
+                let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
                 let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled,
                                                                                     replaceOriginal: replaceOriginal) { step in
                     Task { @MainActor in self.operation?.fraction = 0.4 + step.fraction * 0.6; self.operation?.message = step.message }
@@ -691,7 +703,7 @@ final class WorkspaceModel {
         operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando dublagem…")
         let workflow = workflow()
         let project = project
-        let synthesizer = app.settings.makeSynthesizer()
+        let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
         task = Task {
             do {
                 let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: cast) { step in

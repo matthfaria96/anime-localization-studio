@@ -123,6 +123,21 @@ struct MediaPipelineTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: trash.path) == [episode.lastPathComponent])
     }
 
+    @Test func addedFilesNeverBringTheirChapters() async throws {
+        let dir = MediaFixtures.temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let episode = try await MediaFixtures.makeEpisode(in: dir)
+        let info = try await MediaInspector(tools: testTools).inspect(episode)
+        // An audio file made from the episode by FFmpeg without -map_chapters -1 carries its chapters.
+        let audio = dir.appendingPathComponent("dub.m4a")
+        try await ProcessRunner.runChecked(try testTools.require(.ffmpeg), ["-nostdin", "-v", "error", "-y", "-i", episode.path, "-map", "0:a:0", "-c:a", "aac", audio.path])
+        let plan = MuxPlan(source: info, output: dir.appendingPathComponent("out.mkv"),
+                           newTracks: [NewTrack(file: audio, kind: .audio, name: "Dublado")])
+        let (_, report) = try await MKVMuxer(tools: testTools).mux(plan)
+        #expect(report.passed, "\(report.failures)")
+        #expect(report.outputInfo?.chapterCount == info.chapterCount)
+    }
+
     @Test func verificationCatchesReencodedVideo() async throws {
         let dir = MediaFixtures.temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }

@@ -74,32 +74,52 @@ struct LineDetailView: View {
                     Text(String(format: "%.2f s", Double(cue.duration) / 1_000)).monospacedDigit()
                 }
             }
-            HStack(spacing: Theme.Spacing.xs) {
-                nudge("−100 ms", start: -100, end: -100, index: index, cue: cue)
-                nudge("+100 ms", start: 100, end: 100, index: index, cue: cue)
-                Divider().frame(height: 14)
-                Button("Início no vídeo") {
-                    editor.setTiming(start: workspace.player.currentTime, end: max(cue.end, workspace.player.currentTime + 500), index: index, undoManager: undoManager)
+            // One row when there is room, two rows in narrow panes.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Theme.Spacing.xs) { nudges(index: index, cue: cue); Divider().frame(height: 14); videoButtons(index: index, cue: cue) }
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    HStack(spacing: Theme.Spacing.xs) { nudges(index: index, cue: cue) }
+                    HStack(spacing: Theme.Spacing.xs) { videoButtons(index: index, cue: cue) }
                 }
-                .hint("Início no vídeo", "Faz a fala começar exatamente onde o vídeo está parado agora.")
-                Button("Fim no vídeo") {
-                    editor.setTiming(start: cue.start, end: max(cue.start, workspace.player.currentTime), index: index, undoManager: undoManager)
-                }
-                .hint("Fim no vídeo", "Faz a fala terminar exatamente onde o vídeo está parado agora.")
             }
             .controlSize(.small)
             if !editor.styleNames.isEmpty {
-                HStack {
+                ViewThatFits(in: .horizontal) {
+                    HStack { styleAndActor(cue, index: index) }
+                    VStack(alignment: .leading) { styleAndActor(cue, index: index) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func styleAndActor(_ cue: SubtitleCue, index: Int) -> some View {
                     Picker("Estilo", selection: Binding(get: { cue.style }, set: { editor.setStyle($0, index: index, undoManager: undoManager) })) {
                         ForEach(editor.styleNames, id: \.self) { Text($0).tag($0) }
                         if !editor.styleNames.contains(cue.style) { Text(cue.style).tag(cue.style) }
                     }
                     .hint("Estilo", "Estilo ASS desta fala (fonte, cor, posição). Os estilos são editados no botão de paleta da barra.")
                     TextField("Personagem", text: Binding(get: { cue.actor }, set: { editor.setActor($0, index: index, undoManager: undoManager) }))
+                        .frame(minWidth: 100)
                         .hint("Personagem", "Quem diz esta fala. Usado no contexto da tradução e para escolher a voz na dublagem.")
-                }
-            }
+    }
+
+    @ViewBuilder
+    private func nudges(index: Int, cue: SubtitleCue) -> some View {
+        nudge("−100 ms", start: -100, end: -100, index: index, cue: cue)
+        nudge("+100 ms", start: 100, end: 100, index: index, cue: cue)
+    }
+
+    @ViewBuilder
+    private func videoButtons(index: Int, cue: SubtitleCue) -> some View {
+        Button("Início no vídeo") {
+            editor.setTiming(start: workspace.player.currentTime, end: max(cue.end, workspace.player.currentTime + 500), index: index, undoManager: undoManager)
         }
+        .hint("Início no vídeo", "Faz a fala começar exatamente onde o vídeo está parado agora.")
+        Button("Fim no vídeo") {
+            editor.setTiming(start: cue.start, end: max(cue.start, workspace.player.currentTime), index: index, undoManager: undoManager)
+        }
+        .hint("Fim no vídeo", "Faz a fala terminar exatamente onde o vídeo está parado agora.")
     }
 
     private func timeField(_ title: LocalizedStringKey, text: Binding<String>, commit: @escaping () -> Void) -> some View {
@@ -108,7 +128,7 @@ struct LineDetailView: View {
             TextField(title, text: text)
                 .font(Theme.monoDigits)
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 104)
+                .frame(minWidth: 96, maxWidth: 116)
                 .onSubmit(commit)
                 .labelsHidden()
                 .hint("Tempo", "Digite o tempo (ex.: 0:01:23.45) e aperte Return para aplicar.")

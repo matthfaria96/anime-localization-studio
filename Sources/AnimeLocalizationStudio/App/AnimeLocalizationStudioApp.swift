@@ -10,7 +10,7 @@ struct AnimeLocalizationStudioApp: App {
         Window("Anime Localization Studio", id: "main") {
             RootView()
                 .environment(app)
-                .frame(minWidth: 1_080, minHeight: 700)
+                .frame(minWidth: 960, minHeight: 640)
                 .onAppear {
                     delegate.app = app
                     // Test hook for captures: force an appearance without changing the system's.
@@ -20,6 +20,12 @@ struct AnimeLocalizationStudioApp: App {
                     default: break
                     }
                     if let path = ProcessInfo.processInfo.environment["ALS_OPEN"] { app.open(URL(fileURLWithPath: path)) }
+                    // Test hook for captures: ALS_SIZE=1080x700 sets the window's content size.
+                    if let size = ProcessInfo.processInfo.environment["ALS_SIZE"]?.split(separator: "x").compactMap({ Double($0) }), size.count == 2 {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            NSApp.windows.first { $0.isVisible && $0.styleMask.contains(.titled) }?.setContentSize(NSSize(width: size[0], height: size[1]))
+                        }
+                    }
                 }
         }
         .defaultSize(width: 1_440, height: 900)

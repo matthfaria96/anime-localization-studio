@@ -25,6 +25,7 @@ struct DubbingView: View {
     }
     private var isTranslated: Bool { workspace.editor.translation != nil }
     private var usesClones: Bool { app.settings.dubbingEngine == .voiceStudio }
+    private var engineReadyLabel: Bool { engineReady }
     private var engineReady: Bool { !usesClones || studioConnected == true }
 
     var body: some View {
@@ -54,9 +55,8 @@ struct DubbingView: View {
         .task {
             cast = workspace.loadCast()
             rebuildCast()
-            await checkStudio()
+            await checkStudio(force: true)
         }
-        .onChange(of: app.settings.dubbingEngine) { Task { await checkStudio() } }
         .onChange(of: workspace.editor.revision) { rebuildCast() }
         .onChange(of: cast) { _, new in workspace.saveCast(new) }
         .modifier(SpeakerModelConsent(workspace: workspace))
@@ -73,15 +73,27 @@ struct DubbingView: View {
         @Bindable var app = app
         return Panel {
             SectionLabel("Vozes", systemImage: "waveform.badge.mic")
-            HStack(spacing: Theme.Spacing.m) {
-                OptionCard(title: "Voz original clonada", systemImage: "person.wave.2.fill",
-                           detail: studioStatus, selected: usesClones) { app.settings.dubbingEngine = .voiceStudio }
-                    .hint("Voz original clonada", "Cada personagem fala português com a própria voz do episódio: o app tira um trecho da voz original e o VoiceStudio cria uma cópia dela. Precisa do VoiceStudio aberto (app gratuito, instalado à parte). Clone apenas vozes que você tem permissão de usar.")
+            HStack(alignment: .top, spacing: Theme.Spacing.m) {
+                OptionCard(title: "Voz original (no Mac)", systemImage: "person.wave.2.fill",
+                           detail: workspace.voiceModelsInstalled ? "Recomendado. Cada personagem fala português com a própria voz do episódio. Modelos instalados."
+                                                                  : "Recomendado. Cada personagem fala português com a própria voz. Na primeira vez baixa \(ClonedVoiceSynthesizer.downloadSize).",
+                           selected: app.settings.dubbingEngine == .original) { app.settings.dubbingEngine = .original }
+                    .hint("Voz original (no Mac)", "O app tira um trecho da voz de cada personagem no episódio e a recria falando português, tudo no próprio Mac (Pocket TTS da Kyutai, licença CC-BY-4.0). Não precisa instalar outro programa. Clone apenas vozes que você tem permissão de usar.")
                 OptionCard(title: "Vozes do macOS", systemImage: "desktopcomputer",
-                           detail: "Prontas, robóticas. O app escolhe uma voz grave ou aguda parecida com a original.", selected: !usesClones) {
+                           detail: "Rascunho rápido: vozes prontas do sistema, robóticas.", selected: app.settings.dubbingEngine == .system) {
                     app.settings.dubbingEngine = .system
                 }
-                .hint("Vozes do macOS", "Usa as vozes do sistema, sem instalar nada. O app mede se a voz original é grave ou aguda e escolhe uma voz parecida e diferente para cada personagem. Servem para rascunho e conferência de tempo.")
+                .hint("Vozes do macOS", "Usa as vozes do sistema, escolhidas pelo tom de cada personagem. São robóticas: servem para conferir tempo e texto rapidamente.")
+                ZStack(alignment: .topTrailing) {
+                    OptionCard(title: "VoiceStudio", systemImage: "server.rack", detail: studioStatus, selected: app.settings.dubbingEngine == .voiceStudio) {
+                        app.settings.dubbingEngine = .voiceStudio
+                    }
+                    Button { Task { await checkStudio(force: true) } } label: { Image(systemName: "arrow.clockwise") }
+                        .buttonStyle(.borderless)
+                        .padding(Theme.Spacing.s)
+                        .hint("Procurar o VoiceStudio", "Verifica de novo se o VoiceStudio está aberto neste Mac.")
+                }
+                .hint("VoiceStudio", "Usa o VoiceStudio (app gratuito instalado à parte) para clonar as vozes. Útil se você já tem vozes prontas nele.")
             }
             SectionLabel("Modo", systemImage: "slider.horizontal.3")
             HStack(spacing: Theme.Spacing.m) {
@@ -121,8 +133,8 @@ struct DubbingView: View {
     private var studioStatus: String {
         switch studioConnected {
         case .none: "Procurando o VoiceStudio…"
-        case .some(true): "VoiceStudio conectado. Fala português com a voz de cada personagem."
-        case .some(false): "Precisa do VoiceStudio aberto (voicestudio.sh). Não encontrado neste Mac."
+        case .some(true): "Conectado."
+        case .some(false): "Não está aberto neste Mac. Abra-o e clique em ↻."
         }
     }
 
@@ -202,7 +214,11 @@ struct DubbingView: View {
 
     private func voiceLabel(_ member: CastMember) -> String {
         guard let voice = member.voiceID, member.engine == app.settings.dubbingEngine.rawValue || member.engine == nil else { return "Automática" }
-        return usesClones ? "Voz original clonada" : "Voz \(voice)"
+        switch app.settings.dubbingEngine {
+        case .original: return "Voz original"
+        case .voiceStudio: return "Voz clonada (VoiceStudio)"
+        case .system: return "Voz \(voice)"
+        }
     }
 
     // MARK: Result
@@ -237,8 +253,8 @@ struct DubbingView: View {
 
     // MARK: Actions
 
-    private func checkStudio() async {
-        guard usesClones else { return }
+    private func checkStudio(force: Bool = false) async {
+        guard force || usesClones else { return }
         studioConnected = nil
         let client = VoiceStudioClient(baseURL: app.settings.voiceStudioURL)
         do {
@@ -267,7 +283,7 @@ struct DubbingView: View {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("als-sample-\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: file) }
         do {
-            try await app.settings.makeSynthesizer().synthesize(line ?? "Olá! Esta é uma amostra da minha voz.", voice: voice,
+            try await app.settings.makeSynthesizer(paths: app.paths).synthesize(line ?? "Olá! Esta é uma amostra da minha voz.", voice: voice,
                                                                  style: member.style.isEmpty ? nil : member.style, speed: member.speed, to: file)
             audioPlayer = try AVAudioPlayer(data: Data(contentsOf: file))
             audioPlayer?.play()

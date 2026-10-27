@@ -52,8 +52,11 @@ parte do macOS e não são redistribuídos.
 |---|---|---|---|
 | Segmentation, FBank, Embedding, PLDA (`FluidInference/speaker-diarization-coreml`, ~22 MB) | Conversões Core ML modificadas do pyannote/speaker-diarization-community-1, WeSpeaker e parâmetros PLDA da BUT Speech@FIT | CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/) | pyannote, WeSpeaker, BUT Speech@FIT e Fluid Inference; arquivos convertidos para Core ML pela Fluid Inference |
 
-Os modelos são baixados do Hugging Face só depois que o usuário confirma, e ficam em
-`~/Library/Application Support/Anime Localization Studio/Models/Diarization`. O áudio nunca sai do Mac.
+| Pocket TTS, pacote português e codificador de clonagem (`FluidInference/pocket-tts-coreml`, ~500 MB) | Conversão Core ML do Pocket TTS da Kyutai (kyutai/pocket-tts) | CC-BY-4.0 | Kyutai e Fluid Inference; arquivos convertidos para Core ML pela Fluid Inference |
+
+Os modelos são baixados do Hugging Face só depois que o usuário confirma (identificação de
+falantes) ou começa uma dublagem com “Voz original (no Mac)”, e ficam em
+`~/Library/Application Support/Anime Localization Studio/Models/`. O áudio nunca sai do Mac.
 
 ## Programas externos executados (não distribuídos)
 

@@ -47,6 +47,16 @@ struct DubSessionSheet: View {
                 summary("person.2", "Personagens", speakers > 0 ? "\(speakers) na legenda" : "serão identificados pelo áudio")
                 summary("text.bubble", "Falas", "\(segmentCount) falas traduzidas")
             }
+            if app.settings.dubbingEngine == .original && !workspace.voiceModelsInstalled {
+                InlineMessage(kind: .info, text: "Ao começar, o app baixa os modelos de voz uma única vez (\(ClonedVoiceSynthesizer.downloadSize); \(ClonedVoiceSynthesizer.modelCredits)). Tudo roda no Mac; o áudio não sai do computador.")
+            }
+            if workspace.cachedDubLines > 0 {
+                InlineMessage(kind: .info, text: "\(workspace.cachedDubLines) falas já geradas deste episódio serão reaproveitadas; só o que falta ou mudou é gerado de novo.")
+            }
+            if app.settings.dubbingEngine == .original {
+                Text("Com a voz original, cada fala leva menos de um segundo no Mac; um episódio inteiro leva alguns minutos (mais na primeira vez, para baixar e preparar os modelos). Você pode continuar usando o app.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if usesClones && studioConnected != true {
                 InlineMessage(kind: .warning, text: "O VoiceStudio não está aberto neste Mac, então a voz original não pode ser clonada. Abra o VoiceStudio ou use as vozes do macOS.")
                 Button("Usar vozes do macOS") { app.settings.dubbingEngine = .system }

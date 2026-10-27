@@ -21,6 +21,8 @@ public struct AppPaths: Sendable {
     public var library: URL { root.appendingPathComponent("library.json") }
     /// Downloaded on-device models (speaker diarization).
     public var diarizationModels: URL { root.appendingPathComponent("Models/Diarization", isDirectory: true) }
+    /// On-device voice cloning models (PocketTTS).
+    public var voiceModels: URL { root.appendingPathComponent("Models/PocketTTS", isDirectory: true) }
     public var logs: URL { root.appendingPathComponent("Logs", isDirectory: true) }
     public var previews: URL { caches.appendingPathComponent("Previews", isDirectory: true) }
     public var scratch: URL { caches.appendingPathComponent("Work", isDirectory: true) }

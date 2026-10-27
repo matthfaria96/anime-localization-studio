@@ -220,7 +220,7 @@ public struct EpisodeJobPerformer: JobPerformer {
             // Translates what is missing first, then dubs with the series' cast.
             let (translated, _) = try await workflow.translate(project) { progress($0.fraction * 0.3, $0.message) }
             let cast = series?.cast ?? translated.cast ?? VoiceCast()
-            let (_, url, _, _) = try await workflow.dub(translated, synthesizer: settings.makeSynthesizer(), cast: cast) {
+            let (_, url, _, _) = try await workflow.dub(translated, synthesizer: settings.makeSynthesizer(paths: paths), cast: cast) {
                 progress(0.3 + $0.fraction * 0.7, $0.message)
             }
             return url.path

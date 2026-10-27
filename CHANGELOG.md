@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.0 — 27/10/2026
+
+### Adicionado
+- "Voz original (no Mac)", o novo padrão da dublagem: cada personagem fala português com um clone da própria voz do episódio, feito no Mac pelo Pocket TTS da Kyutai (Core ML via FluidAudio, CC-BY-4.0, ~500 MB baixados uma vez com aviso). Cerca de 0,7 s por fala depois de carregado; o reconhecimento de fala em português lê de volta as frases geradas.
+- Botão ↻ para procurar de novo o VoiceStudio.
+- A janela de dublagem diz quantas falas já geradas serão reaproveitadas.
+
+### Corrigido
+- "Capítulos preservados: 11 de 6": o FFmpeg copiava os capítulos do vídeo para o áudio dublado e o mkvmerge os somava aos originais. Agora o áudio é gerado sem capítulos e arquivos adicionados nunca trazem capítulos, tags ou anexos.
+- Layout que quebrava ao redimensionar: o inspetor fica ao lado quando cabe e se recolhe sozinho em janelas estreitas (abre como gaveta pelo botão ⌥⌘I); a barra do editor e o painel da fala se compactam; início e fim viraram uma coluna "Tempo"; a barra superior ficou com Traduzir, Arquivo e Inspetor. Janela mínima 960×640.
+- A tabela de falas era refeita 30 vezes por segundo durante a reprodução (avisos de reentrada do NSTableView, que podiam derrubar o app); o acompanhamento do vídeo agora fica isolado.
+
 ## 0.8.0 — 26/10/2026
 
 ### Mudou

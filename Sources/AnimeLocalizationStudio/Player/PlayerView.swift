@@ -152,7 +152,7 @@ private struct TransportBar: View {
 
             Text(SubtitleTime.formatDisplay(Int(scrubbing ?? Double(player.currentTime))))
                 .font(.callout.monospacedDigit())
-                .frame(minWidth: 64, alignment: .trailing)
+                .frame(minWidth: 52, alignment: .trailing)
             Slider(value: Binding(get: { scrubbing ?? Double(player.currentTime) }, set: { scrubbing = $0 }),
                    in: 0...Double(max(1, player.duration))) { editing in
                 if !editing, let value = scrubbing { player.seek(to: Int(value)); scrubbing = nil }
@@ -163,14 +163,14 @@ private struct TransportBar: View {
             Text(SubtitleTime.formatDisplay(player.duration))
                 .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)
-                .frame(minWidth: 64, alignment: .leading)
+                .frame(minWidth: 52, alignment: .leading)
 
             Picker("Legenda no vídeo", selection: $workspace.overlayMode) {
                 ForEach(OverlayMode.allCases) { Text($0.label).tag($0) }
             }
             .labelsHidden()
             .pickerStyle(.menu)
-            .fixedSize()
+            .frame(minWidth: 70, maxWidth: 170)
             .hint("Legenda no vídeo", "Escolhe o que aparece sobre o vídeo: a tradução, o original, os dois ao mesmo tempo ou nada.")
 
             if workspace.audioTracks.count > 1 {
@@ -181,7 +181,7 @@ private struct TransportBar: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)
-                .fixedSize()
+                .frame(minWidth: 70, maxWidth: 220)
                 .hint("Áudio da pré-visualização", "Escolhe qual faixa de áudio do arquivo você ouve aqui. Não muda nada no arquivo.")
             }
         }
