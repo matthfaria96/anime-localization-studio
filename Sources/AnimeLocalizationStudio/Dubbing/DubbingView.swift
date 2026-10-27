@@ -60,7 +60,12 @@ struct DubbingView: View {
         .onChange(of: workspace.editor.revision) { rebuildCast() }
         .onChange(of: cast) { _, new in workspace.saveCast(new) }
         .modifier(SpeakerModelConsent(workspace: workspace))
+        .sheet(isPresented: Binding(get: { workspace.dubSession != nil }, set: { if !$0 && !isDubRunning { workspace.dubSession = nil } })) {
+            DubSessionSheet(workspace: workspace, cast: $cast, studioConnected: studioConnected, segmentCount: segments.count)
+        }
     }
+
+    private var isDubRunning: Bool { if case .running = workspace.dubSession?.phase { true } else { false } }
 
     // MARK: How to dub
 
@@ -93,20 +98,20 @@ struct DubbingView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(isTranslated ? "\(segments.count) falas para dublar" : "Traduza o episódio antes de dublar")
                         .font(.headline)
-                    Text("Resultado: um novo “Nome [PT-BR DUB].mkv” com o áudio dublado e a legenda em português, mantendo o áudio e as legendas originais.")
+                    Text("Antes de começar você escolhe onde gravar: um novo arquivo ou o próprio arquivo. O áudio e as legendas originais são mantidos.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button {
-                    workspace.autoDub(cast: cast, undoManager: undoManager) { cast = $0 }
+                    workspace.startDubSession()
                 } label: {
                     Label("Dublar episódio inteiro", systemImage: "waveform")
                 }
                 .buttonStyle(.glassProminent)
                 .controlSize(.large)
-                .disabled(!isTranslated || segments.isEmpty || !engineReady || workspace.isBusy)
+                .disabled(!isTranslated || segments.isEmpty || workspace.isBusy)
                 .hintVerbatim("Dublar episódio inteiro", isTranslated
-                    ? "Faz tudo sozinho: identifica quem fala (se a legenda não disser), recria a voz de cada personagem, gera todas as falas, ajusta ao tempo, mixa e cria o novo MKV."
+                    ? "Abre uma janela que mostra o que vai acontecer e pergunta onde gravar (novo arquivo ou o próprio). Depois faz tudo sozinho e mostra o resultado."
                     : "A dublagem usa o texto traduzido. Traduza o episódio na aba Legendas primeiro.")
             }
             .padding(.top, Theme.Spacing.s)

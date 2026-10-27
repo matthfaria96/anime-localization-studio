@@ -337,7 +337,7 @@ public struct EpisodeWorkflow: Sendable {
     /// Voice-over dub: synthesizes the translated lines with the cast, mixes them over the
     /// original audio, and writes a new MKV with the dubbed audio and the translated subtitle
     /// added (all original tracks kept, video not re-encoded).
-    public func dub(_ project: StudioProject, synthesizer: any SpeechSynthesizer, cast: VoiceCast,
+    public func dub(_ project: StudioProject, synthesizer: any SpeechSynthesizer, cast: VoiceCast, replaceOriginal: Bool = false,
                     progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> (StudioProject, URL, DubbingReport, VerificationReport) {
         var project = project
         guard let translationURL = store.translationURL(for: project, language: settings.targetLanguage),
@@ -360,13 +360,16 @@ public struct EpisodeWorkflow: Sendable {
             NewTrack(file: dubAudio, kind: .audio, language: settings.targetLanguage, name: "\(languageName) · dublagem IA (\(settings.dubbingMode.trackSuffix))", isDefault: settings.makeDefault),
             NewTrack(file: translationURL, kind: .subtitles, language: settings.targetLanguage, name: settings.trackName, isDefault: settings.makeDefault)
         ]
-        let plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "\(settings.targetLanguage.uppercased()) DUB"),
+        var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "\(settings.targetLanguage.uppercased()) DUB"),
                            newTracks: tracks, clearOtherDefaults: settings.makeDefault, placeNewTracksFirst: settings.placeNewTrackFirst)
+        plan.replaceSource = replaceOriginal
+        AppLog.shared.info("Dublagem: \(segments.count) falas, \(report.synthesized) geradas, \(report.failed.count) sem voz; gravando em \(replaceOriginal ? "o próprio arquivo" : plan.output.lastPathComponent)")
         let (url, verification) = try await MKVMuxer(tools: tools).mux(plan) { value in
             progress(WorkflowStep(fraction: 0.85 + value * 0.15, message: value < 0.9 ? "Gravando novo MKV…" : "Verificando integridade…"))
         }
         project.dubbingStatus = report.failed.isEmpty ? .muxed : .failed
         project.lastDubReport = report
+        if replaceOriginal { project.mediaFingerprint = Self.fingerprint(of: url) }
         project.lastOutputPath = url.path
         project.lastVerification = verification
         try store.save(project)

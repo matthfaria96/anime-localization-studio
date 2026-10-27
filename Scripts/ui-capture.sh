@@ -15,17 +15,25 @@ BIN="dist/Anime Localization Studio.app/Contents/MacOS/AnimeLocalizationStudio"
 [[ -x "$BIN" ]] || { print -u2 "build first: Scripts/build-app.sh"; exit 1; }
 HOME_DIR="${HOME_DIR:-$(mktemp -d)}"
 
-pkill -f "$BIN" 2>/dev/null || true
 CFFIXED_USER_HOME="$HOME_DIR" ALS_OPEN="$MEDIA" ALS_APPEARANCE="${APPEARANCE:-}" "$BIN" >/dev/null 2>&1 &
 PID=$!
-sleep "$WAIT"
-ID="$(swift -e '
+list_windows() {
+  swift -e '
 import CoreGraphics
 let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
-for w in list where (w[kCGWindowOwnerName as String] as? String) == "Anime Localization Studio" && (w[kCGWindowLayer as String] as? Int) == 0 {
-    if let b = w[kCGWindowBounds as String] as? [String: Any], let h = b["Height"] as? Double, h > 300 { print(w[kCGWindowNumber as String]!); break }
-}')"
-[[ -n "$ID" ]] || { print -u2 "window not found"; kill $PID; exit 1; }
-screencapture -x -o -l "$ID" "$OUT"
+// Only the windows of the copy this script launched, never the app the user has open.
+for w in list where (w[kCGWindowOwnerPID as String] as? Int) == Int(CommandLine.arguments[1]) && (w[kCGWindowLayer as String] as? Int) == 0 {
+    if let b = w[kCGWindowBounds as String] as? [String: Any], let h = b["Height"] as? Double, h > 200 { print(w[kCGWindowNumber as String]!) }
+}' "$PID"
+}
+# Wait for the window to appear (launch time varies), then give the content WAIT seconds.
+for _ in {1..30}; do [[ -n "$(list_windows)" ]] && break; sleep 1; done
+sleep "$WAIT"
+IDS=(${(f)"$(list_windows)"})
+[[ ${#IDS} -gt 0 ]] || { print -u2 "window not found"; kill $PID; exit 1; }
+screencapture -x -o -l "${IDS[-1]}" "$OUT"
+# Sheets and panels are separate windows: save them as OUT-2.png, OUT-3.png…
+n=2
+for id in "${IDS[@]:0:-1}"; do screencapture -x -o -l "$id" "${OUT:r}-$n.png"; n=$((n + 1)); done
 kill $PID 2>/dev/null || true
 echo "$OUT (home: $HOME_DIR)"

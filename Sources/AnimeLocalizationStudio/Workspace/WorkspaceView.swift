@@ -9,7 +9,7 @@ enum WorkspaceMode: String, CaseIterable, Identifiable {
 
 struct WorkspaceView: View {
     @Bindable var workspace: WorkspaceModel
-    @State private var mode: WorkspaceMode = ProcessInfo.processInfo.environment["ALS_MODE"] == "dubbing" ? .dubbing : .subtitles
+    let mode: WorkspaceMode
     @State private var confirmRetranslate = false
     @Environment(\.undoManager) private var undoManager
 
@@ -25,7 +25,7 @@ struct WorkspaceView: View {
                 DubbingView(workspace: workspace)
             }
         }
-        .navigationTitle(workspace.title)
+        .navigationTitle(mode == .dubbing ? "Dublar · \(workspace.title)" : workspace.title)
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
         .confirmationDialog("Onde gravar a legenda traduzida?", isPresented: $workspace.askEmbedDestination) {
@@ -82,29 +82,22 @@ struct WorkspaceView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Picker("Modo", selection: $mode) {
-                ForEach(WorkspaceMode.allCases) { Label($0.label, systemImage: $0.systemImage).tag($0) }
+        if mode == .subtitles {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("Abrir legenda externa…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
+                    .hint("Abrir legenda externa", "Usa um arquivo de legenda ASS, SSA ou SRT de fora do vídeo como legenda original.")
+                Button("Exportar legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
+                    .disabled(workspace.editor.translation == nil)
+                    .hint("Exportar legenda", "Salva a tradução como um arquivo de legenda separado, ao lado do vídeo.")
+                Button("Incorporar ao MKV", systemImage: "film.stack") { workspace.requestEmbed() }
+                    .disabled(workspace.editor.translation == nil || workspace.isBusy)
+                    .hint("Incorporar ao MKV", "Cria um novo arquivo MKV com a legenda traduzida como faixa extra. O original não é alterado e o vídeo não é recodificado.")
+                Button("Traduzir episódio inteiro", systemImage: "translate") { requestTranslate() }
+                    .buttonStyle(.glassProminent)
+                    .disabled(!workspace.editor.hasDocument || workspace.isBusy)
+                    .keyboardShortcut("t", modifiers: [.command, .shift])
+                    .hint("Traduzir episódio inteiro (⇧⌘T)", "Traduz todas as falas com o motor escolhido, mantendo estilos, tempos e tags. Falas já traduzidas são mantidas.")
             }
-            .pickerStyle(.segmented)
-            .labelStyle(.titleAndIcon)
-            .fixedSize()
-            .hint("Legendas ou Dublagem", "Alterna entre editar e traduzir a legenda e montar a dublagem deste episódio.")
-        }
-        ToolbarItemGroup(placement: .primaryAction) {
-            Button("Abrir legenda externa…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
-                .hint("Abrir legenda externa", "Usa um arquivo de legenda ASS, SSA ou SRT de fora do vídeo como legenda original.")
-            Button("Exportar legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
-                .disabled(workspace.editor.translation == nil)
-                .hint("Exportar legenda", "Salva a tradução como um arquivo de legenda separado, ao lado do vídeo.")
-            Button("Incorporar ao MKV", systemImage: "film.stack") { workspace.requestEmbed() }
-                .disabled(workspace.editor.translation == nil || workspace.isBusy)
-                .hint("Incorporar ao MKV", "Cria um novo arquivo MKV com a legenda traduzida como faixa extra. O original não é alterado e o vídeo não é recodificado.")
-            Button("Traduzir episódio inteiro", systemImage: "translate") { requestTranslate() }
-                .buttonStyle(.glassProminent)
-                .disabled(!workspace.editor.hasDocument || workspace.isBusy)
-                .keyboardShortcut("t", modifiers: [.command, .shift])
-                .hint("Traduzir episódio inteiro (⇧⌘T)", "Traduz todas as falas com o motor escolhido, mantendo estilos, tempos e tags. Falas já traduzidas são mantidas.")
         }
     }
 }

@@ -6,7 +6,7 @@ import TranslationKit
 import UniformTypeIdentifiers
 
 enum SidebarItem: Hashable {
-    case workspace, library, queue, series, diagnostics
+    case workspace, dubbing, library, queue, series, diagnostics
 }
 
 /// App-wide state: settings, stores, the job queue and the episode currently open.
@@ -72,7 +72,7 @@ final class AppModel {
     func open(_ url: URL) {
         let workspace = WorkspaceModel(url: url, app: self)
         self.workspace = workspace
-        selection = .workspace
+        selection = ProcessInfo.processInfo.environment["ALS_MODE"] == "dubbing" ? .dubbing : .workspace
         Task { await workspace.load() }
     }
 

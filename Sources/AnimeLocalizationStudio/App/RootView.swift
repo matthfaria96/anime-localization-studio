@@ -8,8 +8,18 @@ struct RootView: View {
         @Bindable var app = app
         NavigationSplitView {
             List(selection: $app.selection) {
+                if let workspace = app.workspace {
+                    Section(workspace.title) {
+                        Label("Legendar", systemImage: "captions.bubble").tag(SidebarItem.workspace)
+                            .hint("Legendar", "Edite, traduza e incorpore a legenda deste episódio.")
+                        Label("Dublar", systemImage: "waveform.and.person.filled").tag(SidebarItem.dubbing)
+                            .hint("Dublar", "Gere o áudio em português deste episódio com as vozes dos personagens.")
+                    }
+                }
                 Section("Estúdio") {
-                    Label(app.workspace?.title ?? "Episódio", systemImage: "film").tag(SidebarItem.workspace)
+                    if app.workspace == nil {
+                        Label("Abrir episódio", systemImage: "film").tag(SidebarItem.workspace)
+                    }
                     Label("Biblioteca", systemImage: "square.stack.3d.up").tag(SidebarItem.library)
                     Label("Fila", systemImage: "list.bullet.clipboard").tag(SidebarItem.queue)
                         .badge(app.queue.pendingCount)
@@ -54,9 +64,9 @@ struct RootView: View {
     @ViewBuilder
     private var detail: some View {
         switch app.selection ?? .workspace {
-        case .workspace:
+        case .workspace, .dubbing:
             if let workspace = app.workspace {
-                WorkspaceView(workspace: workspace).id(workspace.url)
+                WorkspaceView(workspace: workspace, mode: app.selection == .dubbing ? .dubbing : .subtitles).id(workspace.url)
             } else {
                 WelcomeView()
             }

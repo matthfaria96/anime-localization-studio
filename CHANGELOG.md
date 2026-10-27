@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 — 26/10/2026
+
+### Mudou
+- "Legendar" e "Dublar" agora são itens do menu lateral, sob o episódio aberto, em vez de um seletor no topo da janela.
+- Dublagem numa janela guiada: antes, mostra o que vai acontecer (vozes, modo, personagens, falas), avisa se o VoiceStudio não está aberto e pergunta onde gravar (novo arquivo ou o próprio arquivo); durante, mostra cada etapa; no fim, mostra o arquivo criado, a pasta e os botões para abri-lo, ou explica o erro e o que fazer.
+- A dublagem também pode ser gravada no próprio arquivo (verificado antes, original na Lixeira).
+- Operações de dublagem são registradas no log do app.
+
+### Corrigido
+- O nome sugerido não repete mais o sufixo quando o arquivo já é dublado.
+
 ## 0.7.0 — 26/10/2026
 
 ### Adicionado

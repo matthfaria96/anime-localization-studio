@@ -42,10 +42,11 @@ public struct MuxPlan: Sendable, Hashable, Codable {
     }
 
     /// `Episode 01.mkv` → `Episode 01 [PT-BR].mkv` next to the source.
+    /// A name that already ends with the suffix keeps it once (“[PT-BR DUB] (2)”, not “[PT-BR DUB] [PT-BR DUB]”).
     public static func defaultOutputURL(for source: URL, suffix: String = "PT-BR") -> URL {
-        source.deletingLastPathComponent()
-            .appendingPathComponent("\(source.deletingPathExtension().lastPathComponent) [\(suffix)]")
-            .appendingPathExtension("mkv")
+        let base = source.deletingPathExtension().lastPathComponent
+        let name = base.hasSuffix("[\(suffix)]") ? base : "\(base) [\(suffix)]"
+        return source.deletingLastPathComponent().appendingPathComponent(name).appendingPathExtension("mkv")
     }
 }
 

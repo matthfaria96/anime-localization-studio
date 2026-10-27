@@ -550,15 +550,63 @@ final class WorkspaceModel {
         }
     }
 
-    /// One click: identify who speaks (when the subtitle does not say), give each character a
-    /// voice (a clone of the original, or a similar macOS voice), then dub and mux.
+    /// The guided dub window: confirm → running (with steps) → done or failed.
+    struct DubSession {
+        enum Phase {
+            case confirm
+            case running
+            case done(url: URL, report: DubbingReport, verification: VerificationReport, replaced: Bool)
+            case failed(String)
+        }
+        var phase: Phase = .confirm
+        var replaceOriginal = false
+    }
+
+    enum DubStage: Int, CaseIterable {
+        case speakers, voices, speech, mix, file
+
+        var title: String {
+            switch self {
+            case .speakers: "Identificar quem fala"
+            case .voices: "Preparar a voz de cada personagem"
+            case .speech: "Gerar as falas em português"
+            case .mix: "Mixar com a música e os efeitos"
+            case .file: "Gravar e verificar o MKV"
+            }
+        }
+
+        /// Where each stage sits in the overall progress of `autoDub`.
+        static func at(_ fraction: Double) -> DubStage {
+            switch fraction {
+            case ..<0.2: .speakers
+            case ..<0.4: .voices
+            case ..<0.85: .speech
+            case ..<0.94: .mix
+            default: .file
+            }
+        }
+    }
+
+    var dubSession: DubSession?
+
+    func startDubSession() {
+        guard !isBusy, editor.translation != nil else { return }
+        dubSession = DubSession()
+    }
+
+    /// Identifies who speaks (when the subtitle does not say), gives each character a voice (a
+    /// clone of the original, or a similar macOS voice), dubs every line and writes the MKV.
     func autoDub(cast: VoiceCast, allowDiarizationDownload: Bool = false, undoManager: UndoManager?, onCast: @escaping (VoiceCast) -> Void) {
         guard !isBusy, editor.translation != nil, claim("Dublagem automática") else { return }
+        let replaceOriginal = dubSession?.replaceOriginal ?? false
+        dubSession?.phase = .running
         editor.flush()
         notice = nil
         operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando a dublagem…")
         let workflow = workflow()
         let systemVoices = Set(AVSpeechSynthesisVoice.speechVoices().map(\.name))
+        let engine = app.settings.dubbingEngine.label, mode = app.settings.dubbingMode.label
+        AppLog.shared.info("Dublagem iniciada: \(project.title) · \(engine) · \(mode) · \(replaceOriginal ? "no próprio arquivo" : "novo arquivo")")
         task = Task {
             do {
                 var project = project
@@ -575,27 +623,44 @@ final class WorkspaceModel {
                 onCast(filled)
                 saveCast(filled)
                 let synthesizer = app.settings.makeSynthesizer()
-                let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled) { step in
+                let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled,
+                                                                                    replaceOriginal: replaceOriginal) { step in
                     Task { @MainActor in self.operation?.fraction = 0.4 + step.fraction * 0.6; self.operation?.message = step.message }
                 }
                 project = updated
                 self.project = updated
                 lastDub = (output, report, verification)
                 lastMux = (output, verification)
-                notice = report.failed.isEmpty
-                    ? (.success, "Dublagem pronta: \(output.lastPathComponent). O áudio e a legenda originais continuam no arquivo.")
-                    : (.warning, "Dublagem criada com \(report.failed.count) falas sem voz. Veja a lista de revisão.")
-                noticeAction = ("Abrir o arquivo dublado", { [app] in app.open(output) })
+                dubSession?.phase = .done(url: output, report: report, verification: verification, replaced: replaceOriginal)
+                AppLog.shared.info("Dublagem concluída: \(output.path)")
+                release()
+                operation = nil
+                if replaceOriginal { await reload() }
+                return
             } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
+                dubSession?.phase = .confirm
                 pendingDiarizationDownload = { self.autoDub(cast: cast, allowDiarizationDownload: true, undoManager: undoManager, onCast: onCast) }
             } catch is CancellationError {
-                notice = (.info, "Dublagem cancelada. As vozes já geradas ficam guardadas e serão reaproveitadas.")
+                dubSession?.phase = .failed("Dublagem cancelada. As falas já geradas ficam guardadas e serão reaproveitadas na próxima vez. Nenhum arquivo foi criado ou alterado.")
             } catch {
-                notice = (.error, LogRedactor.redact(error.localizedDescription))
+                let message = Self.explainDubError(error)
+                AppLog.shared.error("Dublagem falhou: \(message)")
+                dubSession?.phase = .failed(message)
             }
             release()
             operation = nil
         }
+    }
+
+    /// Turns technical failures into what happened and what to do.
+    static func explainDubError(_ error: Error) -> String {
+        if case VoiceStudioClient.ClientError.notRunning = error {
+            return "O VoiceStudio não está aberto, então as vozes originais não puderam ser clonadas. Abra o VoiceStudio e tente de novo, ou escolha “Vozes do macOS”. Nenhum arquivo foi criado ou alterado."
+        }
+        if case SynthesisError.engineUnavailable = error {
+            return "O motor de voz parou de responder no meio da dublagem. Nenhum arquivo foi criado ou alterado; as falas já geradas serão reaproveitadas."
+        }
+        return LogRedactor.redact(error.localizedDescription) + " Nenhum arquivo foi criado ou alterado."
     }
 
     // MARK: Dub
@@ -723,7 +788,8 @@ final class WorkspaceModel {
             }
         }
         if env["ALS_TRANSLATE"] == "1" { translateEpisode(undoManager: nil) }
-        if env["ALS_DUB"] == "1" { dubEpisode(cast: loadCast()) }
+        if env["ALS_DUB"] == "1" || env["ALS_DUB"] == "run" { startDubSession() }
+        if env["ALS_DUB"] == "run" { autoDub(cast: loadCast(), undoManager: nil) { [weak self] in self?.saveCast($0) } }
         if env["ALS_IDENTIFY"] == "1" { identifySpeakers(undoManager: nil) }
     }
 
