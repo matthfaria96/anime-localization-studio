@@ -57,5 +57,20 @@ struct EditSubtitleWorkflowTests {
         _ = try await TrackExtractor(tools: tools).extractSubtitle(try #require(subtitles.first), from: info, to: check)
         #expect(try String(contentsOf: check, encoding: .utf8).contains("Hello world"))
         #expect(SHA256.hash(data: try Data(contentsOf: episode)) == originalHash, "the original is untouched")
+
+        // A subtitle written from scratch becomes a new track named after its language.
+        var blank = try await workflow.startBlankSubtitle(project, language: "pt-BR")
+        blank.subtitleTask = .edit
+        let blankURL = try #require(store.sourceSubtitleURL(for: blank))
+        var written = try SubtitleDocument.load(blankURL)
+        #expect(written.count == 1)
+        written.setRawText("Olá mundo", at: 0)
+        try written.write(to: blankURL)
+        let (_, withNew, newReport) = try await workflow.saveEditedSubtitle(blank, replaceOriginal: false) { _ in }
+        #expect(newReport.passed, "\(newReport.failures)")
+        let tracks = try #require(newReport.outputInfo).tracks(.subtitles)
+        #expect(tracks.count == 2, "the English track stays; the new one is added")
+        #expect(tracks.contains { $0.name == "Português (Brasil)" && ($0.languageIETF == "pt-BR" || $0.language == "por") })
+        #expect(withNew != output)
     }
 }

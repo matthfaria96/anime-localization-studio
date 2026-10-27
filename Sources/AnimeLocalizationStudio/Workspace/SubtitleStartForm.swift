@@ -3,17 +3,27 @@ import StudioCore
 import SwiftUI
 import TranslationKit
 
-/// First step of Legendar, in one short form: correct a subtitle of the video (optionally with
-/// another one beside it) or make a new one in another language from an existing one.
+/// First step of Legendar, in one short form: correct a subtitle of the video (alone or with
+/// another beside it), translate one, make one from the speech, start a blank one, or import a file.
 struct SubtitleStartForm: View {
     @Bindable var workspace: WorkspaceModel
     @Environment(AppModel.self) private var app
-    @State private var task: SubtitleTask = .edit
+
+    enum Choice: Hashable { case correct, translate, fromAudio, blank, importFile }
+
+    @State private var choice: Choice = .correct
     @State private var editTrack: Int?
     @State private var reference: Int?
     @State private var baseTrack: Int?
     @State private var language = "pt-BR"
     @State private var autoTranslate = true
+    @State private var audioTrack: Int?
+    @State private var spokenLanguage = "ja-JP"
+    @State private var identifySpeakers = true
+    @State private var translateAfter = false
+    @State private var blankLanguage = "pt-BR"
+    /// The default choice follows what the video has until the person picks one.
+    @State private var picked = false
 
     /// Tag for “the subtitle file chosen from the disk”.
     private static let externalTag = -2
@@ -25,30 +35,34 @@ struct SubtitleStartForm: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.l) {
-                Text("O que você vai editar?").font(.largeTitle.weight(.semibold))
+                Text("O que você vai fazer?").font(.largeTitle.weight(.semibold))
                 Panel {
-                    choice(.edit, "Uma legenda do vídeo", "Corrigir texto, tempos e estilos. Ao gravar, ela entra no lugar da original.") { editOptions }
+                    option(.correct, "Corrigir uma legenda do vídeo", "Texto, tempos e estilos. Sozinha ou com outra ao lado para comparar.",
+                           enabled: hasSource) { correctOptions }
                     Divider()
-                    choice(.translate, "Uma legenda nova", "Em outro idioma, a partir de uma legenda existente. Ao gravar, vira uma faixa nova.") { newOptions }
-                }
-                if !hasSource {
-                    InlineMessage(kind: .info, text: "O vídeo não tem legenda de texto. Use um arquivo do disco, ou comece e transcreva o áudio (ou reconheça uma legenda em imagem) no próprio Mac.")
+                    option(.translate, "Traduzir uma legenda", "Uma legenda nova em outro idioma, a partir de uma existente.",
+                           enabled: hasSource) { translateOptions }
+                    Divider()
+                    option(.fromAudio, "Criar a partir do áudio", "Ouve o vídeo e escreve o que é dito, no tempo certo, no idioma falado. Depois pode traduzir.",
+                           enabled: !workspace.audioTracks.isEmpty) { audioOptions }
+                    Divider()
+                    option(.blank, "Começar em branco", "Uma legenda vazia, só ela na tela, para escrever do zero.", enabled: true) { blankOptions }
+                    Divider()
+                    option(.importFile, "Importar um arquivo de legenda", "ASS, SSA ou SRT do disco, para corrigir. Para traduzir um arquivo, use “Traduzir uma legenda”.",
+                           enabled: true) { EmptyView() }
                 }
                 HStack {
-                    Button("Usar um arquivo de legenda do disco…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
-                        .buttonStyle(.link)
-                        .hint("Arquivo do disco", "Usa um arquivo ASS, SSA ou SRT como a legenda a editar ou como base.")
                     Spacer()
-                    Button { start() } label: { Text("Começar").frame(minWidth: 90) }
+                    Button { start() } label: { Text(choice == .importFile ? "Escolher arquivo…" : "Começar").frame(minWidth: 110) }
                         .buttonStyle(.glassProminent)
                         .controlSize(.large)
                         .keyboardShortcut(.defaultAction)
-                        .disabled(workspace.isBusy || (task == .translate && !hasSource))
-                        .hint("Começar", task == .edit ? "Abre a legenda para editar." : (autoTranslate ? "Cria a legenda nova e já traduz todas as falas." : "Cria a legenda nova como cópia da base, para traduzir à mão."))
+                        .disabled(workspace.isBusy || !canStart)
+                        .hintVerbatim("Começar", startHint)
                 }
             }
             .padding(Theme.Spacing.xl)
-            .frame(maxWidth: 720)
+            .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
         }
         .paneBackground()
@@ -58,72 +72,97 @@ struct SubtitleStartForm: View {
         .onChange(of: workspace.subtitleTracks.map(\.id)) { loadDefaults() }
     }
 
-    private func choice<Options: View>(_ value: SubtitleTask, _ title: String, _ detail: String, @ViewBuilder options: () -> Options) -> some View {
+    private var canStart: Bool {
+        switch choice {
+        case .correct, .translate: hasSource
+        case .fromAudio: !workspace.audioTracks.isEmpty
+        case .blank, .importFile: true
+        }
+    }
+
+    private var startHint: String {
+        switch choice {
+        case .correct: reference == nil ? "Abre a legenda sozinha para corrigir." : "Abre a legenda com a outra ao lado."
+        case .translate: autoTranslate ? "Cria a legenda nova e já traduz todas as falas." : "Cria a legenda nova como cópia da base, para traduzir à mão."
+        case .fromAudio: translateAfter ? "Transcreve o áudio e depois traduz." : "Transcreve o áudio no idioma falado."
+        case .blank: "Abre uma legenda vazia para escrever do zero."
+        case .importFile: "Escolhe um arquivo de legenda do disco para corrigir."
+        }
+    }
+
+    // MARK: Options
+
+    private func option<Options: View>(_ value: Choice, _ title: String, _ detail: String, enabled: Bool,
+                                       @ViewBuilder options: () -> Options) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            Button { task = value } label: {
+            Button { choice = value; picked = true } label: {
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.s) {
-                    Image(systemName: task == value ? "largecircle.fill.circle" : "circle")
-                        .foregroundStyle(task == value ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+                    Image(systemName: choice == value ? "largecircle.fill.circle" : "circle")
+                        .foregroundStyle(choice == value ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title).font(.headline)
-                        Text(detail).font(.callout).foregroundStyle(.secondary)
+                        Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
                 }
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            if task == value {
+            .disabled(!enabled)
+            .opacity(enabled ? 1 : 0.45)
+            if choice == value {
                 options().padding(.leading, 26).transition(.opacity)
             }
         }
-        .padding(.vertical, Theme.Spacing.xs)
-        .animation(.smooth(duration: 0.2), value: task)
+        .padding(.vertical, Theme.Spacing.xxs)
+        .animation(.smooth(duration: 0.2), value: choice)
     }
 
-    private var editOptions: some View {
+    private var correctOptions: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.m, verticalSpacing: Theme.Spacing.s) {
             GridRow {
-                Text("Legenda").foregroundStyle(.secondary)
+                label("Legenda")
                 trackPicker(selection: $editTrack, includeNone: false)
-                    .hint("Legenda a editar", "A faixa que você vai corrigir.")
+                    .hint("Legenda a corrigir", "A faixa (ou o arquivo importado) que você vai corrigir.")
             }
             GridRow {
-                Text("Mostrar ao lado").foregroundStyle(.secondary)
-                trackPicker(selection: $reference, includeNone: true, excluding: editTrack)
-                    .hint("Mostrar ao lado", "Outra legenda do vídeo exibida ao lado, só para consulta (por exemplo a inglesa enquanto corrige a portuguesa). As falas são casadas pelo tempo.")
+                label("Comparar com")
+                trackPicker(selection: $reference, includeNone: true, noneTitle: "Nenhuma (só ela na tela)", excluding: editTrack)
+                    .hint("Comparar com", "Outra legenda exibida ao lado, só para consulta, casada pelo tempo. Escolha “Nenhuma” para ver só a que você edita.")
             }
         }
     }
 
-    private var newOptions: some View {
+    private var translateOptions: some View {
         @Bindable var app = app
         return Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.m, verticalSpacing: Theme.Spacing.s) {
             GridRow {
-                Text("Idioma").foregroundStyle(.secondary)
-                Picker("Idioma", selection: $language) {
-                    ForEach(Languages.all, id: \.code) { Text($0.name).tag($0.code) }
-                }
-                .labelsHidden().fixedSize()
-                .hint("Idioma da legenda nova", "O idioma da legenda que você vai criar. O nome e o idioma da faixa no vídeo saem daqui.")
+                label("Para")
+                languagePicker($language)
+                    .hint("Idioma da legenda nova", "O nome e o idioma da faixa no vídeo saem daqui.")
             }
             GridRow {
-                Text("A partir de").foregroundStyle(.secondary)
-                trackPicker(selection: $baseTrack, includeNone: false)
-                    .hint("Legenda base", "A legenda existente que serve de original. Ela fica ao lado, e a nova é casada fala a fala com ela.")
+                label("A partir de")
+                HStack {
+                    trackPicker(selection: $baseTrack, includeNone: false)
+                    Button("Importar arquivo…") { workspace.openExternalSubtitle() }
+                        .buttonStyle(.link)
+                        .hint("Importar arquivo como base", "Usa um ASS, SSA ou SRT do disco como a legenda a traduzir.")
+                }
+                .hint("Legenda base", "A legenda que é traduzida. Ela fica ao lado, e a nova é casada fala a fala com ela.")
             }
             GridRow {
                 Text("").gridCellUnsizedAxes(.horizontal)
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Toggle("Traduzir automaticamente", isOn: $autoTranslate)
-                        .hint("Traduzir automaticamente", "Ligado: ao começar, todas as falas são traduzidas, mantendo estilos, tempos e tags. Desligado: a legenda nova começa igual à base para você traduzir à mão.")
-                    if autoTranslate {
-                        Picker("com", selection: $app.settings.engine) {
+                    HStack {
+                        Toggle("Traduzir automaticamente com", isOn: $autoTranslate)
+                        Picker("Motor", selection: $app.settings.engine) {
                             ForEach(EngineChoice.allCases) { Text($0.label).tag($0) }
                         }
-                        .fixedSize()
-                        .hintVerbatim("Motor de tradução", app.settings.engine.summary)
+                        .labelsHidden().fixedSize()
+                        .disabled(!autoTranslate)
                     }
+                    .hintVerbatim("Traduzir automaticamente", "Ligado: ao começar, todas as falas são traduzidas mantendo estilos, tempos e tags. Desligado: a legenda nova começa igual à base para traduzir à mão. \(app.settings.engine.summary)")
                     if language == app.settings.targetLanguage, workspace.editor.translation != nil {
                         Text("Já existe um rascunho neste idioma (\(workspace.editor.translatedCount) de \(Plural.count(workspace.editor.translatableCount, "fala", "falas"))). Ele é continuado; só o que falta é traduzido.")
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -133,31 +172,106 @@ struct SubtitleStartForm: View {
         }
     }
 
-    private func trackPicker(selection: Binding<Int?>, includeNone: Bool, excluding: Int? = nil) -> some View {
+    private var audioOptions: some View {
+        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.m, verticalSpacing: Theme.Spacing.s) {
+            if workspace.audioTracks.count > 1 {
+                GridRow {
+                    label("Áudio")
+                    Picker("Áudio", selection: $audioTrack) {
+                        ForEach(workspace.audioTracks) { Text(WorkspaceModel.describe($0)).tag(Optional($0.id)) }
+                    }
+                    .labelsHidden().fixedSize()
+                    .hint("Áudio", "A faixa de áudio que será ouvida. Use a do idioma original.")
+                }
+            }
+            GridRow {
+                label("Idioma falado")
+                Picker("Idioma falado", selection: $spokenLanguage) {
+                    ForEach(TranscriptionLanguage.all, id: \.code) { Text($0.name).tag($0.code) }
+                }
+                .labelsHidden().fixedSize()
+                .hint("Idioma falado", "O idioma em que os personagens falam no áudio. A legenda sai nesse idioma, no tempo de cada fala.")
+            }
+            GridRow {
+                Text("").gridCellUnsizedAxes(.horizontal)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Toggle("Identificar quem fala", isOn: $identifySpeakers)
+                        .hint("Identificar quem fala", "Marca “Falante 1”, “Falante 2”… em cada fala, pelo som da voz. Ajuda na dublagem. Tudo no Mac.")
+                    HStack {
+                        Toggle("Depois traduzir para", isOn: $translateAfter)
+                        languagePicker($language).disabled(!translateAfter)
+                    }
+                    .hint("Depois traduzir", "Quando a transcrição terminar, cria a legenda traduzida a partir dela.")
+                    Text("Tudo roda no Mac (reconhecimento de fala da Apple). Na primeira vez, o macOS pode pedir para baixar o modelo do idioma.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var blankOptions: some View {
+        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.m, verticalSpacing: Theme.Spacing.s) {
+            GridRow {
+                label("Idioma")
+                languagePicker($blankLanguage)
+                    .hint("Idioma", "O idioma da faixa que será criada no vídeo.")
+            }
+        }
+    }
+
+    private func label(_ text: String) -> some View { Text(text).foregroundStyle(.secondary) }
+
+    private func languagePicker(_ selection: Binding<String>) -> some View {
+        Picker("Idioma", selection: selection) {
+            ForEach(Languages.all, id: \.code) { Text($0.name).tag($0.code) }
+        }
+        .labelsHidden()
+        .fixedSize()
+    }
+
+    private func trackPicker(selection: Binding<Int?>, includeNone: Bool, noneTitle: String = "Nenhuma", excluding: Int? = nil) -> some View {
         Picker("Faixa", selection: selection) {
-            if includeNone { Text("Nenhuma").tag(Int?.none) }
+            if includeNone { Text(noneTitle).tag(Int?.none) }
             ForEach(textTracks.filter { $0.id != excluding }) { track in
                 Text("\(track.name ?? track.codec) · \(Languages.display(track.displayLanguage))").tag(Optional(track.id))
             }
-            if hasExternal && !includeNone { Text("Arquivo do disco").tag(Optional(Self.externalTag)) }
+            if hasExternal && !includeNone { Text("Arquivo importado").tag(Optional(Self.externalTag)) }
         }
         .labelsHidden()
         .fixedSize()
         .disabled(!hasSource && !includeNone)
     }
 
+    // MARK: Start
+
     private func loadDefaults() {
         let current = hasExternal ? Self.externalTag : (workspace.project.sourceTrackID ?? textTracks.first?.id)
-        task = workspace.project.subtitleTask ?? .edit
+        if !picked {
+            choice = hasSource ? .correct : workspace.audioTracks.isEmpty ? .blank : .fromAudio
+        }
         editTrack = current
         baseTrack = current
         reference = workspace.project.referenceTrackID
         language = app.settings.targetLanguage
+        blankLanguage = app.settings.targetLanguage
+        audioTrack = workspace.dubAudioTrack?.id
     }
 
     private func start() {
-        let track = task == .edit ? editTrack : baseTrack
-        workspace.startSubtitleWork(task: task, trackID: track == Self.externalTag ? nil : track,
-                                    referenceID: reference, language: language, autoTranslate: autoTranslate)
+        switch choice {
+        case .correct:
+            workspace.startSubtitleWork(task: .edit, trackID: editTrack == Self.externalTag ? nil : editTrack,
+                                        referenceID: reference, language: app.settings.targetLanguage, autoTranslate: false)
+        case .translate:
+            workspace.startSubtitleWork(task: .translate, trackID: baseTrack == Self.externalTag ? nil : baseTrack,
+                                        referenceID: nil, language: language, autoTranslate: autoTranslate)
+        case .fromAudio:
+            workspace.startFromAudio(spokenLanguage: spokenLanguage, audioTrackID: audioTrack,
+                                     identifySpeakers: identifySpeakers, translateTo: translateAfter ? language : nil)
+        case .blank:
+            workspace.startBlankSubtitle(language: blankLanguage)
+        case .importFile:
+            workspace.startImportedSubtitle()
+        }
     }
 }

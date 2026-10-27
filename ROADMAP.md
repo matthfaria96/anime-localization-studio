@@ -91,6 +91,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ (0.13.0) Estilos: criar, duplicar, renomear, apagar; Fontes: estado, adicionar (anexadas ao gravar), extrair
 - ✅ (0.13.0) ⇄ inverter legenda editada e de referência; personagens em lote; SRT guarda personagens no projeto
 - ✅ (0.13.0) Dublagem com referência por fala (voz + emoção) e voz original no idioma de saída
+- ✅ (0.14.0) Legenda em branco, importada ou criada do áudio (idioma falado escolhido, tradução em seguida); extrair todas as fontes na Visão geral
 - ⬜ Tradução de fala para fala com sincronia labial (não há modelo local com licença livre para isso)
 - ✅ Visão geral com dados do arquivo, faixas, faixas padrão e extração de faixas
 - ✅ Legendar pergunta "editar existente" ou "criar tradução"; edição salva no lugar da faixa original

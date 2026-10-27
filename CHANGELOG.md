@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.0 — 27/10/2026
+
+### Adicionado
+- Legendar começa com cinco caminhos: **Corrigir uma legenda do vídeo** (sozinha ou comparando com outra), **Traduzir uma legenda** (com "Importar arquivo…" como base), **Criar a partir do áudio** (escolhe o áudio e o idioma falado, cria a legenda no tempo certo no idioma original, identifica quem fala e, se quiser, já traduz em seguida), **Começar em branco** (só ela na tela, no idioma escolhido) e **Importar um arquivo de legenda**.
+- Legendas que não vieram do vídeo (em branco, importadas, transcritas) são gravadas como faixa nova, com nome e idioma certos; o idioma pode ser trocado na barra.
+- Visão geral: **Extrair todas as fontes…** de uma vez, em Anexos.
+
+### Corrigido
+- A transcrição usava sempre o áudio padrão; agora usa o escolhido. O pedido para baixar o modelo de fala aparece em qualquer tela e retoma a transcrição com as mesmas opções.
+
 ## 0.13.0 — 27/10/2026
 
 ### Adicionado

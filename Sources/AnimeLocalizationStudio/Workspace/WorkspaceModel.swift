@@ -399,12 +399,15 @@ final class WorkspaceModel {
 
     /// Set when macOS must download the speech model for a language before transcribing.
     var pendingModelDownload: String?
+    /// Runs the transcription again once the person agrees to the model download.
+    @ObservationIgnored var transcriptionRetry: (() -> Void)?
     /// Set when the speaker-identification models must be downloaded first: the action to retry.
     var pendingDiarizationDownload: (() -> Void)?
 
     var speakerModelsInstalled: Bool { SpeakerDiarization(modelsDirectory: app.paths.diarizationModels).modelsInstalled }
 
-    func transcribeAudio(language: String, allowModelDownload: Bool = false, identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false) {
+    func transcribeAudio(language: String, allowModelDownload: Bool = false, identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false,
+                         audioTrackID: Int? = nil, then: (@MainActor () -> Void)? = nil) {
         guard !isBusy, claim("Transcrição no estúdio") else { return }
         editor.flush()
         notice = nil
@@ -414,7 +417,8 @@ final class WorkspaceModel {
         task = Task {
             do {
                 let updated = try await workflow.transcribe(project, language: language, allowModelDownload: allowModelDownload,
-                                                            identifySpeakers: identifySpeakers, allowDiarizationDownload: allowDiarizationDownload) { step in
+                                                            identifySpeakers: identifySpeakers, allowDiarizationDownload: allowDiarizationDownload,
+                                                            audioTrackID: audioTrackID) { step in
                     Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
                 }
                 self.project = updated
@@ -425,13 +429,19 @@ final class WorkspaceModel {
                 notice = (.success, identifySpeakers
                           ? "Transcrição pronta: \(editor.rows.count) falas de \(Set(editor.rows.map(\.actor)).filter { !$0.isEmpty }.count) falantes. Renomeie os falantes na aba Dublagem."
                           : "Transcrição pronta: \(editor.rows.count) falas. Revise e traduza.")
+                then?()
                 return
             } catch SpeechTranscription.TranscriptionError.modelDownloadRequired(let language) {
                 pendingModelDownload = language
+                transcriptionRetry = {
+                    self.transcribeAudio(language: language, allowModelDownload: true, identifySpeakers: identifySpeakers,
+                                         allowDiarizationDownload: allowDiarizationDownload, audioTrackID: audioTrackID, then: then)
+                }
             } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
                 // Cleared when the consent dialog is answered or dismissed.
                 pendingDiarizationDownload = {
-                    self.transcribeAudio(language: language, allowModelDownload: allowModelDownload, identifySpeakers: true, allowDiarizationDownload: true)
+                    self.transcribeAudio(language: language, allowModelDownload: allowModelDownload, identifySpeakers: true, allowDiarizationDownload: true,
+                                         audioTrackID: audioTrackID, then: then)
                 }
             } catch is CancellationError {
                 notice = (.info, "Transcrição cancelada.")

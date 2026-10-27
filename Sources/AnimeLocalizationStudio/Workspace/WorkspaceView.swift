@@ -40,6 +40,16 @@ struct WorkspaceView: View {
                  ? "Gravar no vídeo: grava agora (você escolhe novo arquivo ou este arquivo).\nRascunho: as alterações ficam guardadas no app para continuar depois; o vídeo não muda.\nDescartar: volta a legenda para como estava quando a tela abriu."
                  : "Trocar a legenda descarta o rascunho desta (uma cópia da tradução fica no projeto). Grave no vídeo antes se quiser manter as alterações.")
         }
+        .confirmationDialog("Baixar o modelo de fala?", isPresented: Binding(get: { workspace.pendingModelDownload != nil },
+                                                                              set: { if !$0 { workspace.pendingModelDownload = nil } })) {
+            Button("Baixar e transcrever") {
+                workspace.pendingModelDownload = nil
+                workspace.transcriptionRetry?()
+                workspace.transcriptionRetry = nil
+            }
+        } message: {
+            Text("O macOS precisa baixar o modelo de reconhecimento de fala para este idioma. O download é feito e gerenciado pelo sistema (modelo da Apple, uso no dispositivo) e fica disponível para outros apps.")
+        }
         .confirmationDialog("Onde gravar a legenda nova?", isPresented: $workspace.askEmbedDestination) {
             Button("Criar um novo arquivo") { workspace.embedTranslation(replaceOriginal: false) }
             Button("Gravar neste arquivo", role: .destructive) { workspace.embedTranslation(replaceOriginal: true) }
@@ -221,6 +231,18 @@ private struct SubtitleSessionBar: View {
             trackPicker(selection: Binding(get: { mainID }, set: { workspace.requestTracks(main: $0, reference: workspace.project.referenceTrackID) }),
                         none: false)
                 .hint("Legenda que você edita", "Trocar de legenda descarta o rascunho da atual; se houver, o app pergunta antes.")
+            if workspace.project.externalSubtitlePath != nil {
+                Text("faixa em").foregroundStyle(.secondary)
+                Picker("Idioma da faixa", selection: Binding(get: { workspace.project.newTrackLanguage ?? workspace.app.settings.targetLanguage },
+                                                            set: { workspace.setNewTrackLanguage($0) })) {
+                    ForEach(Languages.all, id: \.code) { Text($0.name).tag($0.code) }
+                    if let code = workspace.project.newTrackLanguage, !Languages.all.contains(where: { $0.code == code }) {
+                        Text(Languages.name(for: code)).tag(code)
+                    }
+                }
+                .labelsHidden().fixedSize()
+                .hint("Idioma da faixa", "Esta legenda não veio do vídeo: ao gravar, ela entra como faixa nova com este idioma e nome.")
+            }
             Button { workspace.swapEditedAndReference() } label: { Image(systemName: "arrow.left.arrow.right") }
                 .buttonStyle(.borderless)
                 .disabled(workspace.project.referenceTrackID == nil || workspace.isBusy)
@@ -256,7 +278,7 @@ private struct SubtitleSessionBar: View {
             ForEach(textTracks) { track in
                 Text("\(track.name ?? track.codec) · \(Languages.display(track.displayLanguage))").tag(track.id)
             }
-            if !none && workspace.project.externalSubtitlePath != nil { Text("Arquivo do disco").tag(-2) }
+            if !none && workspace.project.externalSubtitlePath != nil { Text("Legenda nova ou importada").tag(-2) }
         }
         .labelsHidden()
         .frame(maxWidth: 210)

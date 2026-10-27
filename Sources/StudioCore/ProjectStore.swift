@@ -91,6 +91,9 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     public var lineSpeakers: [Int: String]?
     /// Fonts the person added (files in the project's Fonts folder), attached when writing.
     public var addedFonts: [String]?
+    /// Language of a subtitle that did not come from the video (blank, imported, transcribed),
+    /// written as its track language.
+    public var newTrackLanguage: String?
     /// Track shown beside the subtitle being edited (read only).
     public var referenceTrackID: Int?
     /// The subtitle was changed in the app and not yet written into the video.

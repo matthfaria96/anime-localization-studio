@@ -71,15 +71,6 @@ struct EditorPane: View {
                 }
             }
             .modifier(SpeakerModelConsent(workspace: workspace))
-            .confirmationDialog("Baixar o modelo de fala?", isPresented: Binding(get: { workspace.pendingModelDownload != nil },
-                                                                                  set: { if !$0 { workspace.pendingModelDownload = nil } })) {
-                Button("Baixar e transcrever") {
-                    if let language = workspace.pendingModelDownload { workspace.transcribeAudio(language: language, allowModelDownload: true) }
-                    workspace.pendingModelDownload = nil
-                }
-            } message: {
-                Text("O macOS precisa baixar o modelo de reconhecimento de fala para este idioma. O download é feito e gerenciado pelo sistema (modelo da Apple, uso no dispositivo) e fica disponível para outros apps.")
-            }
         }
     }
 }

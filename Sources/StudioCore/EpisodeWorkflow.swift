@@ -166,6 +166,35 @@ public struct EpisodeWorkflow: Sendable {
         return (project, result)
     }
 
+    /// “Japonês”, “Português (Brasil)”: how players name a track in that language.
+    public static func trackName(for language: String) -> String {
+        let name = Locale(identifier: "pt_BR").localizedString(forIdentifier: language) ?? language
+        return name.prefix(1).uppercased() + name.dropFirst()
+    }
+
+    /// A blank subtitle (one empty line) to write from scratch, sized to the video.
+    public func startBlankSubtitle(_ project: StudioProject, language: String) async throws -> StudioProject {
+        var project = project
+        let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
+        let video = info.tracks(.video).first
+        let document = SubtitleDocument.ass(ASSDocument.make(events: [(start: 0, end: 2_000, text: "", actor: "")],
+                                                             playResX: video?.width ?? 1920, playResY: video?.height ?? 1080))
+        let url = store.directory(for: project.id).appendingPathComponent("source.ass")
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let old = store.translationURL(for: project, language: settings.targetLanguage), FileManager.default.fileExists(atPath: old.path) {
+            try? store.backupTranslation(of: project, language: settings.targetLanguage)
+        }
+        try document.write(to: url)
+        project.externalSubtitlePath = url.path
+        project.sourceFormat = .ass
+        project.sourceTrackID = nil
+        project.referenceTrackID = nil
+        project.newTrackLanguage = language
+        project.draftPending = true
+        try store.save(project)
+        return project
+    }
+
     /// Another subtitle track shown beside the one being edited, matched by time. Nothing is saved.
     public func referenceLines(_ project: StudioProject, track: MediaTrack) async throws -> [Int: String] {
         let (project, info, sourceURL) = try await prepareSource(project)
@@ -205,12 +234,13 @@ public struct EpisodeWorkflow: Sendable {
     /// For videos without a text subtitle: transcribes the default audio track on the Mac and
     /// makes the result the project's source subtitle (SRT), ready to translate.
     public func transcribe(_ project: StudioProject, language: String, allowModelDownload: Bool,
-                           identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false,
+                           identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false, audioTrackID: Int? = nil,
                            progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> StudioProject {
         var project = project
         progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
-        guard let audio = info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first else { throw WorkflowError.noAudio }
+        guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
+        else { throw WorkflowError.noAudio }
         let directory = store.directory(for: project.id)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let wav = directory.appendingPathComponent(".transcription-\(UUID().uuidString.prefix(6)).wav")
@@ -238,6 +268,7 @@ public struct EpisodeWorkflow: Sendable {
         project.externalSubtitlePath = url.path
         project.sourceFormat = document.format
         project.sourceTrackID = nil
+        project.newTrackLanguage = language
         project.translationStatus = .extracted
         try store.save(project)
         return project
@@ -357,8 +388,10 @@ public struct EpisodeWorkflow: Sendable {
         guard let sourceURL = store.sourceSubtitleURL(for: project), FileManager.default.fileExists(atPath: sourceURL.path) else { throw WorkflowError.noTextSubtitle }
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         let old = project.sourceTrackID.flatMap { id in info.tracks.first { $0.id == id } }
-        let track = NewTrack(file: sourceURL, kind: .subtitles, language: old?.languageIETF ?? old?.language ?? settings.targetLanguage,
-                             name: old?.name ?? sourceURL.deletingPathExtension().lastPathComponent, isDefault: old?.isDefault ?? false, isForced: old?.isForced ?? false)
+        // A subtitle that did not come from the video (blank, imported, transcribed) is a new track.
+        let language = old?.languageIETF ?? old?.language ?? project.newTrackLanguage ?? settings.targetLanguage
+        let track = NewTrack(file: sourceURL, kind: .subtitles, language: language,
+                             name: old?.name ?? Self.trackName(for: language), isDefault: old?.isDefault ?? settings.makeDefault, isForced: old?.isForced ?? false)
         var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "editado"),
                            newTracks: [track], clearOtherDefaults: track.isDefault, placeNewTracksFirst: false)
         if let old { plan.excludedTrackIDs = [old.id] }

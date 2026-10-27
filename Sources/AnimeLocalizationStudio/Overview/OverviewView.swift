@@ -123,7 +123,16 @@ struct OverviewView: View {
             if !info.attachments.isEmpty {
                 Panel {
                     SectionLabel("Anexos", systemImage: "paperclip")
-                    Text(attachmentsText(info))
+                    HStack {
+                        Text(attachmentsText(info))
+                        Spacer()
+                        if info.attachments.contains(where: \.isFont) {
+                            Button("Extrair todas as fontes…", systemImage: "textformat") { workspace.extractFonts() }
+                                .controlSize(.small)
+                                .disabled(workspace.isBusy)
+                                .hint("Extrair todas as fontes", "Salva de uma vez, numa pasta que você escolhe, todas as fontes anexadas ao vídeo. O vídeo não muda.")
+                        }
+                    }
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }

@@ -45,6 +45,55 @@ extension WorkspaceModel {
         }
     }
 
+    /// A subtitle written from scratch, alone on the screen.
+    func startBlankSubtitle(language: String) {
+        guard !isBusy else { return }
+        editor.flush()
+        let workflow = workflow()
+        let project = project
+        Task {
+            do {
+                var updated = try await workflow.startBlankSubtitle(project, language: language)
+                updated.subtitleTask = .edit
+                self.project = updated
+                try store.save(updated)
+                chooseSubtitleTask(.edit)
+                await reload()
+                notice = (.info, "Legenda em branco criada. Use + para inserir falas e “Gravar no vídeo…” para gravá-la como faixa nova.")
+            } catch {
+                app.report(error, context: "A legenda em branco não foi criada")
+            }
+        }
+    }
+
+    /// A subtitle file from the disk, to correct alone.
+    func startImportedSubtitle() {
+        project.subtitleTask = .edit
+        project.referenceTrackID = nil
+        if project.newTrackLanguage == nil { project.newTrackLanguage = app.settings.targetLanguage }
+        let before = project.externalSubtitlePath
+        openExternalSubtitle()
+        if project.externalSubtitlePath == before { project.subtitleTask = nil } else { chooseSubtitleTask(.edit) }
+    }
+
+    /// A subtitle made from the speech of the video, in the language spoken, at the right times;
+    /// then translated into `translateTo` when asked.
+    func startFromAudio(spokenLanguage: String, audioTrackID: Int?, identifySpeakers: Bool, translateTo: String?) {
+        guard !isBusy else { return }
+        editor.flush()
+        chooseSubtitleTask(translateTo == nil ? .edit : .translate)
+        if let translateTo { app.settings.targetLanguage = translateTo }
+        transcribeAudio(language: spokenLanguage, identifySpeakers: identifySpeakers, audioTrackID: audioTrackID) { [weak self] in
+            guard let self, translateTo != nil else { return }
+            self.translateEpisode(undoManager: nil)
+        }
+    }
+
+    func setNewTrackLanguage(_ language: String) {
+        project.newTrackLanguage = language
+        try? store.save(project)
+    }
+
     // MARK: Reference beside the edited subtitle
 
     func loadReference() async {
