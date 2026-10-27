@@ -63,7 +63,10 @@ extension EpisodeWorkflow {
         }
         project.remoteDub = nil
         project.dubbingStatus = .muxed
-        if replaceOriginal { project.mediaFingerprint = Self.fingerprint(of: url) }
+        if replaceOriginal {
+            if let output = verification.outputInfo { Self.remapTrackIDs(&project, from: info, removed: [], to: output) }
+            project.mediaFingerprint = Self.fingerprint(of: url)
+        }
         project.lastOutputPath = url.path
         project.lastVerification = verification
         try store.save(project)

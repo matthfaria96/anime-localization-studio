@@ -34,6 +34,8 @@ public struct MuxPlan: Sendable, Hashable, Codable {
     public var replaceSource: Bool = false
     /// Tracks of the source left out of the result (an edited subtitle replaces its old version).
     public var excludedTrackIDs: Set<Int> = []
+    /// Attachments of the source left out (fonts no remaining subtitle uses).
+    public var excludedAttachmentIDs: Set<Int> = []
     /// Files attached to the result (fonts the subtitle needs). One already attached under the
     /// same name is not attached twice.
     public var attachments: [URL] = []
@@ -151,6 +153,8 @@ public struct MKVMuxer: Sendable {
         if !excludedSubtitles.isEmpty { args += ["--subtitle-tracks", "!" + excludedSubtitles.joined(separator: ",")] }
         let excludedAudio = plan.source.tracks(.audio).filter { plan.excludedTrackIDs.contains($0.id) }.map { String($0.id) }
         if !excludedAudio.isEmpty { args += ["--audio-tracks", "!" + excludedAudio.joined(separator: ",")] }
+        let excludedAttachments = plan.source.attachments.filter { plan.excludedAttachmentIDs.contains($0.id) }.map { String($0.id) }
+        if !excludedAttachments.isEmpty { args += ["--attachments", "!" + excludedAttachments.joined(separator: ",")] }
         args.append(plan.source.url.path)
         for track in plan.newTracks {
             args += ["--language", "0:\(track.language)",

@@ -34,6 +34,7 @@ struct OverviewView: View {
             .frame(maxWidth: .infinity)
         }
         .paneBackground()
+        .sheet(item: $workspace.trackToDelete) { track in DeleteTrackSheet(workspace: workspace, track: track) }
     }
 
     // MARK: Header
@@ -81,6 +82,7 @@ struct OverviewView: View {
                             workspace.pendingDefaults = defaults
                         }
                         extractButton(track)
+                        deleteButton(track)
                     }
                 }
             }
@@ -95,6 +97,7 @@ struct OverviewView: View {
                     TrackLine(track: track, detail: subtitleDetail(track)) {
                         defaultButton(isDefault: workspace.effectiveDefaults.subtitleTrackID == track.id) { setDefaultSubtitle(track.id) }
                         extractButton(track)
+                        deleteButton(track)
                     }
                 }
                 if !info.tracks(.subtitles).isEmpty {
@@ -166,6 +169,14 @@ struct OverviewView: View {
                     .hint("Tornar padrão", "Marca esta faixa para abrir ligada. A mudança só vai para o arquivo quando você clicar em “Gravar faixas padrão”.")
             }
         }
+    }
+
+    private func deleteButton(_ track: MediaTrack) -> some View {
+        Button("Excluir…", systemImage: "trash") { workspace.trackToDelete = track }
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
+            .disabled(workspace.isBusy)
+            .hint("Excluir faixa", "Tira esta faixa do vídeo. Antes, mostra o que depende dela e pergunta: novo arquivo ou este arquivo.")
     }
 
     private func extractButton(_ track: MediaTrack) -> some View {

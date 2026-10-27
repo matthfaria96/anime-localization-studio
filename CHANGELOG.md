@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.20.0 — 27/10/2026
+
+### Adicionado
+- Visão geral: **Excluir…** em cada áudio e legenda, com confirmação. A janela mostra o que depende da faixa (padrão, único áudio, legenda aberta em Legendar, áudio de base da dublagem) e pergunta onde gravar: novo arquivo sem ela ou este arquivo (regravado sem recodificar, conferido, versão anterior na Lixeira).
+- Ao excluir uma legenda, as fontes ficam no arquivo (são do arquivo inteiro, não de uma legenda; duas legendas com a mesma fonte usam o mesmo anexo). A confirmação mostra as fontes que **só aquela legenda** usa e deixa excluí-las junto; fontes que outra legenda usa nunca são excluídas.
+
+### Corrigido
+- Regravar o próprio arquivo renumera as faixas: agora o app atualiza as referências que guarda (legenda em edição, legenda ao lado, áudio e texto da dublagem, vozes identificadas, dublagem online pendente) em todas as operações que regravam o arquivo, e extrai de novo cópias de legenda mais antigas que o vídeo.
+
 ## 0.19.0 — 27/10/2026
 
 ### Adicionado

@@ -31,9 +31,17 @@ for _ in {1..30}; do [[ -n "$(list_windows)" ]] && break; sleep 1; done
 sleep "$WAIT"
 IDS=(${(f)"$(list_windows)"})
 [[ ${#IDS} -gt 0 ]] || { print -u2 "window not found"; kill $PID; exit 1; }
-screencapture -x -o -l "${IDS[-1]}" "$OUT"
-# Sheets and panels are separate windows: save them as OUT-2.png, OUT-3.png…
+# Windows that cannot be captured (hidden helpers) are skipped. The largest one is the main
+# window; the others (sheets, panels) are saved as OUT-2.png, OUT-3.png…
+SHOTS=()
+for id in "${IDS[@]}"; do
+  shot="${OUT:r}.$id.png"
+  screencapture -x -o -l "$id" "$shot" 2>/dev/null && [[ -s "$shot" ]] && SHOTS+=("$shot")
+done
+[[ ${#SHOTS} -gt 0 ]] || { print -u2 "no window could be captured"; kill $PID; exit 1; }
+SORTED=(${(f)"$(for f in "${SHOTS[@]}"; do print "$(sips -g pixelWidth "$f" | awk '/pixelWidth/{print $2}') $f"; done | sort -rn | cut -d' ' -f2-)"})
+mv "${SORTED[1]}" "$OUT"
 n=2
-for id in "${IDS[@]:0:-1}"; do screencapture -x -o -l "$id" "${OUT:r}-$n.png"; n=$((n + 1)); done
+for f in "${SORTED[@]:1}"; do mv "$f" "${OUT:r}-$n.png"; n=$((n + 1)); done
 kill $PID 2>/dev/null || true
 echo "$OUT (home: $HOME_DIR)"

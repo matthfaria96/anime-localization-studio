@@ -76,7 +76,8 @@ public struct IntegrityVerifier: Sendable {
             }
         }
 
-        let expectedAttachments = plan.source.attachments.count + plan.newAttachments.count
+        let kept = plan.source.attachments.filter { !plan.excludedAttachmentIDs.contains($0.id) }.count
+        let expectedAttachments = kept + plan.newAttachments.count
         report.add("Anexos (fontes) preservados", info.attachments.count == expectedAttachments,
                    "\(info.attachments.count) de \(expectedAttachments)")
         for file in plan.newAttachments {

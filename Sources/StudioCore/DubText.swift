@@ -26,7 +26,10 @@ extension EpisodeWorkflow {
         let info = if let info { info } else { try await MediaInspector(tools: tools).inspect(project.mediaURL) }
         guard let track = info.tracks.first(where: { $0.id == trackID }), let ext = track.textSubtitleExtension else { throw WorkflowError.noTextSubtitle }
         let url = store.directory(for: project.id).appendingPathComponent("speak-\(trackID).\(ext)")
-        if !FileManager.default.fileExists(atPath: url.path) {
+        // Track numbers change when the video is rewritten: a copy older than the video is extracted again.
+        let fileDate = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        let mediaDate = (try? project.mediaURL.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        if fileDate == nil || (mediaDate.map { fileDate! < $0 } ?? false) {
             _ = try await TrackExtractor(tools: tools).extractSubtitle(track, from: info, to: url)
         }
         return DubText(document: try SubtitleDocument.load(url), key: "track-\(trackID)", language: Self.language(of: track),

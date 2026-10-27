@@ -132,7 +132,6 @@ public struct EpisodeWorkflow: Sendable {
                            newTracks: [track], clearOtherDefaults: settings.makeDefault, placeNewTracksFirst: settings.placeNewTrackFirst)
         plan.replaceSource = replaceOriginal
         plan.attachments = store.addedFontURLs(for: project)
-        let previousSource = project.sourceTrackID.flatMap { id in info.tracks.first { $0.id == id } }
         let (url, report) = try await MKVMuxer(tools: tools).mux(plan) { value in
             progress(WorkflowStep(fraction: value, message: value < 0.9 ? "Gravando novo MKV…" : "Verificando integridade…"))
         }
@@ -140,10 +139,8 @@ public struct EpisodeWorkflow: Sendable {
         project.lastOutputPath = url.path
         project.lastVerification = report
         if replaceOriginal {
-            // Track ids can shift in the rewritten file; find the original subtitle again.
-            if let previous = previousSource, let output = report.outputInfo {
-                project.sourceTrackID = output.tracks(.subtitles).first { IntegrityVerifier.sameTrack(previous, $0) }?.id ?? project.sourceTrackID
-            }
+            // Track ids can shift in the rewritten file; every reference follows its track.
+            if let output = report.outputInfo { Self.remapTrackIDs(&project, from: info, removed: [], to: output) }
             project.mediaFingerprint = Self.fingerprint(of: url)
         }
         try store.save(project)
@@ -401,8 +398,12 @@ public struct EpisodeWorkflow: Sendable {
         let (url, report) = try await MKVMuxer(tools: tools).mux(plan) { value in
             progress(WorkflowStep(fraction: value, message: value < 0.9 ? "Gravando o MKV…" : "Verificando integridade…"))
         }
-        if replaceOriginal {
-            project.sourceTrackID = report.outputInfo?.tracks(.subtitles).first { $0.name == track.name && ($0.languageIETF == track.language || $0.language == old?.language) }?.id
+        if replaceOriginal, let output = report.outputInfo {
+            Self.remapTrackIDs(&project, from: info, removed: plan.excludedTrackIDs, to: output)
+            // The corrected subtitle is the new track that took the old one's place.
+            let edited = output.tracks(.subtitles).first { $0.name == track.name && ($0.languageIETF == track.language || $0.language == old?.language) }?.id
+            project.sourceTrackID = edited
+            project.sourceFileTrackID = edited
             project.mediaFingerprint = Self.fingerprint(of: url)
         }
         project.lastOutputPath = url.path
@@ -464,7 +465,10 @@ public struct EpisodeWorkflow: Sendable {
         }
         project.dubbingStatus = report.failed.isEmpty ? .muxed : .failed
         project.lastDubReport = report
-        if replaceOriginal { project.mediaFingerprint = Self.fingerprint(of: url) }
+        if replaceOriginal {
+            if let output = verification.outputInfo { Self.remapTrackIDs(&project, from: info, removed: [], to: output) }
+            project.mediaFingerprint = Self.fingerprint(of: url)
+        }
         project.lastOutputPath = url.path
         project.lastVerification = verification
         try store.save(project)

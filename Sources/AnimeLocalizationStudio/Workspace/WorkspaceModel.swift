@@ -200,6 +200,8 @@ final class WorkspaceModel {
     var showSeries = false
     /// “Criar a partir do áudio” window.
     var showFromAudio = false
+    /// The track whose deletion is being confirmed in the Visão geral.
+    var trackToDelete: MediaTrack?
     /// Where the person wanted to go when Legendar had unsaved changes (asks save or discard).
     var pendingLeave: LeaveTarget?
     /// The subtitles as they were when Legendar loaded them.
@@ -626,6 +628,8 @@ final class WorkspaceModel {
             chooseSubtitleTask(task)
             if let id = env["ALS_REFERENCE"].flatMap(Int.init) { setReference(id) }
         }
+        // ALS_DELETE=<track id>: opens the delete confirmation of the Visão geral.
+        if let id = env["ALS_DELETE"].flatMap(Int.init) { trackToDelete = info?.tracks.first { $0.id == id } }
         // ALS_TRACKS=main,reference: what the Legendar bar pickers do.
         if let ids = env["ALS_TRACKS"]?.split(separator: ",").compactMap({ Int($0) }), let main = ids.first {
             Task {
