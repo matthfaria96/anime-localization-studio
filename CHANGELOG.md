@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.19.0 — 27/10/2026
+
+### Adicionado
+- **Posição na tela** de cada fala: no painel da fala, uma grade 3×3 mostra onde ela aparece (em cima, no meio, embaixo; esquerda, centro, direita) e se a posição vem do estilo ou da própria fala; clicar muda só aquela fala (`{\anN}`), e "Usar a do estilo" volta ao padrão. Falas com ponto exato (`\pos`) são indicadas. Na lista, cada fala tem um mini-indicador da posição, e o menu do botão direito muda a posição de várias falas de uma vez.
+- **Personagem** virou um campo de digitar com lista dos nomes que você já escreveu (seta ▾), gravado ao apertar Return ou sair do campo, para nunca escrever o mesmo personagem de dois jeitos. Aparece também em legendas SRT.
+
+### Mudou
+- O app não escreve mais "Falante N" em lugar nenhum: as vozes separadas pelo áudio (agora "Voz 1, 2…") ficam guardadas no app para a dublagem, inclusive na transcrição, e você dá o nome de cada personagem. "Identificar quem fala pelo áudio" saiu do Legendar.
+- A coluna Personagem não mostra mais o nome do estilo quando a fala não tem personagem ("—" e o estilo embaixo, em cinza).
+
 ## 0.18.1 — 27/10/2026
 
 ### Corrigido

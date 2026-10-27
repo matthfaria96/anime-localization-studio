@@ -432,7 +432,7 @@ final class WorkspaceModel {
                 release()
                 await loadSubtitles()
                 notice = (.success, identifySpeakers
-                          ? "Transcrição pronta: \(editor.rows.count) falas de \(Set(editor.rows.map(\.actor)).filter { !$0.isEmpty }.count) falantes. Renomeie os falantes na aba Dublagem."
+                          ? "Transcrição pronta: \(editor.rows.count) falas. As vozes foram separadas e ficam guardadas para a dublagem; dê o nome de cada personagem em Dublar › Personagens."
                           : "Transcrição pronta: \(editor.rows.count) falas. Revise e traduza.")
                 then?()
                 return
@@ -631,6 +631,8 @@ final class WorkspaceModel {
             Task {
                 try? await Task.sleep(for: .seconds(2))
                 requestTracks(main: main, reference: ids.count > 1 ? ids[1] : nil)
+                try? await Task.sleep(for: .seconds(4))
+                if let line = env["ALS_SELECT"].flatMap(Int.init) { editor.selection = [line - 1] }
             }
         }
         if env["ALS_TRANSLATE"] == "1" { translateEpisode(undoManager: nil) }

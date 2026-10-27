@@ -200,14 +200,12 @@ private struct EditorToolbar: View {
         Menu {
             Button("Definir personagem das falas selecionadas…") { showCharacter = true }
                 .disabled(editor.selection.isEmpty)
-            Button("Identificar quem fala pelo áudio") { identify() }
-                .disabled(!canIdentify)
         } label: {
             Label("Personagens", systemImage: "person.2")
         }
         .menuStyle(.button)
         .fixedSize()
-        .hint("Personagens", "Diga quem fala em cada linha (é o que a dublagem usa para escolher a voz). No ASS o nome vai no campo Name, que não aparece na tela; no SRT fica guardado no app, fora do arquivo.")
+        .hint("Personagens", "Diga quem fala nas falas selecionadas (é o que a dublagem usa para escolher a voz). No ASS o nome vai no campo Name, que não aparece na tela; no SRT fica guardado no app, fora do arquivo.")
         Button("Estilos e fontes…", systemImage: "paintpalette") { showStyles = true }
             .hint("Estilos e fontes", "Criar, duplicar, renomear, apagar e editar estilos; ver de onde vem cada fonte, adicionar fontes ao vídeo e extrair as que ele tem.")
     }
@@ -222,9 +220,13 @@ struct LinesTable: View {
         ScrollViewReader { proxy in
             Table(editor.visibleRows, selection: Binding(get: { editor.selection }, set: { editor.selection = $0 })) {
                 TableColumn("#") { row in
-                    Text("\(row.id + 1)").monospacedDigit().foregroundStyle(.secondary)
+                    HStack(spacing: 5) {
+                        Text("\(row.id + 1)").monospacedDigit().foregroundStyle(.secondary)
+                        PositionGlyph(alignment: row.alignment, fromLine: row.alignmentFromLine)
+                            .hintVerbatim("Posição na tela", ScreenPosition.name(row.alignment) + (row.alignmentFromLine ? ", definida nesta fala." : ", do estilo."))
+                    }
                 }
-                .width(min: 28, ideal: 34, max: 50)
+                .width(min: 44, ideal: 52, max: 70)
                 TableColumn("Tempo") { row in
                     VStack(alignment: .leading, spacing: 0) {
                         Text(SubtitleTime.formatDisplay(row.start)).monospacedDigit()
@@ -236,8 +238,9 @@ struct LinesTable: View {
                 .width(min: 56, ideal: 66, max: 90)
                 TableColumn("Personagem") { row in
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(row.actor.isEmpty ? row.style : row.actor).lineLimit(1)
-                        if !row.actor.isEmpty && !row.style.isEmpty { Text(row.style).font(.caption2).foregroundStyle(.tertiary).lineLimit(1) }
+                        Text(row.actor.isEmpty ? "—" : row.actor).lineLimit(1)
+                            .foregroundStyle(row.actor.isEmpty ? .tertiary : .primary)
+                        if !row.style.isEmpty { Text("estilo \(row.style)").font(.caption2).foregroundStyle(.tertiary).lineLimit(1) }
                     }
                 }
                 .width(min: 60, ideal: 90, max: 180)
@@ -265,6 +268,14 @@ struct LinesTable: View {
             .contextMenu(forSelectionType: Int.self) { ids in
                 Button("Ir para a fala no vídeo") { if let id = ids.first { workspace.select(id, seek: true) } }
                 Button("Inserir fala depois") { if let id = ids.max() { editor.insertLine(after: id, undoManager: undoManager) } }
+                Menu("Posição na tela") {
+                    ForEach(ScreenPosition.rows.flatMap { $0 }, id: \.self) { value in
+                        Button(ScreenPosition.name(value)) { editor.setAlignment(value, lines: ids, undoManager: undoManager) }
+                    }
+                    Divider()
+                    Button("Usar a do estilo") { editor.setAlignment(nil, lines: ids, undoManager: undoManager) }
+                }
+                Divider()
                 Button(ids.count > 1 ? "Excluir \(ids.count) falas" : "Excluir fala", role: .destructive) { editor.removeLines(ids, undoManager: undoManager) }
                 Divider()
                 Button("Reproduzir só esta fala") {

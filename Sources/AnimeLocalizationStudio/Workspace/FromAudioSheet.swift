@@ -33,7 +33,7 @@ struct FromAudioSheet: View {
                 }
                 .hint("Idioma falado", "O idioma em que os personagens falam. A legenda sai nesse idioma.")
                 Toggle("Identificar quem fala", isOn: $identifySpeakers)
-                    .hint("Identificar quem fala", "Marca “Falante 1”, “Falante 2”… em cada fala, pelo som da voz. Ajuda na dublagem.")
+                    .hint("Identificar quem fala", "Separa as vozes (Voz 1, Voz 2…) pelo som, para a dublagem dar uma voz a cada uma. Fica guardado no app: a legenda sai sem nomes, e você escreve o nome de cada personagem em Dublar ou no campo Personagem.")
                 Toggle("Depois traduzir", isOn: $translateAfter)
                     .hint("Depois traduzir", "Quando a transcrição terminar, cria a tradução a partir dela.")
                 if translateAfter {

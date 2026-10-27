@@ -267,7 +267,11 @@ public struct EpisodeWorkflow: Sendable {
             let turns = try await diarizer.diarize(wav, allowModelDownload: allowDiarizationDownload) { value in
                 progress(WorkflowStep(fraction: 0.75 + value * 0.25, message: "Identificando quem fala…"))
             }
-            document = SpeechTranscription.document(from: lines, speakers: SpeakerDiarization.assign(turns, to: lines.map { ($0.start, $0.end) }))
+            // Who speaks is kept in the project (for the dub), not written into the subtitle.
+            let speakers = SpeakerDiarization.assign(turns, to: lines.map { ($0.start, $0.end) })
+            project.autoSpeakers = (project.autoSpeakers ?? [:]).merging(["translation": Dictionary(uniqueKeysWithValues:
+                speakers.enumerated().compactMap { n, name in name.map { (n, $0) } })]) { _, new in new }
+            document = SpeechTranscription.document(from: lines, speakers: [])
         } else {
             document = SpeechTranscription.document(from: lines)
         }

@@ -9,7 +9,8 @@ public struct SpeakerDiarization: Sendable {
     public struct Turn: Sendable, Hashable {
         public let start: Int
         public let end: Int
-        /// "Falante 1", "Falante 2"… numbered in order of first appearance.
+        /// "Voz 1", "Voz 2"… numbered in order of first appearance: voices to be named by the
+        /// person, never written into a subtitle as characters.
         public let speaker: String
     }
 
@@ -54,7 +55,7 @@ public struct SpeakerDiarization: Sendable {
             .sorted { $0.startTimeSeconds < $1.startTimeSeconds }
             .map { segment -> Turn in
                 let name = names[segment.speakerId] ?? {
-                    let label = "Falante \(names.count + 1)"
+                    let label = "Voz \(names.count + 1)"
                     names[segment.speakerId] = label
                     return label
                 }()

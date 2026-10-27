@@ -151,12 +151,12 @@ extension WorkspaceModel {
     /// names an earlier version wrote into it.
     func clearIdentifiedSpeakers(undoManager: UndoManager?) {
         project.autoSpeakers = nil
-        let written = editor.rows.filter { $0.actor.range(of: #"^Falante \d+$"#, options: .regularExpression) != nil }
+        let written = editor.rows.filter { $0.actor.range(of: #"^(Falante|Voz) \d+$"#, options: .regularExpression) != nil }
         if !written.isEmpty {
             editor.setActors(Dictionary(uniqueKeysWithValues: written.map { ($0.id, "") }), undoManager: undoManager)
             editor.flush()
         }
-        cast.members.removeAll { $0.name.range(of: #"^Falante \d+$"#, options: .regularExpression) != nil }
+        cast.members.removeAll { $0.name.range(of: #"^(Falante|Voz) \d+$"#, options: .regularExpression) != nil }
         try? store.save(project)
         notice = (.success, written.isEmpty ? "Personagens identificados esquecidos." : "Personagens identificados esquecidos e “Falante N” tirado de \(Plural.count(written.count, "fala", "falas")) da legenda.")
         Task { await loadDubText() }

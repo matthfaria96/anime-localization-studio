@@ -52,7 +52,7 @@ struct SpeakerDiarizationTests {
         #expect(assigned[0] == assigned[2], "\(assigned)")
         #expect(assigned[1] == assigned[3], "\(assigned)")
         #expect(assigned[0] != assigned[1], "\(assigned)")
-        #expect(assigned[0] == "Falante 1")
+        #expect(assigned[0] == "Voz 1")
     }
 
     @Test func refusesToDownloadWithoutPermission() async throws {

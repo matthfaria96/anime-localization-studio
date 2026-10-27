@@ -61,7 +61,7 @@ struct DubVoicesSection: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if workspace.hasAutoSpeakers || workspace.cast.members.contains(where: { $0.name.hasPrefix("Falante ") }) {
+                if workspace.hasAutoSpeakers || workspace.cast.members.contains(where: { $0.name.hasPrefix("Falante ") || $0.name.hasPrefix("Voz ") }) {
                     Button("Limpar", systemImage: "xmark.circle") { workspace.clearIdentifiedSpeakers(undoManager: undoManager) }
                         .disabled(workspace.isBusy)
                         .hint("Limpar personagens identificados", "Esquece os “Falante 1, 2…” achados pelo áudio e tira esses nomes da legenda. A próxima dublagem identifica de novo, sem gravar nada na legenda.")

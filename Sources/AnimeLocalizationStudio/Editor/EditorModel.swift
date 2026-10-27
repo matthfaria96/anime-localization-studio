@@ -36,6 +36,12 @@ struct EditorRow: Identifiable, Hashable {
     let isTranslated: Bool
     /// Characters per second of the visible translation (fansub guides aim for ≤ 17–20).
     let readingSpeed: Double
+    /// Where the line shows on screen (numpad 1–9: 8 top center, 2 bottom center…).
+    var alignment: Int = 2
+    /// The position comes from the line itself (`{\anN}`), not from its style.
+    var alignmentFromLine = false
+    /// The line is placed at an exact point (`\pos`).
+    var hasExactPosition = false
 }
 
 /// The two working documents (original and translation) and every edit made to them.
@@ -191,7 +197,7 @@ final class EditorModel {
         }
     }
 
-    /// Renames a character in every line ("Falante 1" → "Kirito").
+    /// Renames a character in every line ("Voz 1" → "Kirito").
     func renameActor(_ old: String, to new: String, undoManager: UndoManager?) {
         let name = new.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty, name != old else { return }
@@ -299,9 +305,30 @@ final class EditorModel {
         return fonts.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    /// Characters already used, for suggestions.
+    /// Characters the person already wrote, to pick again without typos (labels made by older
+    /// versions, “Falante N”, are left out).
     var actorNames: [String] {
-        Array(Set(rows.map(\.actor).filter { !$0.isEmpty })).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        Array(Set(rows.map(\.actor).filter { !$0.isEmpty && $0.range(of: #"^(Falante|Voz) \d+$"#, options: .regularExpression) == nil }))
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    // MARK: Position on screen
+
+    /// The numpad alignment of a style (2, bottom center, when unknown or in SRT).
+    func styleAlignment(_ name: String) -> Int {
+        guard case .ass(let doc) = source, let record = doc.style(named: name) else { return 2 }
+        return ASSStyleInfo(record: record, isSSA: doc.isSSA).alignment
+    }
+
+    /// Puts the lines at `alignment` (`{\anN}` in the line), or back to their style's position when nil.
+    func setAlignment(_ alignment: Int?, lines: Set<Int>, undoManager: UndoManager?) {
+        guard !lines.isEmpty else { return }
+        mutate(alignment == nil ? "Usar a posição do estilo" : "Mudar a posição", undoManager: undoManager) { source, translation in
+            for index in lines {
+                if let raw = source?.rawText(at: index) { source?.setRawText(ASSText.settingAlignment(alignment, in: raw), at: index) }
+                if let raw = translation?.rawText(at: index) { translation?.setRawText(ASSText.settingAlignment(alignment, in: raw), at: index) }
+            }
+        }
     }
 
     func updateStyle(_ info: ASSStyleInfo, at styleIndex: Int, undoManager: UndoManager?) {
@@ -418,10 +445,15 @@ final class EditorModel {
             let isTranslated = translated.map { $0.rawText != cue.rawText } ?? false
             let seconds = max(0.001, Double(cue.duration) / 1_000)
             let visible = (isTranslated ? translatedText : cue.plainText).filter { !$0.isWhitespace }.count
-            return EditorRow(id: cue.id, start: cue.start, end: cue.end, style: cue.style, actor: cue.actor,
-                             original: cue.plainText, translation: isTranslated ? translatedText : "",
-                             isComment: cue.isComment, skipReason: source.skipReason(at: cue.id), isTranslated: isTranslated,
-                             readingSpeed: cue.isComment ? 0 : Double(visible) / seconds)
+            let inline = ASSText.alignmentOverride(in: cue.rawText)
+            var row = EditorRow(id: cue.id, start: cue.start, end: cue.end, style: cue.style, actor: cue.actor,
+                                original: cue.plainText, translation: isTranslated ? translatedText : "",
+                                isComment: cue.isComment, skipReason: source.skipReason(at: cue.id), isTranslated: isTranslated,
+                                readingSpeed: cue.isComment ? 0 : Double(visible) / seconds)
+            row.alignment = inline ?? styleAlignment(cue.style)
+            row.alignmentFromLine = inline != nil
+            row.hasExactPosition = ASSText.positionOverride(in: cue.rawText) != nil
+            return row
         }
     }
 }

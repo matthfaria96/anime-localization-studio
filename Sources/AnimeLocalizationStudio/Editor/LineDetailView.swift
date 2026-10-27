@@ -99,25 +99,50 @@ struct LineDetailView: View {
                 }
             }
             .controlSize(.small)
-            if !editor.styleNames.isEmpty {
-                ViewThatFits(in: .horizontal) {
-                    HStack { styleAndActor(cue, index: index) }
-                    VStack(alignment: .leading) { styleAndActor(cue, index: index) }
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.s, verticalSpacing: Theme.Spacing.s) {
+                if !editor.styleNames.isEmpty {
+                    GridRow {
+                        Text("Estilo").foregroundStyle(.secondary)
+                        Picker("Estilo", selection: Binding(get: { cue.style }, set: { editor.setStyle($0, index: index, undoManager: undoManager) })) {
+                            ForEach(editor.styleNames, id: \.self) { Text($0).tag($0) }
+                            if !editor.styleNames.contains(cue.style) { Text(cue.style).tag(cue.style) }
+                        }
+                        .labelsHidden()
+                        .hint("Estilo", "Estilo ASS desta fala (fonte, cor, posição). Os estilos são editados em “Estilos e fontes…”.")
+                    }
+                }
+                GridRow {
+                    Text("Personagem").foregroundStyle(.secondary)
+                    CharacterField(editor: editor, index: index, actor: cue.actor)
                 }
             }
+            position(index: index)
         }
     }
 
-    @ViewBuilder
-    private func styleAndActor(_ cue: SubtitleCue, index: Int) -> some View {
-                    Picker("Estilo", selection: Binding(get: { cue.style }, set: { editor.setStyle($0, index: index, undoManager: undoManager) })) {
-                        ForEach(editor.styleNames, id: \.self) { Text($0).tag($0) }
-                        if !editor.styleNames.contains(cue.style) { Text(cue.style).tag(cue.style) }
-                    }
-                    .hint("Estilo", "Estilo ASS desta fala (fonte, cor, posição). Os estilos são editados no botão de paleta da barra.")
-                    TextField("Personagem", text: Binding(get: { cue.actor }, set: { editor.setActor($0, index: index, undoManager: undoManager) }))
-                        .frame(minWidth: 100)
-                        .hint("Personagem", "Quem diz esta fala. Usado no contexto da tradução e para escolher a voz na dublagem.")
+    /// Where the line shows on screen, from the line itself or from its style, and the grid to change it.
+    private func position(index: Int) -> some View {
+        let row = editor.rows.first { $0.id == index }
+        let alignment = row?.alignment ?? 2
+        return HStack(alignment: .top, spacing: Theme.Spacing.m) {
+            PositionPad(alignment: alignment) { editor.setAlignment($0, lines: [index], undoManager: undoManager) }
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Posição na tela").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text(ScreenPosition.name(alignment)).font(.callout)
+                Text(row?.alignmentFromLine == true ? "Definida nesta fala." : "Vem do estilo “\(row?.style.isEmpty == false ? row!.style : "padrão")”.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if row?.hasExactPosition == true {
+                    Text("Esta fala tem um ponto exato na tela (\\pos); a grade muda o lado de onde ela se ancora.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                if row?.alignmentFromLine == true {
+                    Button("Usar a do estilo") { editor.setAlignment(nil, lines: [index], undoManager: undoManager) }
+                        .buttonStyle(.link).font(.caption)
+                        .hint("Usar a posição do estilo", "Tira a posição própria desta fala; ela volta a seguir o estilo.")
+                }
+            }
+        }
+        .hint("Posição na tela", "Onde esta fala aparece no vídeo. Clique num quadrado para mudar só esta fala (a legenda ganha {\\anN} no início). Para mudar todas as falas de um estilo, use “Estilos e fontes…”.")
     }
 
     @ViewBuilder
@@ -206,5 +231,56 @@ struct LineDetailView: View {
         let start = SubtitleTime.parseFlexible(startDraft) ?? cue.start
         let end = SubtitleTime.parseFlexible(endDraft) ?? cue.end
         editor.setTiming(start: start, end: max(start, end), index: index, undoManager: undoManager)
+    }
+}
+
+/// Who says the line: type a name, or pick one already written in this subtitle, so the same
+/// character is never spelled two ways. The name is saved on Return or when leaving the field.
+struct CharacterField: View {
+    let editor: EditorModel
+    let index: Int
+    let actor: String
+    @Environment(\.undoManager) private var undoManager
+    @State private var draft = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 2) {
+            TextField("Nome do personagem", text: $draft)
+                .textFieldStyle(.roundedBorder)
+                .focused($focused)
+                .onSubmit(commit)
+                .onChange(of: focused) { if !focused { commit() } }
+            Menu {
+                if editor.actorNames.isEmpty {
+                    Text("Nenhum personagem escrito ainda")
+                } else {
+                    ForEach(editor.actorNames, id: \.self) { name in
+                        Button(name) { draft = name; commit() }
+                    }
+                }
+                if !actor.isEmpty {
+                    Divider()
+                    Button("Sem personagem") { draft = ""; commit() }
+                }
+            } label: {
+                Image(systemName: "chevron.down")
+            }
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .buttonStyle(.borderless)
+            .fixedSize()
+            .hint("Escolher personagem", "Os nomes que você já escreveu nesta legenda, para não digitar diferente.")
+        }
+        .frame(minWidth: 140)
+        .onAppear { draft = actor }
+        .onChange(of: actor) { draft = actor }
+        .onChange(of: index) { draft = actor }
+        .hint("Personagem", "Quem diz esta fala. Escreva o nome ou escolha um já usado na seta. Usado no contexto da tradução e para dar a voz certa na dublagem.")
+    }
+
+    private func commit() {
+        let name = draft.trimmingCharacters(in: .whitespaces)
+        if name != actor { editor.setActor(name, index: index, undoManager: undoManager) }
     }
 }

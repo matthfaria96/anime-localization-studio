@@ -204,3 +204,15 @@ struct SRTSpeakerTests {
         #expect(doc.cues[2].actor == "Kirito", "the name moves with its line")
     }
 }
+
+@Suite("Line position")
+struct LinePositionTests {
+    @Test func setsReplacesAndRemovesTheAlignmentTag() {
+        #expect(ASSText.settingAlignment(8, in: "Hello") == "{\\an8}Hello")
+        #expect(ASSText.settingAlignment(8, in: "{\\i1}Hello") == "{\\an8\\i1}Hello")
+        #expect(ASSText.settingAlignment(7, in: "{\\an8\\i1}Hello") == "{\\an7\\i1}Hello")
+        #expect(ASSText.settingAlignment(nil, in: "{\\an8}Hello") == "Hello")
+        #expect(ASSText.settingAlignment(nil, in: "{\\an8\\b1}Hi {\\i1}there") == "{\\b1}Hi {\\i1}there")
+        #expect(ASSText.alignmentOverride(in: ASSText.settingAlignment(3, in: "{\\pos(10,20)}Sign")) == 3)
+    }
+}
