@@ -105,6 +105,7 @@ final class WorkspaceModel {
             editor.load(source: source, translation: translation.flatMap { $0.count == source.count ? $0 : nil })
             try? store.save(project)
             await loadReference()
+            await loadDubText()
         } catch WorkflowError.noTextSubtitle {
             editor.load(source: nil, translation: nil)
             notice = (.info, "Este arquivo não tem legenda de texto embutida. Abra uma legenda externa (ASS, SSA ou SRT).")
@@ -536,6 +537,8 @@ final class WorkspaceModel {
     var cast = VoiceCast() {
         didSet { if cast != oldValue { saveCast(cast) } }
     }
+    /// What the dub speaks (loaded from the app's translation or a subtitle of the video).
+    var dubText: DubText?
     /// Text of the reference track beside each line being edited (read only).
     var referenceLines: [Int: String] = [:]
     var lastDub: (url: URL, report: DubbingReport, verification: VerificationReport)?
@@ -622,6 +625,13 @@ final class WorkspaceModel {
         if let task = env["ALS_TASK"].flatMap(SubtitleTask.init(rawValue:)) {
             chooseSubtitleTask(task)
             if let id = env["ALS_REFERENCE"].flatMap(Int.init) { setReference(id) }
+        }
+        // ALS_TRACKS=main,reference: what the Legendar bar pickers do.
+        if let ids = env["ALS_TRACKS"]?.split(separator: ",").compactMap({ Int($0) }), let main = ids.first {
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                requestTracks(main: main, reference: ids.count > 1 ? ids[1] : nil)
+            }
         }
         if env["ALS_TRANSLATE"] == "1" { translateEpisode(undoManager: nil) }
         if env["ALS_DUB"] == "1" || env["ALS_DUB"] == "run" { startDubSession() }

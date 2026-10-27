@@ -27,6 +27,8 @@ VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')" || true
 BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 
 if [[ "${SKIP_TESTS:-0}" != 1 ]]; then
+  # A test copies the MLX kernels next to its binary and removes them; clear a leftover so signing never fails.
+  rm -f .build/out/Products/*/*.xctest/Contents/MacOS/mlx.metallib(N)
   swift test
 fi
 swift build -c "$CONFIG" --arch arm64

@@ -64,4 +64,49 @@ struct DubWorkflowTests {
         #expect(result.tracks(.subtitles).count == 2)
         #expect(SHA256.hash(data: try Data(contentsOf: episode)) == originalHash)
     }
+
+    @Test func dubsFromAPortugueseSubtitleAlreadyInTheVideo() async throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("ALSDubTrack-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let paths = AppPaths(root: base.appendingPathComponent("Support"), caches: base.appendingPathComponent("Caches"))
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        let raw = base.appendingPathComponent("raw.mkv")
+        try await ProcessRunner.runChecked(try tools.require(.ffmpeg), [
+            "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=160x90:rate=24:duration=5",
+            "-f", "lavfi", "-i", "sine=frequency=330:duration=5", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", raw.path])
+        let pt = base.appendingPathComponent("pt.ass")
+        try """
+        [Script Info]
+        ScriptType: v4.00+
+
+        [Events]
+        Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+        Dialogue: 0,0:00:00.50,0:00:02.50,Default,Kirito,0,0,0,,Eu não vou deixar!
+        Dialogue: 0,0:00:03.00,0:00:04.50,Default,,0,0,0,,Espera!
+
+        """.write(to: pt, atomically: true, encoding: .utf8)
+        let episode = base.appendingPathComponent("Show - 07.mkv")
+        try await ProcessRunner.runChecked(try tools.require(.mkvmerge), ["-o", episode.path, "--language", "1:ja", raw.path, "--language", "0:pt-BR", pt.path],
+                                           acceptedExitCodes: [0, 1])
+        let info = try await MediaInspector(tools: tools).inspect(episode)
+        let ptTrack = try #require(info.tracks(.subtitles).first)
+        var project = ProjectStore(paths: paths).project(for: episode)
+        // Who says the second line was found from the audio: kept in the project, not in the file.
+        project.autoSpeakers = ["track-\(ptTrack.id)": [1: "Asuna"]]
+        let workflow = EpisodeWorkflow(paths: paths, settings: AppSettings(), engine: AppleTranslationEngine(), glossary: Glossary())
+        let text = try await workflow.dubText(project, trackID: ptTrack.id)
+        #expect(text.language == "pt-BR" && text.isVideoTrack)
+        #expect(workflow.spokenSegments(text, project: project).map(\.speaker) == ["Kirito", "Asuna"])
+        #expect(!(try String(contentsOf: text.file, encoding: .utf8).contains("Asuna")), "the subtitle is not changed")
+
+        let cast = VoiceCast(members: [CastMember(name: "Kirito", voiceID: "Luciana"), CastMember(name: "Asuna", voiceID: "Luciana")])
+        let (_, _, report, verification) = try await workflow.dub(project, synthesizer: SystemVoiceSynthesizer(), cast: cast,
+                                                                    textTrackID: ptTrack.id) { _ in }
+        #expect(report.synthesized == 2 && report.failed.isEmpty)
+        #expect(verification.passed, "\(verification.failures)")
+        let result = try #require(verification.outputInfo)
+        #expect(result.tracks(.audio).count == 2)
+        #expect(result.tracks(.subtitles).count == 1, "the Portuguese subtitle is not added a second time")
+    }
 }

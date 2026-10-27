@@ -106,6 +106,11 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     public var dubAudioTrackID: Int?
     /// Characters of each line for subtitles that cannot store them (SRT), by line index.
     public var lineSpeakers: [Int: String]?
+    /// Speakers found from the audio for the dub, by spoken text (`translation` or `track-<id>`)
+    /// and line. Kept here, never written into the subtitle.
+    public var autoSpeakers: [String: [Int: String]]?
+    /// Subtitle track whose text the dub speaks; nil = the app's translation.
+    public var dubTextTrackID: Int?
     /// Fonts the person added (files in the project's Fonts folder), attached when writing.
     public var addedFonts: [String]?
     /// Language of a subtitle that did not come from the video (blank, imported, transcribed),

@@ -330,15 +330,15 @@ public struct EpisodeWorkflow: Sendable {
     }
 
     /// Clips of each speaker's original voice (isolated from music), cached in the project.
-    public func voiceSamples(_ project: StudioProject, audioTrackID: Int? = nil, progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> [OriginalVoices.Sample] {
-        let (_, info, sourceURL) = try await prepareSource(project)
-        let source = try SubtitleDocument.load(sourceURL)
-        let translation = store.translationURL(for: project, language: settings.targetLanguage).flatMap { try? SubtitleDocument.load($0) }
+    public func voiceSamples(_ project: StudioProject, audioTrackID: Int? = nil, textTrackID: Int? = nil,
+                             progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> [OriginalVoices.Sample] {
+        let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
         else { throw WorkflowError.noAudio }
-        let lines = DubbingPlan.segments(from: (translation ?? source).withSideSpeakers(project.lineSpeakers ?? [:]))
+        let text = try await dubText(project, trackID: textTrackID, info: info)
+        let lines = spokenSegments(text, project: project)
             .filter { $0.speaker != "Desconhecido" }
-            .map { OriginalVoices.Line(id: $0.id, start: $0.start, end: $0.end, speaker: $0.speaker, text: source.plainText(at: $0.id)) }
+            .map { OriginalVoices.Line(id: $0.id, start: $0.start, end: $0.end, speaker: $0.speaker, text: $0.text) }
         guard !lines.isEmpty else { return [] }
         let work = store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
         return try await OriginalVoices(tools: tools, workDirectory: work).samples(for: lines, media: info, audioTrack: audio) { value, message in
@@ -348,9 +348,9 @@ public struct EpisodeWorkflow: Sendable {
 
     /// Gives every speaker without a voice their own: the clip of their original voice, which
     /// Chatterbox clones on the Mac. Voices made by another engine are replaced.
-    public func automaticCast(_ project: StudioProject, cast: VoiceCast, audioTrackID: Int? = nil,
+    public func automaticCast(_ project: StudioProject, cast: VoiceCast, audioTrackID: Int? = nil, textTrackID: Int? = nil,
                               progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> VoiceCast {
-        let samples = try await voiceSamples(project, audioTrackID: audioTrackID, progress: progress)
+        let samples = try await voiceSamples(project, audioTrackID: audioTrackID, textTrackID: textTrackID, progress: progress)
         var cast = cast
         cast.addMissing(from: samples.map(\.speaker))
         let engine = settings.dubbingEngine.rawValue
@@ -407,18 +407,21 @@ public struct EpisodeWorkflow: Sendable {
     /// Voice-over dub: synthesizes the translated lines with the cast, mixes them over the
     /// original audio, and writes a new MKV with the dubbed audio and the translated subtitle
     /// added (all original tracks kept, video not re-encoded).
+    /// Speaks `textTrackID` (a subtitle of the video) or, when nil, the app's translation, in that
+    /// text's language. A subtitle already in the video is not added again.
     public func dub(_ project: StudioProject, synthesizer: any SpeechSynthesizer, cast: VoiceCast, replaceOriginal: Bool = false, audioTrackID: Int? = nil,
+                    textTrackID: Int? = nil,
                     progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> (StudioProject, URL, DubbingReport, VerificationReport) {
         var project = project
-        guard let translationURL = store.translationURL(for: project, language: settings.targetLanguage),
-              let translation = try? SubtitleDocument.load(translationURL) else { throw WorkflowError.notTranslated }
         progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
         else { throw WorkflowError.noAudio }
-        let segments = DubbingPlan.segments(from: translation.withSideSpeakers(project.lineSpeakers ?? [:]))
+        let text = try await dubText(project, trackID: textTrackID, info: info)
+        let language = text.language
+        let segments = spokenSegments(text, project: project)
         let work = store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
-        let dubAudio = store.directory(for: project.id).appendingPathComponent("dub.\(settings.targetLanguage).m4a")
+        let dubAudio = store.directory(for: project.id).appendingPathComponent("dub.\(language).m4a")
         var lineVoices: [Int: String] = [:]
         if settings.dubbingEngine == .original && settings.dubbingPerLineVoice {
             // Each line is cloned from its own original audio: same voice, same emotion.
@@ -433,13 +436,13 @@ public struct EpisodeWorkflow: Sendable {
         let report = try await pipeline.run(segments, media: info, audioTrack: audio, output: dubAudio) { value, message in
             progress(WorkflowStep(fraction: value * 0.85, message: message))
         }
-        let localized = Locale(identifier: "pt_BR").localizedString(forIdentifier: settings.targetLanguage) ?? settings.targetLanguage
-        let languageName = localized.prefix(1).uppercased() + localized.dropFirst()
-        let tracks = [
-            NewTrack(file: dubAudio, kind: .audio, language: settings.targetLanguage, name: "\(languageName) · dublagem IA (\(settings.dubbingMode.trackSuffix))", isDefault: settings.makeDefault),
-            NewTrack(file: translationURL, kind: .subtitles, language: settings.targetLanguage, name: settings.trackName, isDefault: settings.makeDefault)
-        ]
-        var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "\(settings.targetLanguage.uppercased()) DUB"),
+        var tracks = [NewTrack(file: dubAudio, kind: .audio, language: language,
+                               name: "\(Self.trackName(for: language)) · dublagem IA (\(settings.dubbingMode.trackSuffix))", isDefault: settings.makeDefault)]
+        // The translation goes in with its dub; a subtitle of the video is already there.
+        if !text.isVideoTrack {
+            tracks.append(NewTrack(file: text.file, kind: .subtitles, language: language, name: settings.trackName, isDefault: settings.makeDefault))
+        }
+        var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "\(language.uppercased()) DUB"),
                            newTracks: tracks, clearOtherDefaults: settings.makeDefault, placeNewTracksFirst: settings.placeNewTrackFirst)
         plan.replaceSource = replaceOriginal
         plan.attachments = store.addedFontURLs(for: project)

@@ -213,11 +213,20 @@ public enum SubtitleDocument: Sendable, Hashable {
         return Dictionary(uniqueKeysWithValues: doc.cues.enumerated().compactMap { $1.speaker.isEmpty ? nil : ($0, $1.speaker) })
     }
 
-    /// The same document with the characters kept outside the file put back (SubRip only).
+    /// The same document with characters kept outside the file put in: every SubRip line, and
+    /// ASS lines whose own `Name` is empty (a name written in the file always wins).
     public func withSideSpeakers(_ speakers: [Int: String]) -> SubtitleDocument {
-        guard case .srt(var doc) = self, !speakers.isEmpty else { return self }
-        for (index, name) in speakers where doc.cues.indices.contains(index) { doc.cues[index].speaker = name }
-        return .srt(doc)
+        guard !speakers.isEmpty else { return self }
+        switch self {
+        case .srt(var doc):
+            for (index, name) in speakers where doc.cues.indices.contains(index) { doc.cues[index].speaker = name }
+            return .srt(doc)
+        case .ass(var doc):
+            for (index, name) in speakers where index < doc.eventCount && doc.event(at: index).actor.isEmpty {
+                doc.updateEvent(at: index) { $0.actor = name }
+            }
+            return .ass(doc)
+        }
     }
 
     public mutating func setStyle(_ style: String, at index: Int) {

@@ -285,10 +285,12 @@ private struct SubtitleSessionBar: View {
                 .labelsHidden().fixedSize()
                 .hint("Idioma da faixa", "Esta legenda não veio do vídeo: ao gravar, ela entra como faixa nova com este idioma e nome.")
             }
-            Button { workspace.swapEditedAndReference() } label: { Image(systemName: "arrow.left.arrow.right") }
-                .buttonStyle(.borderless)
-                .disabled(workspace.project.referenceTrackID == nil || workspace.isBusy)
-                .hint("Inverter (⇄)", "A legenda ao lado passa a ser a editada, e a editada vai para o lado.")
+            if workspace.project.referenceTrackID != nil {
+                Button { workspace.swapEditedAndReference() } label: { Image(systemName: "arrow.left.arrow.right") }
+                    .buttonStyle(.borderless)
+                    .disabled(workspace.isBusy)
+                    .hint("Inverter (⇄)", "A legenda ao lado passa a ser a editada, e a editada vai para o lado.")
+            }
             Text("Ao lado").foregroundStyle(.secondary)
             trackPicker(selection: Binding(get: { workspace.project.referenceTrackID ?? -1 },
                                            set: { workspace.requestTracks(main: mainID, reference: $0 < 0 ? nil : $0) }),

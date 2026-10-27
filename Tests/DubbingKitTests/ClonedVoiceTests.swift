@@ -11,24 +11,27 @@ private let modelsDirectory = FileManager.default.urls(for: .applicationSupportD
 private let synthesizer = ClonedVoiceSynthesizer(modelsDirectory: modelsDirectory)
 private let enabled = synthesizer.modelsInstalled || ProcessInfo.processInfo.environment["ALS_CHATTERBOX"] == "1"
 
-/// MLX looks for its GPU kernels next to the binary that contains it (here, the test bundle)
-/// as `mlx.metallib`; SwiftPM puts them in `mlx-swift_Cmlx.bundle` beside the test bundle.
-/// The app gets the bundle copied into Contents/Resources by Scripts/build-app.sh.
-private func installMetallibForTests() throws {
+/// MLX looks for its GPU kernels next to the binary that contains it (here the test bundle)
+/// as `mlx.metallib`; SwiftPM builds them into `mlx-swift_Cmlx.bundle` beside the test bundle.
+/// The copy is removed after the test: an extra file next to the binary breaks code signing on
+/// the next build (Scripts/install.sh also clears a leftover). The app gets the bundle in
+/// Contents/Resources from Scripts/build-app.sh.
+private func installMetallibForTests() throws -> URL? {
     var info = Dl_info()
-    guard dladdr(#dsohandle, &info) != 0, let name = info.dli_fname else { return }
+    guard dladdr(#dsohandle, &info) != 0, let name = info.dli_fname else { return nil }
     let binaryDir = URL(fileURLWithPath: String(cString: name)).deletingLastPathComponent()
     let target = binaryDir.appendingPathComponent("mlx.metallib")
-    guard !FileManager.default.fileExists(atPath: target.path) else { return }
     let products = binaryDir.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     let source = products.appendingPathComponent("mlx-swift_Cmlx.bundle/Contents/Resources/default.metallib")
-    try FileManager.default.copyItem(at: source, to: target)
+    if !FileManager.default.fileExists(atPath: target.path) { try FileManager.default.copyItem(at: source, to: target) }
+    return target
 }
 
 @Suite("Cloned Portuguese voice (Chatterbox, real model)", .enabled(if: enabled), .serialized)
 struct ClonedVoiceTests {
     @Test func speaksUnderstandablePortugueseWithTheReferenceVoice() async throws {
-        try installMetallibForTests()
+        let metallib = try installMetallibForTests()
+        defer { if let metallib { try? FileManager.default.removeItem(at: metallib) } }
         let tools = ToolLocator()
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ALSChatterbox-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

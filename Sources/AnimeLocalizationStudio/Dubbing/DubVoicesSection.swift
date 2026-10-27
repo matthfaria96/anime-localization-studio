@@ -56,10 +56,19 @@ struct DubVoicesSection: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             HStack {
                 SectionLabel("Personagens", systemImage: "person.2")
+                if !workspace.cast.members.isEmpty {
+                    Text(workspace.hasAutoSpeakers ? "identificados pelo áudio (guardados no app, fora da legenda)" : "do campo Personagem da legenda")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Spacer()
-                Button("Identificar falantes no áudio", systemImage: "person.wave.2") { workspace.identifySpeakers(undoManager: undoManager) }
-                    .disabled(workspace.isBusy || !workspace.editor.hasDocument || workspace.audioTracks.isEmpty)
-                    .hint("Identificar falantes no áudio", "Descobre pelo áudio quem fala em cada linha sem personagem e preenche “Falante 1”, “Falante 2”… Tudo no Mac. ⌘Z desfaz. A dublagem automática faz isso sozinha quando precisa.")
+                if workspace.hasAutoSpeakers || workspace.cast.members.contains(where: { $0.name.hasPrefix("Falante ") }) {
+                    Button("Limpar", systemImage: "xmark.circle") { workspace.clearIdentifiedSpeakers(undoManager: undoManager) }
+                        .disabled(workspace.isBusy)
+                        .hint("Limpar personagens identificados", "Esquece os “Falante 1, 2…” achados pelo áudio e tira esses nomes da legenda. A próxima dublagem identifica de novo, sem gravar nada na legenda.")
+                }
+                Button("Identificar falantes no áudio", systemImage: "person.wave.2") { workspace.identifyDubSpeakers() }
+                    .disabled(workspace.isBusy || workspace.dubText == nil || workspace.audioTracks.isEmpty)
+                    .hint("Identificar falantes no áudio", "Descobre pelo áudio quem fala em cada linha sem personagem (“Falante 1”, “Falante 2”…), para dar uma voz a cada um. Fica guardado no app: a legenda não muda. A dublagem faz isso sozinha quando precisa.")
             }
             if workspace.cast.members.isEmpty {
                 Text(workspace.editor.hasDocument
@@ -78,7 +87,7 @@ struct DubVoicesSection: View {
             Image(systemName: "person.crop.circle.fill").font(.title2).foregroundStyle(.tint.opacity(0.8))
             VStack(alignment: .leading, spacing: 2) {
                 CastNameField(name: name) { newName in
-                    workspace.editor.renameActor(name, to: newName, undoManager: undoManager)
+                    workspace.renameSpeaker(name, to: newName, undoManager: undoManager)
                     member.wrappedValue.name = newName
                 }
                 Text(Plural.count(lines.count, "fala", "falas")).font(.caption).foregroundStyle(.secondary)

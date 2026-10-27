@@ -42,13 +42,13 @@ struct DubSessionSheet: View {
             Text("Dublar “\(workspace.title)”").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 summary("waveform", "Áudio de base", workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "—")
-                summary("globe", "Dublar para", Languages.name(for: app.settings.targetLanguage))
+                summary("globe", "Dublar para", Languages.name(for: online ? app.settings.targetLanguage : workspace.dubLanguage))
                 if online {
                     summary("cloud", "Motor", "ElevenLabs: separa os personagens, traduz e dubla com a voz de cada um")
                     summary("person.wave.2", "Idioma falado", app.settings.dubbingSourceLanguage.map { code in
                         TranscriptionLanguage.all.first { $0.code == code }?.name ?? code } ?? "detectar automaticamente")
                 } else {
-                    summary("text.bubble", "Texto falado", "legenda traduzida, \(Plural.count(segmentCount, "fala", "falas"))")
+                    summary("text.bubble", "Texto falado", "\(workspace.dubText?.isVideoTrack == true ? "legenda do vídeo" : "tradução feita no app"), \(Plural.count(segmentCount, "fala", "falas"))")
                     summary("waveform.badge.mic", "Vozes", app.settings.dubbingPerLineVoice ? "voz original, com a emoção de cada fala" : "voz original, uma amostra por personagem")
                     summary("slider.horizontal.3", "Modo", app.settings.dubbingMode.label)
                     summary("person.2", "Personagens", speakers > 0 ? Plural.count(speakers, "personagem", "personagens") : "identificados pelo áudio")

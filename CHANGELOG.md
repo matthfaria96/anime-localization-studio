@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.0 — 27/10/2026
+
+### Corrigido
+- Dublar (voz do Mac) só aceitava a tradução feita no app e dizia "Ainda não há legenda traduzida" mesmo com o vídeo já tendo legenda em português. Agora há **Texto falado**: a tradução do app ou qualquer legenda do vídeo; a dublagem sai no idioma dessa legenda, e uma legenda que já está no vídeo não é adicionada de novo.
+- A dublagem identificava os falantes sozinha e **gravava "Falante 1, 2…" na legenda**. Agora quem fala, achado pelo áudio, fica guardado no app e a legenda não muda. Em Dublar › Personagens aparece de onde vieram os nomes e **Limpar** esquece os identificados e tira da legenda os "Falante N" gravados antes. Renomear um personagem vale também para os guardados no app.
+- O ⇄ da barra do Legendar só aparece quando há uma legenda "Ao lado" (antes ficava desativado sem explicação).
+
 ## 0.17.0 — 27/10/2026
 
 ### Mudou

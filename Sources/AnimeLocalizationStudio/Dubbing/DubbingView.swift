@@ -14,9 +14,8 @@ struct DubbingView: View {
     @AppStorage("dubVoicesExpanded") private var voicesExpanded = false
 
     private var segments: [DubSegment] { workspace.dubSegments }
-    private var isTranslated: Bool { workspace.editor.translation != nil }
     private var online: Bool { app.settings.dubbingEngine == .elevenLabs }
-    private var language: String { Languages.name(for: app.settings.targetLanguage) }
+    private var language: String { Languages.name(for: online ? app.settings.targetLanguage : workspace.dubLanguage) }
 
     var body: some View {
         ScrollView {
@@ -52,8 +51,10 @@ struct DubbingView: View {
         .paneBackground()
         .task {
             workspace.refreshDubStorage()
+            await workspace.loadDubText()
             rebuildCast()
         }
+        .onChange(of: workspace.dubText?.key) { rebuildCast() }
         .onChange(of: workspace.editor.revision) { rebuildCast() }
         .modifier(SpeakerModelConsent(workspace: workspace))
         .confirmationDialog("Recomeçar a dublagem do zero?", isPresented: $confirmRestart) {
@@ -89,7 +90,7 @@ struct DubbingView: View {
                        selected: online) { app.settings.dubbingEngine = .elevenLabs }
                 .hint("ElevenLabs", "Serviço online de dublagem automática: só o áudio do vídeo é enviado (nunca o vídeo). Não precisa de legenda. Usa a sua conta e os seus créditos da ElevenLabs.")
             OptionCard(title: "Voz original no Mac", systemImage: "desktopcomputer",
-                       detail: "Gratuita e offline. Fala o texto da legenda traduzida com um clone da voz de cada personagem.",
+                       detail: "Gratuita e offline. Lê uma legenda (do vídeo ou traduzida no app) com um clone da voz de cada personagem.",
                        selected: !online) { app.settings.dubbingEngine = .original }
                 .hint("Voz original no Mac", "Tudo no próprio Mac (Chatterbox Multilingual da Resemble AI, MIT), pela GPU do Apple silicon. Fala 23 idiomas, inclusive português e japonês. Precisa de uma legenda traduzida.")
         }
@@ -122,8 +123,9 @@ struct DubbingView: View {
     private var warning: String? {
         if workspace.audioTracks.isEmpty { return "O vídeo não tem áudio." }
         if online { return app.elevenLabsKey == nil ? "Cole a sua chave da ElevenLabs acima." : nil }
-        if !ClonedVoiceSynthesizer.supports(app.settings.targetLanguage) { return "A voz do Mac ainda não fala \(language). Use a ElevenLabs." }
-        return isTranslated ? nil : "Crie a legenda traduzida em Legendar."
+        if workspace.dubText == nil { return "Escolha o texto falado ou crie uma tradução em Legendar." }
+        if !ClonedVoiceSynthesizer.supports(workspace.dubLanguage) { return "A voz do Mac ainda não fala \(language). Use a ElevenLabs." }
+        return segments.isEmpty ? "A legenda escolhida não tem falas para dublar." : nil
     }
 
     @ViewBuilder
@@ -185,12 +187,25 @@ struct DubbingView: View {
     private var localRows: some View {
         GridRow {
             rowTitle("Texto falado", "text.bubble")
-            if isTranslated {
-                Text("Legenda em \(language) · \(Plural.count(segments.count, "fala", "falas"))")
-                    .hint("Texto falado", "O app fala o texto da legenda traduzida, no tempo de cada fala. Corrigir a tradução muda o que é dito.")
+            if workspace.hasTranslationDraft || !workspace.dubTextTracks.isEmpty {
+                HStack {
+                    Picker("Texto falado", selection: Binding(get: { workspace.dubTextChoice }, set: { if let value = $0 { workspace.chooseDubText(value) } })) {
+                        if workspace.hasTranslationDraft {
+                            Text("Tradução feita no app · \(Languages.name(for: app.settings.targetLanguage))").tag(Optional(WorkspaceModel.DubTextChoice.translation))
+                        }
+                        ForEach(workspace.dubTextTracks) { track in
+                            Text(Self.trackLabel(track))
+                                .tag(Optional(WorkspaceModel.DubTextChoice.track(track.id)))
+                        }
+                    }
+                    .labelsHidden().fixedSize()
+                    .disabled(workspace.isBusy)
+                    if !segments.isEmpty { Text(Plural.count(segments.count, "fala", "falas")).foregroundStyle(.secondary) }
+                }
+                .hint("Texto falado", "A legenda que a voz lê, no tempo de cada fala: uma legenda que o vídeo já tem (por exemplo a em português) ou a tradução feita no app. A dublagem sai no idioma dessa legenda.")
             } else {
                 HStack {
-                    Text("Ainda não há legenda traduzida.").foregroundStyle(.secondary)
+                    Text("O vídeo não tem legenda de texto.").foregroundStyle(.secondary)
                     Button("Criar em Legendar") { app.show(.subtitles) }.buttonStyle(.link)
                 }
             }
@@ -206,6 +221,13 @@ struct DubbingView: View {
             rowTitle("Resultado", "square.and.arrow.down")
             Text("Nova faixa de áudio em \(language)")
         }
+    }
+
+    /// “Legenda do vídeo: Dialogue@Ryuumaru · Inglês”, without repeating a name that is the language.
+    static func trackLabel(_ track: MediaTrack) -> String {
+        let language = Languages.name(for: EpisodeWorkflow.language(of: track))
+        guard let name = track.name, !name.isEmpty, name.caseInsensitiveCompare(language) != .orderedSame else { return "Legenda do vídeo em \(language)" }
+        return "Legenda do vídeo: \(name) · \(language)"
     }
 
     private func rowTitle(_ title: String, _ icon: String) -> some View {

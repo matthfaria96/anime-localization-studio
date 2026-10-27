@@ -56,8 +56,110 @@ extension WorkspaceModel {
 
     /// The lines that will be spoken (from the translation, or the original if there is none).
     var dubSegments: [DubSegment] {
-        guard let document = editor.translation ?? editor.source else { return [] }
-        return DubbingPlan.segments(from: document)
+        guard let dubText else { return [] }
+        return workflow().spokenSegments(dubText, project: project)
+    }
+
+    // MARK: What the dub speaks
+
+    /// A subtitle the dub can speak: the app's translation, or a text track of the video.
+    enum DubTextChoice: Hashable { case translation, track(Int) }
+
+    var hasTranslationDraft: Bool {
+        guard let url = store.translationURL(for: project, language: app.settings.targetLanguage) else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    var dubTextTracks: [MediaTrack] { subtitleTracks.filter { $0.textSubtitleExtension != nil } }
+
+    /// The chosen text, or the best one: the translation when there is one, else a subtitle of the
+    /// video already in the output language.
+    var dubTextChoice: DubTextChoice? {
+        if let id = project.dubTextTrackID, dubTextTracks.contains(where: { $0.id == id }) { return .track(id) }
+        if hasTranslationDraft { return .translation }
+        let target = ElevenLabsDubbing.languageCode(app.settings.targetLanguage)
+        if let match = dubTextTracks.first(where: { ElevenLabsDubbing.languageCode(EpisodeWorkflow.language(of: $0)) == target }) { return .track(match.id) }
+        return nil
+    }
+
+    func chooseDubText(_ choice: DubTextChoice) {
+        switch choice {
+        case .translation: project.dubTextTrackID = nil
+        case .track(let id): project.dubTextTrackID = id
+        }
+        try? store.save(project)
+        Task { await loadDubText() }
+    }
+
+    var dubTextTrackID: Int? { if case .track(let id) = dubTextChoice { id } else { nil } }
+
+    func loadDubText() async {
+        guard let choice = dubTextChoice else { dubText = nil; return }
+        let trackID: Int? = if case .track(let id) = choice { id } else { nil }
+        dubText = try? await workflow().dubText(project, trackID: trackID, info: info)
+    }
+
+    /// The language the dub speaks: the language of its text.
+    var dubLanguage: String { dubText?.language ?? app.settings.targetLanguage }
+
+    /// Speakers found from the audio for the current text (kept in the app, not in the subtitle).
+    var hasAutoSpeakers: Bool { !(project.autoSpeakers?[dubText?.key ?? ""] ?? [:]).isEmpty }
+
+    /// Renames a character in the subtitle and in the speakers kept in the app.
+    func renameSpeaker(_ old: String, to new: String, undoManager: UndoManager?) {
+        let name = new.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, name != old else { return }
+        editor.renameActor(old, to: name, undoManager: undoManager)
+        if var all = project.autoSpeakers {
+            for key in all.keys { all[key] = all[key]?.mapValues { $0 == old ? name : $0 } }
+            project.autoSpeakers = all
+            try? store.save(project)
+        }
+    }
+
+    /// Finds who speaks each line of the dub text from the audio, kept in the project only.
+    func identifyDubSpeakers(allowModelDownload: Bool = false) {
+        guard !isBusy, let text = dubText, claim("Identificação de falantes") else { return }
+        notice = nil
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando a identificação de falantes…")
+        let workflow = workflow()
+        let project = project
+        task = Task {
+            do {
+                let speakers = try await workflow.identifySpeakers(in: text.document, of: project, allowModelDownload: allowModelDownload) { step in
+                    Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
+                }
+                self.project.autoSpeakers = (self.project.autoSpeakers ?? [:]).merging([text.key: speakers]) { _, new in new }
+                try? store.save(self.project)
+                var cast = self.cast
+                cast.addMissing(from: DubbingPlan.speakers(in: dubSegments).filter { $0 != "Desconhecido" })
+                updateCast(cast)
+                notice = (.success, "\(Plural.count(Set(speakers.values).count, "falante encontrado", "falantes encontrados")) em \(Plural.count(speakers.count, "fala", "falas")). Guardado no app; a legenda não mudou.")
+            } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
+                pendingDiarizationDownload = { self.identifyDubSpeakers(allowModelDownload: true) }
+            } catch is CancellationError {
+                notice = (.info, "Identificação de falantes cancelada.")
+            } catch {
+                notice = (.error, LogRedactor.redact(error.localizedDescription))
+            }
+            release()
+            operation = nil
+        }
+    }
+
+    /// Forgets the speakers found from the audio, and takes out of the subtitle the “Falante N”
+    /// names an earlier version wrote into it.
+    func clearIdentifiedSpeakers(undoManager: UndoManager?) {
+        project.autoSpeakers = nil
+        let written = editor.rows.filter { $0.actor.range(of: #"^Falante \d+$"#, options: .regularExpression) != nil }
+        if !written.isEmpty {
+            editor.setActors(Dictionary(uniqueKeysWithValues: written.map { ($0.id, "") }), undoManager: undoManager)
+            editor.flush()
+        }
+        cast.members.removeAll { $0.name.range(of: #"^Falante \d+$"#, options: .regularExpression) != nil }
+        try? store.save(project)
+        notice = (.success, written.isEmpty ? "Personagens identificados esquecidos." : "Personagens identificados esquecidos e “Falante N” tirado de \(Plural.count(written.count, "fala", "falas")) da legenda.")
+        Task { await loadDubText() }
     }
 
     func refreshDubStorage() { dubStorageBytes = StorageInventory.size(of: dubDirectory) }
@@ -81,7 +183,7 @@ extension WorkspaceModel {
         operation = RunningOperation(kind: .extracting, fraction: 0, message: "Separando as vozes originais…")
         defer { release(); operation = nil }
         do {
-            let samples = try await workflow().voiceSamples(project, audioTrackID: dubAudioTrack?.id) { step in
+            let samples = try await workflow().voiceSamples(project, audioTrackID: dubAudioTrack?.id, textTrackID: dubTextTrackID) { step in
                 Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
             }
             voiceSamples = Dictionary(samples.map { ($0.speaker, $0.url) }, uniquingKeysWith: { a, _ in a })
@@ -149,7 +251,7 @@ extension WorkspaceModel {
 
     /// Online dubs listen to the audio; the Mac's voice speaks the translated subtitle.
     var canStartDub: Bool {
-        dubsOnline ? !audioTracks.isEmpty && app.elevenLabsKey != nil : editor.translation != nil && !dubSegments.isEmpty
+        dubsOnline ? !audioTracks.isEmpty && app.elevenLabsKey != nil : !dubSegments.isEmpty
     }
 
 
@@ -209,7 +311,9 @@ extension WorkspaceModel {
     /// Identifies who speaks (when the subtitle does not say), gives each character a voice (a
     /// clone of the original, or a similar macOS voice), dubs every line and writes the MKV.
     func autoDub(cast: VoiceCast, allowDiarizationDownload: Bool = false, undoManager: UndoManager?) {
-        guard !isBusy, editor.translation != nil, claim("Dublagem automática") else { return }
+        guard !isBusy, let text = dubText, claim("Dublagem automática") else { return }
+        let textTrackID = dubTextTrackID
+        let language = text.language
         let replaceOriginal = dubSession?.replaceOriginal ?? false
         let regenerate = dubSession?.regenerate == true
         if regenerate {
@@ -228,27 +332,31 @@ extension WorkspaceModel {
         task = Task {
             do {
                 var project = project
-                if let document = editor.translation, DubbingPlan.segments(from: document).allSatisfy({ $0.speaker == "Desconhecido" }) {
-                    let speakers = try await workflow.identifySpeakers(in: document, of: project, allowModelDownload: allowDiarizationDownload) { step in
+                // Who speaks, found from the audio when the subtitle does not say: kept in the
+                // project, never written into the subtitle.
+                if workflow.spokenSegments(text, project: project).allSatisfy({ $0.speaker == "Desconhecido" }) {
+                    let speakers = try await workflow.identifySpeakers(in: text.document, of: project, allowModelDownload: allowDiarizationDownload) { step in
                         Task { @MainActor in self.operation?.fraction = step.fraction * 0.2; self.operation?.message = step.message }
                     }
-                    editor.setActors(speakers, undoManager: undoManager)
-                    editor.flush()
+                    project.autoSpeakers = (project.autoSpeakers ?? [:]).merging([text.key: speakers]) { _, new in new }
+                    self.project.autoSpeakers = project.autoSpeakers
+                    try store.save(self.project)
                 }
-                let filled = try await workflow.automaticCast(project, cast: cast, audioTrackID: audioTrackID) { step in
+                let filled = try await workflow.automaticCast(project, cast: cast, audioTrackID: audioTrackID, textTrackID: textTrackID) { step in
                     Task { @MainActor in self.operation?.fraction = 0.2 + step.fraction * 0.2; self.operation?.message = step.message }
                 }
                 updateCast(filled)
                 let downloading = !voiceModelsInstalled
                 operation?.message = downloading ? "Baixando o modelo de voz (\(ClonedVoiceSynthesizer.downloadSize))…" : "Carregando o modelo de voz…"
-                try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: app.settings.targetLanguage).prepare { value in
+                let synthesizer = ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: language)
+                try await synthesizer.prepare { value in
                     Task { @MainActor in
                         self.operation?.message = downloading ? "Baixando o modelo de voz… \(Int(value * 100))%" : "Carregando o modelo de voz…"
                     }
                 }
-                let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
                 let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled,
-                                                                                    replaceOriginal: replaceOriginal, audioTrackID: audioTrackID) { step in
+                                                                                    replaceOriginal: replaceOriginal, audioTrackID: audioTrackID,
+                                                                                    textTrackID: textTrackID) { step in
                     Task { @MainActor in self.operation?.fraction = 0.4 + step.fraction * 0.6; self.operation?.message = step.message }
                 }
                 project = updated
@@ -257,7 +365,7 @@ extension WorkspaceModel {
                 lastMux = (output, verification)
                 dubSession?.phase = .done(url: output, report: report, verification: verification, replaced: replaceOriginal)
                 recordDub(DubRecord(outputPath: output.path, replacedOriginal: replaceOriginal, engine: engine, mode: mode,
-                                    baseAudio: dubAudioTrack.map(Self.describe) ?? "—", language: app.settings.targetLanguage,
+                                    baseAudio: dubAudioTrack.map(Self.describe) ?? "—", language: language,
                                     lines: report.synthesized + report.reusedClips, failedLines: report.failed.count, verified: verification.passed))
                 AppLog.shared.info("Dublagem concluída: \(output.path)")
                 release()

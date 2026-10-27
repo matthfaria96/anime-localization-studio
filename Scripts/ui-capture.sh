@@ -20,7 +20,7 @@ PID=$!
 list_windows() {
   swift -e '
 import CoreGraphics
-let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+let list = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
 // Only the windows of the copy this script launched, never the app the user has open.
 for w in list where (w[kCGWindowOwnerPID as String] as? Int) == Int(CommandLine.arguments[1]) && (w[kCGWindowLayer as String] as? Int) == 0 {
     if let b = w[kCGWindowBounds as String] as? [String: Any], let h = b["Height"] as? Double, h > 200 { print(w[kCGWindowNumber as String]!) }
