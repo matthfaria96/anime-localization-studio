@@ -47,7 +47,7 @@ struct DubSessionSheet: View {
                 summary("globe", "Idioma do resultado", Locale.current.localizedString(forIdentifier: app.settings.targetLanguage) ?? app.settings.targetLanguage)
                 summary("waveform.badge.mic", "Vozes", app.settings.dubbingEngine.label)
                 summary("slider.horizontal.3", "Modo", app.settings.dubbingMode.label)
-                summary("person.2", "Personagens", speakers > 0 ? "\(speakers) na legenda" : "serão identificados pelo áudio")
+                summary("person.2", "Personagens", speakers > 0 ? Plural.count(speakers, "personagem", "personagens") : "identificados pelo áudio")
             }
             if app.settings.dubbingEngine == .original && !workspace.voiceModelsInstalled {
                 InlineMessage(kind: .info, text: "Ao começar, o app baixa os modelos de voz uma única vez (\(ClonedVoiceSynthesizer.downloadSize); \(ClonedVoiceSynthesizer.modelCredits)). Tudo roda no Mac; o áudio não sai do computador.")
@@ -75,12 +75,12 @@ struct DubSessionSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 Text("Onde gravar").font(.headline)
                 destination(false, "Criar um novo arquivo", "“\(outputName)”, na mesma pasta do original. O original não muda.")
-                destination(true, "Incorporar no próprio arquivo", "O áudio dublado e a legenda entram no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.")
+                destination(true, "Gravar neste arquivo", "O áudio dublado e a legenda entram no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.")
             }
             HStack {
                 Spacer()
                 Button("Cancelar") { workspace.dubSession = nil }.keyboardShortcut(.cancelAction)
-                Button("Começar a dublagem") { workspace.autoDub(cast: cast, undoManager: undoManager) { cast = $0 } }
+                Button("Começar a dublagem") { workspace.autoDub(cast: cast, undoManager: undoManager) }
                     .buttonStyle(.glassProminent)
                     .keyboardShortcut(.defaultAction)
                     .disabled(usesClones && studioConnected != true)

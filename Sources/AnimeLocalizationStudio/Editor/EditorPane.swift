@@ -240,6 +240,14 @@ struct LinesTable: View {
                     }
                 }
                 .width(min: 60, ideal: 90, max: 180)
+                if editor.editsOriginal && editor.referenceTitle != nil {
+                    TableColumn(LocalizedStringKey(editor.referenceTitle.map { "Ao lado · \($0)" } ?? "Ao lado")) { row in
+                        Text(editor.reference[row.id]?.replacingOccurrences(of: "\n", with: " ⏎ ") ?? "—")
+                            .lineLimit(2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .width(min: 80, ideal: 220)
+                }
                 TableColumn(editor.editsOriginal ? "Texto" : "Original") { row in
                     Text(row.original.replacingOccurrences(of: "\n", with: " ⏎ "))
                         .lineLimit(2)

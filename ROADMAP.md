@@ -84,6 +84,10 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ (0.11.0) Legendar: "Voltar" à escolha da tarefa; sair com alterações pergunta salvar ou descartar
 - ✅ (0.11.0) Dublar: histórico de dublagens, apagar com confirmação (só do histórico ou com o arquivo)
 - 🚫 (0.11.0) Biblioteca, Fila e Recentes saíram da interface (um vídeo por vez)
+- ✅ (0.12.0) Formulário único de Legendar: corrigir com referência ao lado, ou legenda nova com idioma e tradução automática
+- ✅ (0.12.0) Rascunho + "Gravar no vídeo…" como único salvamento; sair pergunta gravar, rascunho ou descartar
+- ✅ (0.12.0) Abas com sublinhado rosa; Dublar com resumo, histórico e "Recomeçar do zero"
+- ⬜ Referência ao lado a partir de um arquivo do disco (hoje só faixas do vídeo)
 - ✅ Visão geral com dados do arquivo, faixas, faixas padrão e extração de faixas
 - ✅ Legendar pergunta "editar existente" ou "criar tradução"; edição salva no lugar da faixa original
 - ✅ Dublar mostra áudio de base, origem do texto e idioma do resultado; "gerar tudo do zero"

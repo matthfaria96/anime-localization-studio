@@ -154,3 +154,37 @@ struct SubtitleDocumentTests {
         #expect(!StructureCheck.compare(source: source, translated: translated).isValid)
     }
 }
+
+@Suite("Reference beside the edited subtitle")
+struct ReferenceTests {
+    @Test func linesAreMatchedByTimeAndUnmatchedOnesAreLeftOut() throws {
+        let edited = try SubtitleDocument.parse(Data("""
+        1
+        00:00:01,000 --> 00:00:03,000
+        Eu não vou deixar
+
+        2
+        00:00:04,000 --> 00:00:05,000
+        Espera!
+
+        3
+        00:00:10,000 --> 00:00:11,000
+        (silêncio)
+
+        """.utf8), format: .srt)
+        let english = try SubtitleDocument.parse(Data("""
+        1
+        00:00:01,100 --> 00:00:02,000
+        I won't let you
+
+        2
+        00:00:04,100 --> 00:00:05,200
+        <i>Wait!</i>
+
+        """.utf8), format: .srt)
+        let lines = TranslationAlignment.reference(english, for: edited)
+        #expect(lines[0] == "I won't let you")
+        #expect(lines[1] == "Wait!")
+        #expect(lines[2] == nil)
+    }
+}

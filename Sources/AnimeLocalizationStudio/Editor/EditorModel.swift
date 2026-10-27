@@ -65,6 +65,10 @@ final class EditorModel {
         }
     }
 
+    /// Another subtitle shown beside the edited one, by line (read only).
+    var reference: [Int: String] = [:]
+    var referenceTitle: String?
+
     var availableFilters: [LineFilter] { editsOriginal ? [.all, .longLines] : LineFilter.allCases }
     var followPlayback = true
     private(set) var isDirty = false

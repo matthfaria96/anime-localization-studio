@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.12.0 — 27/10/2026
+
+### Mudou
+- Legendar começa por um formulário único, "O que você vai editar?":
+  - **Uma legenda do vídeo**: corrigir uma faixa, com **"Mostrar ao lado"** opcional para ver outra legenda (por exemplo a inglesa ao corrigir a portuguesa) numa coluna só de leitura, casada pelo tempo.
+  - **Uma legenda nova**: escolher o **idioma**, a legenda **base** e, se quiser, **traduzir automaticamente** com o motor escolhido ao começar.
+- Um só jeito de salvar no vídeo: **"Gravar no vídeo…"** (⌘S), na barra do Legendar. Tudo o que você muda fica como **rascunho** no app até ser gravado; o selo "Rascunho" permite descartá-lo.
+- Sair do Legendar depois de mudar algo pergunta: **Gravar no vídeo…**, **Manter como rascunho**, **Descartar alterações** ou **Continuar editando**.
+- O painel da direita ficou enxuto: ao corrigir, só "Mostrar ao lado"; na legenda nova, tradução (motor, glossário, traduzir, trazer uma tradução pronta) e a faixa no vídeo (nome, ligada ao abrir, primeira da lista).
+- Abas do topo refeitas: ícone e nome, a atual em rosa com sublinhado que desliza.
+- Dublar reorganizado: resumo (voz e fundo, texto falado, resultado, vozes) com o botão **Dublar…**, depois **Dublagens feitas**, depois "Ajustar vozes e personagens" recolhido, e **Recomeçar do zero…** no fim.
+- Vocabulário unificado ("Gravar no vídeo", "Este arquivo", "sem idioma" no lugar de "UND") e plurais corretos ("1 fala", "1 fonte").
+
+### Corrigido
+- Apagar os arquivos guardados ou trocar o áudio de base deixava o elenco apontando para amostras de voz apagadas; agora as vozes são zeradas junto.
+- Apagar uma dublagem do histórico não atualizava a página: agora oferece "apagar e recomeçar do zero" (vozes, arquivos e "Última dublagem" somem na hora) ou "só tirar do histórico".
+- O nome da faixa acompanha o idioma de saída (antes ficava "Português (Brasil)" mesmo em outro idioma).
+- O app não carrega mais sozinho uma faixa traduzida do vídeo como tradução; use "Trazer uma tradução pronta".
+
 ## 0.11.0 — 27/10/2026
 
 ### Mudou

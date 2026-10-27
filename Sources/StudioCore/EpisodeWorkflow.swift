@@ -165,6 +165,16 @@ public struct EpisodeWorkflow: Sendable {
         return (project, result)
     }
 
+    /// Another subtitle track shown beside the one being edited, matched by time. Nothing is saved.
+    public func referenceLines(_ project: StudioProject, track: MediaTrack) async throws -> [Int: String] {
+        let (project, info, sourceURL) = try await prepareSource(project)
+        guard let ext = track.textSubtitleExtension else { throw WorkflowError.noTextSubtitle }
+        let temp = store.directory(for: project.id).appendingPathComponent(".reference-\(UUID().uuidString.prefix(6)).\(ext)")
+        defer { try? FileManager.default.removeItem(at: temp) }
+        _ = try await TrackExtractor(tools: tools).extractSubtitle(track, from: info, to: temp)
+        return TranslationAlignment.reference(try SubtitleDocument.load(temp), for: try SubtitleDocument.load(sourceURL))
+    }
+
     /// A text track of the file in the target language that is not the original, to link
     /// automatically when the project has no translation yet (e.g. a file muxed earlier).
     public func existingTranslationTrack(in info: MediaInfo, project: StudioProject) -> MediaTrack? {

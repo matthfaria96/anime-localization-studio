@@ -87,6 +87,10 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     public var subtitleTask: SubtitleTask?
     /// Audio track the dub is based on (voices and background); nil = the default one.
     public var dubAudioTrackID: Int?
+    /// Track shown beside the subtitle being edited (read only).
+    public var referenceTrackID: Int?
+    /// The subtitle was changed in the app and not yet written into the video.
+    public var draftPending: Bool?
     /// Finished dubs, newest first (optional so projects saved before it still load).
     public var dubHistory: [DubRecord]?
     public var createdAt: Date

@@ -5,22 +5,29 @@ import SubtitleKit
 /// Where to go once the question about unsaved subtitle edits is answered.
 enum LeaveTarget: Equatable {
     case screen(EpisodeScreen)
-    /// Back to the “edit or translate?” choice.
+    /// Back to the start form of Legendar.
     case chooser
     case close
     case open(URL)
 }
 
-/// Legendar keeps edits on disk as you type, but treats each visit as a session: leaving it
-/// with changes asks whether to keep them or go back to how the subtitles were when loaded.
+/// Legendar keeps every edit as a draft in the app (written as you type). The video changes
+/// only with “Gravar no vídeo…”. Leaving after changing something in this visit asks: write
+/// it into the video, keep it as a draft, or discard what was changed in this visit.
 extension WorkspaceModel {
+    enum LeaveChoice { case writeToVideo, keepDraft, discard }
+
     func beginSubtitleSession() {
         sessionSource = editor.source
         sessionTranslation = editor.translation
         sessionRevision = editor.revision
+        sessionDraftPending = project.draftPending ?? false
     }
 
-    /// Cheap check for the screen (edits not yet committed from the text fields count too).
+    /// The subtitle differs from the video (kept in the app, not written into it).
+    var hasDraft: Bool { project.draftPending == true || showsUnsavedChanges }
+
+    /// Changed in this visit (cheap check for the screen).
     var showsUnsavedChanges: Bool {
         project.subtitleTask != nil && (editor.revision != sessionRevision || editor.hasPendingDraft)
     }
@@ -32,16 +39,9 @@ extension WorkspaceModel {
         return editor.source != sessionSource || editor.translation != sessionTranslation
     }
 
-    /// “Voltar”: back to the choice of task, reloading everything.
+    /// “Voltar”: back to the start form, reloading everything.
     func requestBackToChooser() {
         if hasUnsavedSubtitleChanges(on: .subtitles) { pendingLeave = .chooser } else { perform(.chooser) }
-    }
-
-    /// Keeps the changes as the new starting point.
-    func saveSubtitleSession() {
-        editor.flush()
-        beginSubtitleSession()
-        notice = (.success, "Alterações salvas no projeto. Para gravá-las no vídeo, use “\(isEditingOriginal ? "Salvar no MKV…" : "Incorporar ao MKV…")”.")
     }
 
     /// Restores the subtitles as they were when Legendar loaded them.
@@ -56,6 +56,8 @@ extension WorkspaceModel {
                     try FileManager.default.removeItem(at: url)
                 }
             }
+            project.draftPending = sessionDraftPending
+            try store.save(project)
             editor.load(source: sessionSource, translation: sessionTranslation)
             beginSubtitleSession()
         } catch {
@@ -63,12 +65,22 @@ extension WorkspaceModel {
         }
     }
 
-    /// Answers the unsaved-changes question, then goes where the person asked.
-    func resolveLeave(save: Bool) {
+    /// Answers the question asked when leaving with changes.
+    func resolveLeave(_ choice: LeaveChoice) {
         guard let target = pendingLeave else { return }
         pendingLeave = nil
-        if save { saveSubtitleSession() } else { discardSubtitleChanges() }
-        perform(target)
+        switch choice {
+        case .writeToVideo:
+            // Stay: the person picks where to write; leaving afterwards no longer asks.
+            requestWriteToVideo()
+        case .keepDraft:
+            editor.flush()
+            beginSubtitleSession()
+            perform(target)
+        case .discard:
+            discardSubtitleChanges()
+            perform(target)
+        }
     }
 
     func perform(_ target: LeaveTarget) {

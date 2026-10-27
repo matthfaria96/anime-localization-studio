@@ -20,6 +20,82 @@ extension WorkspaceModel {
 
     var isEditingOriginal: Bool { project.subtitleTask == .edit }
 
+    // MARK: Starting Legendar
+
+    /// Applies the start form: what is edited, beside what, in which language, then loads it
+    /// all again (and translates when asked).
+    func startSubtitleWork(task: SubtitleTask, trackID: Int?, referenceID: Int?, language: String, autoTranslate: Bool) {
+        editor.flush()
+        if task == .translate { app.settings.targetLanguage = language }
+        if let trackID, trackID != project.sourceTrackID || project.externalSubtitlePath != nil {
+            // A translation is matched line by line to its base: it does not carry over to another one.
+            if let old = store.translationURL(for: project, language: app.settings.targetLanguage), FileManager.default.fileExists(atPath: old.path) {
+                try? store.backupTranslation(of: project, language: app.settings.targetLanguage)
+                try? FileManager.default.removeItem(at: old)
+            }
+            project.sourceTrackID = trackID
+            project.externalSubtitlePath = nil
+            project.draftPending = false
+        }
+        project.referenceTrackID = task == .edit ? referenceID : nil
+        chooseSubtitleTask(task)
+        Task {
+            await reload()
+            if task == .translate && autoTranslate { translateEpisode(undoManager: nil) }
+        }
+    }
+
+    // MARK: Reference beside the edited subtitle
+
+    func loadReference() async {
+        guard project.subtitleTask == .edit, let id = project.referenceTrackID, id != project.sourceTrackID,
+              let track = subtitleTracks.first(where: { $0.id == id }) else {
+            if project.referenceTrackID != nil && project.referenceTrackID == project.sourceTrackID { project.referenceTrackID = nil }
+            referenceLines = [:]
+            editor.reference = [:]
+            editor.referenceTitle = nil
+            return
+        }
+        do {
+            referenceLines = try await workflow().referenceLines(project, track: track)
+            editor.reference = referenceLines
+            editor.referenceTitle = "\(Languages.display(track.displayLanguage)) · \(track.name ?? track.codec)"
+        } catch {
+            referenceLines = [:]
+            notice = (.warning, "A referência não pôde ser carregada: \(LogRedactor.redact(error.localizedDescription))")
+        }
+    }
+
+    func setReference(_ id: Int?) {
+        project.referenceTrackID = id
+        try? store.save(project)
+        Task { await loadReference() }
+    }
+
+    /// What “Gravar no vídeo…” does for the current task.
+    func requestWriteToVideo() {
+        if isEditingOriginal { requestSaveEdited() } else { requestEmbed() }
+    }
+
+    /// Throws the draft away and goes back to what the video has.
+    func discardDraft() {
+        editor.flush()
+        do {
+            if isEditingOriginal, let url = store.sourceSubtitleURL(for: project) {
+                try? FileManager.default.removeItem(at: url)
+            } else if let url = store.translationURL(for: project, language: app.settings.targetLanguage), FileManager.default.fileExists(atPath: url.path) {
+                try store.backupTranslation(of: project, language: app.settings.targetLanguage)
+                try FileManager.default.removeItem(at: url)
+            }
+            project.draftPending = false
+            try store.save(project)
+            notice = (.info, "Rascunho descartado. A legenda voltou a ser a do vídeo.")
+            Task { await reload() }
+        } catch {
+            app.report(error, context: "O rascunho não foi descartado")
+        }
+    }
+
     // MARK: Extracting a track
 
     /// Saves one track as its own file (subtitles keep their ASS header; audio and video are
@@ -77,6 +153,9 @@ extension WorkspaceModel {
                     Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
                 }
                 self.project = updated
+                self.project.draftPending = false
+                try? store.save(self.project)
+                beginSubtitleSession()
                 lastMux = (output, report)
                 release()
                 operation = nil

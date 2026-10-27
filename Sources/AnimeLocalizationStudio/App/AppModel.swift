@@ -16,6 +16,20 @@ enum EpisodeScreen: String, CaseIterable, Identifiable {
         case .dubbing: "Dublar"
         }
     }
+    var systemImage: String {
+        switch self {
+        case .overview: "film"
+        case .subtitles: "captions.bubble"
+        case .dubbing: "waveform.and.person.filled"
+        }
+    }
+    var hint: String {
+        switch self {
+        case .overview: "Dados e faixas do vídeo: tamanho, codecs, áudio e legenda padrão, extração."
+        case .subtitles: "Corrigir uma legenda do vídeo ou criar uma nova a partir de outra."
+        case .dubbing: "Criar uma faixa de áudio dublada a partir da legenda traduzida."
+        }
+    }
 }
 
 /// App-wide state: settings, series and the one video currently open.
@@ -32,6 +46,10 @@ final class AppModel {
     var settings: AppSettings {
         didSet {
             guard settings != oldValue else { return }
+            // The track is named after its language unless the person typed another name.
+            if settings.targetLanguage != oldValue.targetLanguage, settings.trackName == Languages.name(for: oldValue.targetLanguage) {
+                settings.trackName = Languages.name(for: settings.targetLanguage)
+            }
             do { try SettingsStore(paths: paths).save(settings) } catch { report(error, context: "Ajustes não salvos") }
         }
     }

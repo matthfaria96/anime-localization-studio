@@ -123,11 +123,18 @@ struct OverviewView: View {
             if !info.attachments.isEmpty {
                 Panel {
                     SectionLabel("Anexos", systemImage: "paperclip")
-                    Text("\(info.attachments.filter(\.isFont).count) fontes e \(info.attachments.filter { !$0.isFont }.count) outros anexos. São mantidos em tudo o que o app grava.")
+                    Text(attachmentsText(info))
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }
         }
+    }
+
+    private func attachmentsText(_ info: MediaInfo) -> String {
+        let fonts = info.attachments.filter(\.isFont).count
+        let others = info.attachments.count - fonts
+        let parts = [fonts > 0 ? Plural.count(fonts, "fonte", "fontes") : nil, others > 0 ? Plural.count(others, "outro anexo", "outros anexos") : nil]
+        return parts.compactMap { $0 }.joined(separator: " e ") + ". Mantidos em tudo o que o app grava."
     }
 
     private func setDefaultSubtitle(_ id: Int) {
@@ -197,7 +204,7 @@ private struct TrackLine<Trailing: View>: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: Theme.Spacing.xs) {
                     Text(track.name ?? track.kind.label).lineLimit(1)
-                    Tag(text: track.displayLanguage.uppercased())
+                    Tag(text: Languages.display(track.displayLanguage))
                 }
                 Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }

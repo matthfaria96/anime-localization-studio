@@ -40,15 +40,15 @@ struct AnimeLocalizationStudioApp: App {
                     .disabled(app.workspace == nil)
             }
             CommandGroup(after: .saveItem) {
-                Button("Salvar alterações") { app.workspace?.editor.flush() }.keyboardShortcut("s")
-                Button("Exportar legenda traduzida…") { app.workspace?.exportTranslation() }
-                    .keyboardShortcut("e", modifiers: [.command, .shift])
-                    .disabled(app.workspace?.editor.translation == nil)
+                Button("Salvar legenda como arquivo…") {
+                    if app.workspace?.isEditingOriginal == true { app.workspace?.exportSource() } else { app.workspace?.exportTranslation() }
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+                .disabled(app.workspace?.project.subtitleTask == nil || app.screen != .subtitles)
             }
             CommandMenu("Episódio") {
-                Button("Incorporar ao MKV…") { app.workspace?.requestEmbed() }
-                    .keyboardShortcut("m", modifiers: [.command, .shift])
-                    .disabled(app.workspace?.editor.translation == nil)
+                Button("Gravar legenda no vídeo…") { app.workspace?.requestWriteToVideo() }
+                    .disabled(app.workspace?.project.subtitleTask == nil || app.screen != .subtitles)
                 Button("Cancelar operação") { app.workspace?.cancelOperation() }
                     .keyboardShortcut(".", modifiers: .command)
                     .disabled(app.workspace?.isBusy != true)

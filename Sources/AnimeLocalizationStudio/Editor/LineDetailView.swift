@@ -20,6 +20,18 @@ struct LineDetailView: View {
                         header(cue)
                         timing(cue, index: index)
                         if editor.editsOriginal {
+                            if let title = editor.referenceTitle {
+                                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                                    Text("Ao lado · \(title)").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                    Text(editor.reference[index] ?? "Sem fala correspondente neste tempo.")
+                                        .foregroundStyle(editor.reference[index] == nil ? .tertiary : .secondary)
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(Theme.Spacing.s)
+                                        .background(.background.secondary, in: .rect(cornerRadius: Theme.Radius.small))
+                                }
+                                .hint("Referência", "A fala da outra legenda no mesmo tempo, só para consulta. Selecione e copie se quiser.")
+                            }
                             textEditor("Texto", text: Bindable(editor).originalDraft, side: .original, index: index, prominent: true)
                         } else {
                             textEditor("Tradução", text: Bindable(editor).translationDraft, side: .translation, index: index, prominent: true)

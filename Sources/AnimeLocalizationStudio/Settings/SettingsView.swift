@@ -18,10 +18,7 @@ struct SettingsView: View {
     }
 }
 
-private let languages: [(String, String)] = [
-    ("pt-BR", "Português (Brasil)"), ("pt-PT", "Português (Portugal)"), ("es", "Espanhol"), ("en", "Inglês"),
-    ("fr", "Francês"), ("de", "Alemão"), ("it", "Italiano"), ("ja", "Japonês"), ("ko", "Coreano"), ("zh", "Chinês")
-]
+private let languages = Languages.all.map { ($0.code, $0.name) }
 
 private struct GeneralSettings: View {
     @Environment(AppModel.self) private var app

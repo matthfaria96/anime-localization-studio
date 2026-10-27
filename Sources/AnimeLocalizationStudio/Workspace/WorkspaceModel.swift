@@ -94,18 +94,13 @@ final class WorkspaceModel {
             if project.sourceFormat == nil { project.sourceFormat = SubtitleFormat(fileExtension: sourceURL.pathExtension) }
             let source = try SubtitleDocument.load(sourceURL)
             editorLoadedSource = source
+            cast = loadCast()
             writtenSource = nil
             let translationURL = store.translationURL(for: project, language: app.settings.targetLanguage)
             let translation = translationURL.flatMap { FileManager.default.fileExists(atPath: $0.path) ? try? SubtitleDocument.load($0) : nil }
             editor.load(source: source, translation: translation.flatMap { $0.count == source.count ? $0 : nil })
             try? store.save(project)
-            // A file muxed before already carries the translation as a track: use it.
-            if editor.translation == nil, project.subtitleTask != .edit, let info, let existing = workflow().existingTranslationTrack(in: info, project: project),
-               let (linked, result) = try? await workflow().linkTranslation(project, track: existing) {
-                project = linked
-                editor.load(source: source, translation: result.document)
-                notice = (.info, "A faixa “\(existing.name ?? existing.displayLanguage)” do arquivo foi carregada como tradução. Troque em “Tradução”, à direita.")
-            }
+            await loadReference()
         } catch WorkflowError.noTextSubtitle {
             editor.load(source: nil, translation: nil)
             notice = (.info, "Este arquivo não tem legenda de texto embutida. Abra uma legenda externa (ASS, SSA ou SRT).")
@@ -166,27 +161,6 @@ final class WorkspaceModel {
         startPreview()
     }
 
-    func selectSourceTrack(_ id: Int) {
-        guard id != project.sourceTrackID else { return }
-        editor.flush()
-        do {
-            // The translation belongs to the old track; it is removed only once a copy is safe.
-            try store.backupTranslation(of: project, language: app.settings.targetLanguage)
-            if let old = store.translationURL(for: project, language: app.settings.targetLanguage) { try? FileManager.default.removeItem(at: old) }
-        } catch {
-            app.report(error, context: "Troca de faixa cancelada: não foi possível guardar a tradução atual")
-            return
-        }
-        project.sourceTrackID = id
-        project.externalSubtitlePath = nil
-        project.translationStatus = .new
-        Task {
-            operation = RunningOperation(kind: .extracting, fraction: nil, message: "Extraindo legenda…")
-            await loadSubtitles()
-            operation = nil
-        }
-    }
-
     func openExternalSubtitle() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = AppModel.subtitleTypes
@@ -225,6 +199,7 @@ final class WorkspaceModel {
     @ObservationIgnored var sessionSource: SubtitleDocument?
     @ObservationIgnored var sessionTranslation: SubtitleDocument?
     var sessionRevision = 0
+    @ObservationIgnored var sessionDraftPending = false
     /// Asks “this file or a copy?” before writing default-track changes.
     var askDefaultsDestination = false
     /// Optional button shown with the notice (e.g. open the file just created).
@@ -237,16 +212,6 @@ final class WorkspaceModel {
 
     var effectiveDefaults: TrackFlagEditor.Defaults { pendingDefaults ?? currentDefaults }
     var hasPendingDefaults: Bool { pendingDefaults != nil && pendingDefaults != currentDefaults }
-
-    func chooseDefault(_ track: MediaTrack) {
-        var defaults = effectiveDefaults
-        switch track.kind {
-        case .audio: defaults.audioTrackID = track.id
-        case .subtitles: defaults.subtitleTrackID = defaults.subtitleTrackID == track.id ? -1 : track.id
-        default: return
-        }
-        pendingDefaults = defaults
-    }
 
     func applyDefaults(inPlace: Bool) {
         guard let defaults = pendingDefaults, !isBusy, claim("Faixas padrão") else { return }
@@ -393,10 +358,10 @@ final class WorkspaceModel {
     }
 
     func embedTranslation(replaceOriginal: Bool = false) {
-        guard !isBusy, editor.translation != nil, claim("Incorporação no estúdio") else { return }
+        guard !isBusy, editor.translation != nil, claim("Gravar a legenda no vídeo") else { return }
         editor.flush()
         notice = nil
-        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando incorporação…")
+        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando a gravação…")
         let workflow = workflow()
         let project = project
         task = Task {
@@ -405,18 +370,21 @@ final class WorkspaceModel {
                     Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
                 }
                 self.project = updated
+                self.project.draftPending = false
+                try? store.save(self.project)
+                beginSubtitleSession()
                 lastMux = (output, report)
                 if replaceOriginal {
                     release()
                     operation = nil
                     await reload()
-                    notice = (.success, "Faixa incorporada no próprio arquivo e verificada. A versão anterior está na Lixeira.")
+                    notice = (.success, "Legenda gravada neste arquivo e verificada. A versão anterior do arquivo está na Lixeira.")
                     return
                 }
                 notice = (.success, "Novo arquivo criado e verificado: \(output.lastPathComponent). O original não foi alterado.")
                 noticeAction = ("Abrir o novo arquivo", { [app] in app.open(output) })
             } catch is CancellationError {
-                notice = (.info, "Incorporação cancelada. Nenhum arquivo foi criado.")
+                notice = (.info, "Gravação cancelada. Nenhum arquivo foi criado ou alterado.")
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }
@@ -548,6 +516,12 @@ final class WorkspaceModel {
     /// Clips of each speaker's original voice, for “Ouvir original”.
     var voiceSamples: [String: URL] = [:]
     var dubSession: DubSession?
+    /// Characters and their voices (of the series, or of this video without a series).
+    var cast = VoiceCast() {
+        didSet { if cast != oldValue { saveCast(cast) } }
+    }
+    /// Text of the reference track beside each line being edited (read only).
+    var referenceLines: [Int: String] = [:]
     var lastDub: (url: URL, report: DubbingReport, verification: VerificationReport)?
     /// Size of this episode's dub work files, refreshed after dubbing or clearing.
     var dubStorageBytes: Int64 = 0
@@ -605,6 +579,7 @@ final class WorkspaceModel {
                 writtenSource = source
                 if project.externalSubtitlePath != nil { project.externalSubtitlePath = url.path }
             }
+            if source != nil || translation != nil { project.draftPending = true }
             if let translation, let url = store.translationURL(for: project, language: app.settings.targetLanguage) {
                 try translation.write(to: url)
                 if project.translationStatus == .new || project.translationStatus == .extracted { project.translationStatus = .reviewed }
@@ -626,10 +601,13 @@ final class WorkspaceModel {
                 player.seek(to: ms)
             }
         }
-        if let task = env["ALS_TASK"].flatMap(SubtitleTask.init(rawValue:)) { chooseSubtitleTask(task) }
+        if let task = env["ALS_TASK"].flatMap(SubtitleTask.init(rawValue:)) {
+            chooseSubtitleTask(task)
+            if let id = env["ALS_REFERENCE"].flatMap(Int.init) { setReference(id) }
+        }
         if env["ALS_TRANSLATE"] == "1" { translateEpisode(undoManager: nil) }
         if env["ALS_DUB"] == "1" || env["ALS_DUB"] == "run" { startDubSession() }
-        if env["ALS_DUB"] == "run" { autoDub(cast: loadCast(), undoManager: nil) { [weak self] in self?.saveCast($0) } }
+        if env["ALS_DUB"] == "run" { autoDub(cast: cast, undoManager: nil) }
         if env["ALS_IDENTIFY"] == "1" { identifySpeakers(undoManager: nil) }
     }
 

@@ -34,10 +34,22 @@ extension WorkspaceModel {
     }
 
     /// Deletes the synthesized lines, voices and separated audio of this episode.
+    /// Deletes the synthesized lines, voices and separated audio of this episode, and forgets
+    /// the voices made from them, so the next dub starts from scratch.
     func clearDubFiles() {
         try? FileManager.default.removeItem(at: dubDirectory)
         voiceSamples = [:]
+        lastDub = nil
+        updateCast(Self.withoutVoices(cast))
         refreshDubStorage()
+    }
+
+    func updateCast(_ new: VoiceCast) { cast = new }
+
+    /// The lines that will be spoken (from the translation, or the original if there is none).
+    var dubSegments: [DubSegment] {
+        guard let document = editor.translation ?? editor.source else { return [] }
+        return DubbingPlan.segments(from: document)
     }
 
     func refreshDubStorage() { dubStorageBytes = StorageInventory.size(of: dubDirectory) }
@@ -53,7 +65,7 @@ extension WorkspaceModel {
     }
 
     static func describe(_ track: MediaTrack) -> String {
-        [track.displayLanguage.uppercased(), track.name, track.codec].compactMap { $0 }.joined(separator: " · ")
+        [Languages.display(track.displayLanguage), track.name, track.codec].compactMap { $0 }.joined(separator: " · ")
     }
 
     func prepareVoiceSamples() async {
@@ -117,7 +129,7 @@ extension WorkspaceModel {
 
     /// Identifies who speaks (when the subtitle does not say), gives each character a voice (a
     /// clone of the original, or a similar macOS voice), dubs every line and writes the MKV.
-    func autoDub(cast: VoiceCast, allowDiarizationDownload: Bool = false, undoManager: UndoManager?, onCast: @escaping (VoiceCast) -> Void) {
+    func autoDub(cast: VoiceCast, allowDiarizationDownload: Bool = false, undoManager: UndoManager?) {
         guard !isBusy, editor.translation != nil, claim("Dublagem automática") else { return }
         let replaceOriginal = dubSession?.replaceOriginal ?? false
         let regenerate = dubSession?.regenerate == true
@@ -148,8 +160,7 @@ extension WorkspaceModel {
                 let filled = try await workflow.automaticCast(project, cast: cast, systemVoices: systemVoices, audioTrackID: audioTrackID) { step in
                     Task { @MainActor in self.operation?.fraction = 0.2 + step.fraction * 0.2; self.operation?.message = step.message }
                 }
-                onCast(filled)
-                saveCast(filled)
+                updateCast(filled)
                 if app.settings.dubbingEngine == .original {
                     operation?.message = voiceModelsInstalled ? "Carregando o modelo de voz…" : "Baixando os modelos de voz (\(ClonedVoiceSynthesizer.downloadSize))…"
                     try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels).prepare()
@@ -175,7 +186,7 @@ extension WorkspaceModel {
                 return
             } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
                 dubSession?.phase = .confirm
-                pendingDiarizationDownload = { self.autoDub(cast: cast, allowDiarizationDownload: true, undoManager: undoManager, onCast: onCast) }
+                pendingDiarizationDownload = { self.autoDub(cast: cast, allowDiarizationDownload: true, undoManager: undoManager) }
             } catch is CancellationError {
                 dubSession?.phase = .failed("Dublagem cancelada. As falas já geradas ficam guardadas e serão reaproveitadas na próxima vez. Nenhum arquivo foi criado ou alterado.")
             } catch {
@@ -205,12 +216,16 @@ extension WorkspaceModel {
     }
 
     /// Removes a dub from the history and, when asked, moves its file to the Trash.
-    func deleteDubRecord(_ record: DubRecord, trashFile: Bool) {
+    func deleteDubRecord(_ record: DubRecord, trashFile: Bool, resetVoices: Bool) {
         do {
             if trashFile && canTrashOutput(of: record) { try FileOps.trash(record.outputURL) }
             project.dubHistory = dubHistory.filter { $0.id != record.id }
             try store.save(project)
-            notice = (.success, trashFile ? "Dublagem apagada: “\(record.outputURL.lastPathComponent)” foi para a Lixeira." : "Dublagem tirada do histórico. O arquivo continua no disco.")
+            if lastDub?.url.path == record.outputPath { lastDub = nil }
+            if resetVoices { clearDubFiles() }
+            notice = (.success, [trashFile ? "Dublagem apagada; o arquivo foi para a Lixeira." : "Dublagem tirada do histórico; o arquivo continua no disco.",
+                                 resetVoices ? "Vozes e arquivos guardados limpos: a próxima dublagem começa do zero." : nil]
+                .compactMap { $0 }.joined(separator: " "))
         } catch {
             notice = (.error, "Não foi possível apagar: \(LogRedactor.redact(error.localizedDescription))")
         }

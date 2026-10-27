@@ -3,8 +3,9 @@ import StudioCore
 import SwiftUI
 import TranslationKit
 
-/// Right column of Legendar. Its sections follow the chosen task: which subtitle is edited and
-/// how to save it back, or which subtitle is the base, the translation and the new track.
+/// Right column of Legendar. Correcting: what is shown beside the text, and other ways to
+/// save. New subtitle: the translation tools and how the new track is named and placed.
+/// Writing into the video is always the “Gravar no vídeo…” button at the top.
 struct InspectorView: View {
     @Bindable var workspace: WorkspaceModel
     let requestTranslate: () -> Void
@@ -12,6 +13,7 @@ struct InspectorView: View {
     @Environment(\.undoManager) private var undoManager
 
     private var isEditing: Bool { workspace.isEditingOriginal }
+    private var editor: EditorModel { workspace.editor }
 
     var body: some View {
         ScrollView {
@@ -24,12 +26,20 @@ struct InspectorView: View {
                     InlineMessage(kind: notice.kind, text: notice.text)
                     if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
                 }
-                baseSection
                 if isEditing {
-                    saveEditedSection
+                    referenceSection
                 } else {
                     translationSection
-                    muxSection
+                    trackSection
+                }
+                otherWays
+                if let mux = workspace.lastMux {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                        SectionLabel("Última gravação", systemImage: "checkmark.seal")
+                        Text(mux.url.lastPathComponent).font(.callout).lineLimit(2).textSelection(.enabled)
+                        VerificationList(report: mux.report)
+                        Button("Mostrar no Finder", systemImage: "folder") { workspace.revealOutput() }.buttonStyle(.link)
+                    }
                 }
             }
             .padding(Theme.Spacing.l)
@@ -38,69 +48,36 @@ struct InspectorView: View {
         .scrollContentBackground(.hidden)
     }
 
-    // MARK: Which subtitle
+    // MARK: Correcting
 
-    private var baseSection: some View {
+    private var referenceSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel(isEditing ? "Legenda que você está editando" : "Legenda base (o original)", systemImage: "captions.bubble")
-            ForEach(workspace.subtitleTracks) { track in
-                ChoiceRow(title: track.name ?? track.displayLanguage, detail: "\(track.displayLanguage.uppercased()) · \(track.codec)\(track.isBitmapSubtitle ? " · imagem" : "")",
-                          selected: track.id == workspace.project.sourceTrackID && workspace.project.externalSubtitlePath == nil,
-                          enabled: track.textSubtitleExtension != nil && !workspace.isBusy) {
-                    workspace.selectSourceTrack(track.id)
+            SectionLabel("Mostrar ao lado", systemImage: "rectangle.split.2x1")
+            Picker("Mostrar ao lado", selection: Binding(get: { workspace.project.referenceTrackID }, set: { workspace.setReference($0) })) {
+                Text("Nenhuma").tag(Int?.none)
+                ForEach(workspace.linkableTracks) { track in
+                    Text("\(track.name ?? track.codec) · \(Languages.display(track.displayLanguage))").tag(Optional(track.id))
                 }
-                .hintVerbatim(track.name ?? track.displayLanguage, track.textSubtitleExtension != nil
-                              ? (isEditing ? "Edita esta faixa. Ao salvar, a versão corrigida entra no lugar dela." : "Usa esta faixa como o texto a traduzir.")
-                              : "Legenda em imagem: para editar, transforme em texto com “Reconhecer texto (OCR)” no editor vazio.")
             }
-            if workspace.project.externalSubtitlePath != nil {
-                ChoiceRow(title: "Arquivo externo", detail: workspace.project.sourceFormat?.fileExtension.uppercased() ?? "", selected: true, enabled: true) {}
-            }
-            Button("Abrir um arquivo de legenda…", systemImage: "doc.badge.plus") { workspace.openExternalSubtitle() }
-                .buttonStyle(.link)
-                .disabled(workspace.isBusy)
-                .hint("Abrir um arquivo de legenda", "Usa um arquivo ASS, SSA ou SRT do disco no lugar das faixas do arquivo.")
-        }
-    }
-
-    // MARK: Saving an edited subtitle
-
-    private var saveEditedSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel("Salvar", systemImage: "square.and.arrow.down")
-            Text("A legenda corrigida entra no MKV no lugar da faixa original, com o mesmo idioma, nome e flags. As outras faixas não mudam e o vídeo não é recodificado. Você escolhe entre um novo arquivo e o próprio arquivo.")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Button { workspace.requestSaveEdited() } label: {
-                Label("Salvar no MKV…", systemImage: "square.and.arrow.down.on.square").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
-            .disabled(!workspace.editor.hasDocument || workspace.isBusy)
-            .hint("Salvar no MKV", "Grava a legenda corrigida no arquivo de vídeo, no lugar da antiga, e confere o resultado.")
-            Button("Salvar como arquivo de legenda…", systemImage: "square.and.arrow.up") { workspace.exportSource() }
-                .buttonStyle(.link)
-                .disabled(!workspace.editor.hasDocument)
-                .hint("Salvar como arquivo", "Salva a legenda corrigida como um arquivo ASS/SRT separado, sem mexer no vídeo.")
-            Text("As correções ficam guardadas no projeto enquanto você edita; nada vai para o vídeo até você salvar.")
-                .font(.caption).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
-            if let mux = workspace.lastMux {
-                VerificationList(report: mux.report)
-                Button("Mostrar no Finder", systemImage: "folder") { workspace.revealOutput() }.buttonStyle(.link)
+            .labelsHidden()
+            .disabled(workspace.isBusy)
+            .hint("Mostrar ao lado", "Outra legenda do vídeo exibida ao lado de cada fala, só para consulta. As falas são casadas pelo tempo.")
+            if workspace.project.referenceTrackID != nil {
+                Text("\(Plural.count(editor.reference.count, "fala tem", "falas têm")) correspondência na referência.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
     }
 
-    // MARK: Translation
+    // MARK: New subtitle
 
     private var translationSection: some View {
         @Bindable var app = app
         return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel("Tradução para \(targetName)", systemImage: "translate")
-            let editor = workspace.editor
+            SectionLabel("Tradução", systemImage: "translate")
             if editor.hasDocument {
                 HStack {
-                    Text("\(editor.translatedCount) de \(editor.translatableCount) falas")
-                        .font(.callout.monospacedDigit())
+                    Text("\(editor.translatedCount) de \(Plural.count(editor.translatableCount, "fala", "falas"))").font(.callout.monospacedDigit())
                     Spacer()
                     if editor.translatableCount > 0 {
                         Gauge(value: Double(editor.translatedCount), in: 0...Double(max(1, editor.translatableCount))) {}
@@ -110,114 +87,71 @@ struct InspectorView: View {
                     }
                 }
             }
+            Picker("Motor", selection: $app.settings.engine) {
+                ForEach(EngineChoice.allCases) { Text($0.label).tag($0) }
+            }
+            .hintVerbatim("Motor de tradução", app.settings.engine.summary)
+            Picker("Glossário", selection: Binding(get: { workspace.project.seriesID }, set: { workspace.assignSeries($0) })) {
+                Text("Nenhum").tag(UUID?.none)
+                ForEach(app.series) { Text($0.name).tag(Optional($0.id)) }
+            }
+            .hint("Glossário da série", "Nomes, golpes e lugares que devem sair sempre iguais. O elenco de vozes da série também é usado na dublagem.")
+            Button(action: requestTranslate) {
+                Label(editor.translatedCount > 0 ? "Traduzir o que falta" : "Traduzir tudo", systemImage: "sparkles").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glass)
+            .controlSize(.large)
+            .disabled(!editor.hasDocument || workspace.isBusy)
+            .keyboardShortcut("t", modifiers: [.command, .shift])
+            .hint("Traduzir (⇧⌘T)", "Traduz as falas mantendo estilos, tempos e tags. Se já houver tradução, você escolhe entre completar o que falta ou refazer tudo.")
+            if let report = workspace.lastReport { ReportSummary(report: report) }
             Menu {
                 ForEach(workspace.linkableTracks) { track in
-                    Button("Faixa \(track.displayLanguage.uppercased()) · \(track.name ?? track.codec)") { workspace.linkTranslation(track: track, undoManager: undoManager) }
+                    Button("\(track.name ?? track.codec) · \(Languages.display(track.displayLanguage))") { workspace.linkTranslation(track: track, undoManager: undoManager) }
                 }
                 Button("Arquivo de legenda…") { workspace.linkTranslationFile(undoManager: undoManager) }
-                Divider()
-                Button("Começar uma tradução vazia, à mão") { workspace.editor.startManualTranslation() }
-                    .disabled(editor.translation != nil)
             } label: {
-                Label("Usar uma tradução que já existe", systemImage: "link")
+                Label("Trazer uma tradução pronta", systemImage: "link")
             }
             .menuStyle(.button)
             .buttonStyle(.link)
             .fixedSize()
             .disabled(workspace.isBusy || !editor.hasDocument)
-            .hint("Usar uma tradução que já existe", "Carrega para revisar uma faixa já traduzida do arquivo ou um arquivo de legenda: as falas são casadas pelo tempo. Ou comece vazia para traduzir à mão.")
-            Picker("Motor", selection: $app.settings.engine) {
-                ForEach(EngineChoice.allCases) { Text($0.label).tag($0) }
-            }
-            .hint("Motor de tradução", "Quem traduz: a tradução da Apple (rápida, sem contexto), a Apple Intelligence (usa contexto e glossário) ou um servidor como Ollama ou LM Studio.")
-            Text(app.settings.engine.summary).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Picker("Série / glossário", selection: Binding(get: { workspace.project.seriesID }, set: { workspace.assignSeries($0) })) {
-                Text("Nenhuma").tag(UUID?.none)
-                ForEach(app.series) { Text($0.name).tag(Optional($0.id)) }
-            }
-            .hint("Série / glossário", "Liga o episódio a uma série: o glossário, as notas e o elenco de vozes dela são usados na tradução e na dublagem.")
-            Button("Editar séries e glossários…", systemImage: "books.vertical") { workspace.showSeries = true }
-                .buttonStyle(.link)
-                .hint("Editar séries e glossários", "Termos que devem ser traduzidos sempre do mesmo jeito (nomes, golpes, lugares) e notas de estilo da série.")
-            Button(action: requestTranslate) {
-                Label("Traduzir episódio inteiro", systemImage: "sparkles").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
-            .disabled(!workspace.editor.hasDocument || workspace.isBusy)
-            .keyboardShortcut("t", modifiers: [.command, .shift])
-            .hint("Traduzir episódio inteiro (⇧⌘T)", "Traduz todas as falas mantendo estilos, tempos e tags. Se já houver tradução, você escolhe entre completar o que falta ou refazer tudo.")
-            if let report = workspace.lastReport { ReportSummary(report: report) }
+            .hint("Trazer uma tradução pronta", "Usa como ponto de partida uma faixa do vídeo ou um arquivo já traduzido; as falas são casadas pelo tempo. ⌘Z desfaz.")
         }
     }
 
-    private var targetName: String {
-        Locale.current.localizedString(forIdentifier: app.settings.targetLanguage) ?? app.settings.targetLanguage
-    }
-
-    // MARK: Mux
-
-    private var muxSection: some View {
+    private var trackSection: some View {
         @Bindable var app = app
         return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            SectionLabel("Gravar no MKV", systemImage: "film.stack")
-            Text("A tradução vira uma faixa nova; a legenda original continua no arquivo.")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            TextField("Nome da faixa", text: $app.settings.trackName)
-                .hint("Nome da faixa", "Nome que os players mostram no menu de legendas, por exemplo “Português (Brasil)”.")
-            Toggle("Definir como legenda padrão", isOn: $app.settings.makeDefault)
-                .hint("Legenda padrão", "Os players abrem o arquivo já com esta legenda ligada.")
-            Toggle("Colocar antes das outras legendas", isOn: $app.settings.placeNewTrackFirst)
-                .hint("Colocar primeiro", "A nova faixa aparece no topo da lista de legendas do player.")
-            Button {
-                workspace.requestEmbed()
-            } label: {
-                Label("Incorporar ao MKV…", systemImage: "square.and.arrow.down.on.square").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glass)
-            .controlSize(.large)
-            .disabled(workspace.editor.translation == nil || workspace.isBusy)
-            .hint("Incorporar ao MKV", "Grava a tradução como nova faixa e confere o resultado. Antes você escolhe entre um novo arquivo e o próprio arquivo. O vídeo não é recodificado.")
-            Button("Salvar a tradução como arquivo de legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
-                .buttonStyle(.link)
-                .disabled(workspace.editor.translation == nil)
-                .hint("Salvar como arquivo", "Salva a tradução como um arquivo ASS/SRT separado, sem mexer no vídeo.")
-            if let mux = workspace.lastMux {
-                VerificationList(report: mux.report)
-                Button("Mostrar no Finder", systemImage: "folder") { workspace.revealOutput() }
-                    .buttonStyle(.link)
-                    .hint("Mostrar no Finder", "Abre a pasta do novo arquivo com ele selecionado.")
-            }
+            SectionLabel("Faixa no vídeo", systemImage: "film.stack")
+            TextField("Nome", text: $app.settings.trackName)
+                .hint("Nome da faixa", "O nome que os players mostram no menu de legendas. Acompanha o idioma, a menos que você escreva outro.")
+            Toggle("Ligada ao abrir o vídeo", isOn: $app.settings.makeDefault)
+                .hint("Legenda padrão", "Os players abrem o vídeo com esta legenda ligada.")
+            Toggle("Primeira da lista", isOn: $app.settings.placeNewTrackFirst)
+                .hint("Primeira da lista", "A faixa nova aparece no topo do menu de legendas do player.")
         }
     }
-}
 
-/// A radio-style row: one of several choices, with a short description.
-struct ChoiceRow: View {
-    let title: String
-    let detail: String
-    let selected: Bool
-    let enabled: Bool
-    let action: () -> Void
+    // MARK: Other ways to save
 
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Theme.Spacing.s) {
-                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
-                    .foregroundStyle(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.callout).lineLimit(1)
-                    Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-                Spacer(minLength: 0)
+    private var otherWays: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Button("Salvar como arquivo de legenda…", systemImage: "square.and.arrow.up") {
+                if isEditing { workspace.exportSource() } else { workspace.exportTranslation() }
             }
-            .padding(.vertical, 3)
-            .contentShape(.rect)
+            .buttonStyle(.link)
+            .disabled(isEditing ? !editor.hasDocument : editor.translation == nil)
+            .hint("Salvar como arquivo", "Salva a legenda como um arquivo ASS/SRT separado, sem mexer no vídeo.")
+            if isEditing {
+                Button("Editar séries e glossários…", systemImage: "books.vertical") { workspace.showSeries = true }.buttonStyle(.link)
+                    .hint("Séries e glossários", "Termos fixos e notas de cada série.")
+            } else {
+                Button("Editar glossários…", systemImage: "books.vertical") { workspace.showSeries = true }.buttonStyle(.link)
+                    .hint("Editar glossários", "Termos que devem ser traduzidos sempre do mesmo jeito e notas de estilo da série.")
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.5)
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
