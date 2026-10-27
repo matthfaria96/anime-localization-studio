@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.0 — 27/10/2026
+
+### Mudou
+- **Dublar com a ElevenLabs** (novo padrão): só a faixa de áudio vai para o serviço, que separa os personagens, traduz e dubla com a voz de cada um, mantendo emoção e música. Não precisa de legenda traduzida. Você escolhe o áudio, o idioma falado (ou automático) e o idioma de saída; a chave fica no Keychain e a conta mostra plano e créditos. O resultado entra no MKV como faixa nova, verificado, e vai para o histórico. Um trabalho interrompido é retomado sem enviar nem cobrar de novo.
+- A dublagem local ficou só com a **Voz original no Mac** (Pocket TTS). As vozes do macOS e o VoiceStudio saíram.
+- O áudio de base da dublagem passa a ser o do idioma original (não uma dublagem anterior que esteja como padrão).
+
 ## 0.14.0 — 27/10/2026
 
 ### Adicionado

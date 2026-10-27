@@ -74,6 +74,26 @@ final class AppModel {
         return key
     }
 
+    // MARK: ElevenLabs
+
+    static let elevenLabsAccount = "api.elevenlabs.io"
+
+    /// The person's ElevenLabs key, kept only in the Keychain.
+    var elevenLabsKey: String? {
+        _ = elevenLabsKeyRevision
+        let key = KeychainStore.read(Self.elevenLabsAccount)
+        if let key, !key.isEmpty { LogRedactor.register(secret: key); return key }
+        return nil
+    }
+
+    /// Bumped when the key changes, so views reading `elevenLabsKey` update.
+    var elevenLabsKeyRevision = 0
+
+    func saveElevenLabsKey(_ key: String) throws {
+        try KeychainStore.write(key.trimmingCharacters(in: .whitespacesAndNewlines), account: Self.elevenLabsAccount)
+        elevenLabsKeyRevision += 1
+    }
+
     func makeEngine() -> any TranslationEngine { settings.makeEngine(apiKey: Self.apiKey(for: settings)) }
 
     // MARK: Opening media

@@ -21,7 +21,15 @@ extension WorkspaceModel {
     /// The audio track the dub is based on: the voices are cloned from it and its music and
     /// effects stay under the new voices.
     var dubAudioTrack: MediaTrack? {
-        audioTracks.first { $0.id == project.dubAudioTrackID } ?? audioTracks.first(where: \.isDefault) ?? audioTracks.first
+        if let chosen = audioTracks.first(where: { $0.id == project.dubAudioTrackID }) { return chosen }
+        // The original voices: a track not already in the output language (often the default
+        // track is an earlier dub).
+        let target = ElevenLabsDubbing.languageCode(app.settings.targetLanguage)
+        let original = audioTracks.filter { track in
+            ElevenLabsDubbing.languageCode(track.languageIETF ?? "") != target
+                && IntegrityVerifier.iso6392(for: target) != track.language
+        }
+        return original.first(where: \.isDefault) ?? original.first ?? audioTracks.first(where: \.isDefault) ?? audioTracks.first
     }
 
     func selectDubAudio(_ id: Int) {
@@ -87,7 +95,8 @@ extension WorkspaceModel {
         enum Phase {
             case confirm
             case running
-            case done(url: URL, report: DubbingReport, verification: VerificationReport, replaced: Bool)
+            /// `report` is nil for an online dub (ElevenLabs reports no per-line details).
+            case done(url: URL, report: DubbingReport?, verification: VerificationReport, replaced: Bool)
             case failed(String)
         }
         var phase: Phase = .confirm
@@ -97,7 +106,7 @@ extension WorkspaceModel {
     }
 
     enum DubStage: Int, CaseIterable {
-        case speakers, voices, speech, mix, file
+        case speakers, voices, speech, mix, upload, remote, download, file
 
         var title: String {
             switch self {
@@ -105,26 +114,96 @@ extension WorkspaceModel {
             case .voices: "Preparar a voz de cada personagem"
             case .speech: "Gerar as falas dubladas"
             case .mix: "Mixar com a música e os efeitos"
+            case .upload: "Enviar o áudio para a ElevenLabs"
+            case .remote: "Separar vozes, traduzir e dublar (na ElevenLabs)"
+            case .download: "Baixar o áudio dublado"
             case .file: "Gravar e verificar o MKV"
             }
         }
 
-        /// Where each stage sits in the overall progress of `autoDub`.
-        static func at(_ fraction: Double) -> DubStage {
+        static func stages(online: Bool) -> [DubStage] {
+            online ? [.upload, .remote, .download, .file] : [.speakers, .voices, .speech, .mix, .file]
+        }
+
+        /// Where each stage sits in the overall progress of the dub.
+        static func at(_ fraction: Double, online: Bool) -> DubStage {
+            if online {
+                switch fraction {
+                case ..<0.2: return .upload
+                case ..<0.86: return .remote
+                case ..<0.9: return .download
+                default: return .file
+                }
+            }
             switch fraction {
-            case ..<0.2: .speakers
-            case ..<0.4: .voices
-            case ..<0.85: .speech
-            case ..<0.94: .mix
-            default: .file
+            case ..<0.2: return .speakers
+            case ..<0.4: return .voices
+            case ..<0.85: return .speech
+            case ..<0.94: return .mix
+            default: return .file
             }
         }
     }
 
+    var dubsOnline: Bool { app.settings.dubbingEngine == .elevenLabs }
+
+    /// Online dubs listen to the audio; the Mac's voice speaks the translated subtitle.
+    var canStartDub: Bool {
+        dubsOnline ? !audioTracks.isEmpty && app.elevenLabsKey != nil : editor.translation != nil && !dubSegments.isEmpty
+    }
+
 
     func startDubSession() {
-        guard !isBusy, editor.translation != nil else { return }
+        guard !isBusy, canStartDub else { return }
         dubSession = DubSession()
+    }
+
+    /// Sends the audio to ElevenLabs, waits for the dub and writes it into the MKV.
+    func onlineDub() {
+        guard !isBusy, let key = app.elevenLabsKey, claim("Dublagem na ElevenLabs") else { return }
+        let replaceOriginal = dubSession?.replaceOriginal ?? false
+        let audioTrackID = dubAudioTrack?.id
+        let baseAudio = dubAudioTrack.map(Self.describe) ?? "—"
+        let language = app.settings.targetLanguage
+        dubSession?.phase = .running
+        notice = nil
+        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando o áudio…")
+        let workflow = workflow()
+        let client = ElevenLabsDubbing(apiKey: key)
+        LogRedactor.register(secret: key)
+        AppLog.shared.info("Dublagem ElevenLabs iniciada: \(project.title) → \(language) · \(replaceOriginal ? "no próprio arquivo" : "novo arquivo")")
+        task = Task {
+            do {
+                let result = try await workflow.dubWithElevenLabs(project, client: client, audioTrackID: audioTrackID, replaceOriginal: replaceOriginal) { step in
+                    Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
+                }
+                self.project = result.project
+                lastDub = nil
+                lastMux = (result.output, result.verification)
+                dubSession?.phase = .done(url: result.output, report: nil, verification: result.verification, replaced: replaceOriginal)
+                recordDub(DubRecord(outputPath: result.output.path, replacedOriginal: replaceOriginal, engine: "ElevenLabs", mode: "Automático",
+                                    baseAudio: baseAudio, language: language, lines: 0, failedLines: 0, verified: result.verification.passed))
+                AppLog.shared.info("Dublagem ElevenLabs concluída: \(result.output.path)")
+                release()
+                operation = nil
+                if replaceOriginal { await reload() }
+                return
+            } catch is CancellationError {
+                dubSession?.phase = .failed("Você parou de esperar. Se o áudio já tinha sido enviado, a ElevenLabs continua dublando: na próxima vez o app retoma o mesmo trabalho, sem enviar nem cobrar de novo. Nenhum arquivo foi criado ou alterado.")
+            } catch {
+                let message = Self.explainDubError(error)
+                AppLog.shared.error("Dublagem ElevenLabs falhou: \(message)")
+                if case ElevenLabsDubbing.ServiceError.failed = error { project.remoteDub = nil; try? store.save(project) }
+                dubSession?.phase = .failed(message)
+            }
+            release()
+            operation = nil
+        }
+    }
+
+    /// Starts the dub with the chosen engine.
+    func startDub(cast: VoiceCast, undoManager: UndoManager?) {
+        if dubsOnline { onlineDub() } else { autoDub(cast: cast, undoManager: undoManager) }
     }
 
     /// Identifies who speaks (when the subtitle does not say), gives each character a voice (a
@@ -144,7 +223,6 @@ extension WorkspaceModel {
         notice = nil
         operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando a dublagem…")
         let workflow = workflow()
-        let systemVoices = Set(AVSpeechSynthesisVoice.speechVoices().map(\.name))
         let engine = app.settings.dubbingEngine.label, mode = app.settings.dubbingMode.label
         AppLog.shared.info("Dublagem iniciada: \(project.title) · \(engine) · \(mode) · \(replaceOriginal ? "no próprio arquivo" : "novo arquivo")")
         task = Task {
@@ -157,14 +235,12 @@ extension WorkspaceModel {
                     editor.setActors(speakers, undoManager: undoManager)
                     editor.flush()
                 }
-                let filled = try await workflow.automaticCast(project, cast: cast, systemVoices: systemVoices, audioTrackID: audioTrackID) { step in
+                let filled = try await workflow.automaticCast(project, cast: cast, audioTrackID: audioTrackID) { step in
                     Task { @MainActor in self.operation?.fraction = 0.2 + step.fraction * 0.2; self.operation?.message = step.message }
                 }
                 updateCast(filled)
-                if app.settings.dubbingEngine == .original {
-                    operation?.message = voiceModelsInstalled ? "Carregando o modelo de voz…" : "Baixando os modelos de voz (\(ClonedVoiceSynthesizer.downloadSize))…"
-                    try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: app.settings.targetLanguage).prepare()
-                }
+                operation?.message = voiceModelsInstalled ? "Carregando o modelo de voz…" : "Baixando os modelos de voz (\(ClonedVoiceSynthesizer.downloadSize))…"
+                try await ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: app.settings.targetLanguage).prepare()
                 let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
                 let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled,
                                                                                     replaceOriginal: replaceOriginal, audioTrackID: audioTrackID) { step in
@@ -233,8 +309,8 @@ extension WorkspaceModel {
 
     /// Turns technical failures into what happened and what to do.
     static func explainDubError(_ error: Error) -> String {
-        if case VoiceStudioClient.ClientError.notRunning = error {
-            return "O VoiceStudio não está aberto, então as vozes originais não puderam ser clonadas. Abra o VoiceStudio e tente de novo, ou escolha “Vozes do macOS”. Nenhum arquivo foi criado ou alterado."
+        if let service = error as? ElevenLabsDubbing.ServiceError {
+            return (service.errorDescription ?? "") + " Nenhum arquivo foi criado ou alterado."
         }
         if case SynthesisError.engineUnavailable = error {
             return "O motor de voz parou de responder no meio da dublagem. Nenhum arquivo foi criado ou alterado; as falas já geradas serão reaproveitadas."

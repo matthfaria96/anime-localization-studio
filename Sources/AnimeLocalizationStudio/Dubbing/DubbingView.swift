@@ -3,20 +3,19 @@ import MediaKit
 import StudioCore
 import SwiftUI
 
-/// Dublar: what will be dubbed and one button, the dubs already made, and (collapsed) the
-/// voices. Everything shown comes from the model, so clearing or deleting updates the page.
+/// Dublar: which engine, what will be dubbed and one button, the dubs already made and,
+/// for the Mac's voice, its settings (collapsed). Everything shown comes from the model, so
+/// clearing or deleting updates the page.
 struct DubbingView: View {
     @Bindable var workspace: WorkspaceModel
     @Environment(AppModel.self) private var app
-    @State private var studioConnected: Bool?
-    @State private var studioVoices: [VoiceStudioClient.Voice] = []
     @State private var recordToDelete: DubRecord?
     @State private var confirmRestart = false
     @AppStorage("dubVoicesExpanded") private var voicesExpanded = false
 
     private var segments: [DubSegment] { workspace.dubSegments }
     private var isTranslated: Bool { workspace.editor.translation != nil }
-    private var usesClones: Bool { app.settings.dubbingEngine == .voiceStudio }
+    private var online: Bool { app.settings.dubbingEngine == .elevenLabs }
     private var language: String { Languages.name(for: app.settings.targetLanguage) }
 
     var body: some View {
@@ -32,17 +31,19 @@ struct DubbingView: View {
                         if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
                     }
                 }
+                engines
                 summary
-                if let dub = workspace.lastDub { DubResultPanel(workspace: workspace, dub: dub) }
+                if let dub = workspace.lastDub, !online { DubResultPanel(workspace: workspace, dub: dub) }
                 history
-                DisclosureGroup(isExpanded: $voicesExpanded) {
-                    DubVoicesSection(workspace: workspace, studioConnected: studioConnected, studioVoices: studioVoices) { await checkStudio() }
-                        .padding(.top, Theme.Spacing.m)
-                } label: {
-                    Label("Ajustar vozes e personagens", systemImage: "person.2.wave.2").font(.headline)
-                        .hint("Ajustar vozes e personagens", "Motor de voz, modo de mixagem e a voz de cada personagem. O app escolhe tudo sozinho; abra só se quiser mudar.")
+                if !online {
+                    DisclosureGroup(isExpanded: $voicesExpanded) {
+                        DubVoicesSection(workspace: workspace).padding(.top, Theme.Spacing.m)
+                    } label: {
+                        Label("Ajustar vozes e personagens", systemImage: "person.2.wave.2").font(.headline)
+                            .hint("Ajustar vozes e personagens", "Emoção por fala, modo de mixagem e os personagens. O app escolhe tudo sozinho; abra só se quiser mudar.")
+                    }
+                    restart
                 }
-                restart
             }
             .padding(Theme.Spacing.xl)
             .frame(maxWidth: 900)
@@ -52,7 +53,6 @@ struct DubbingView: View {
         .task {
             workspace.refreshDubStorage()
             rebuildCast()
-            await checkStudio()
         }
         .onChange(of: workspace.editor.revision) { rebuildCast() }
         .modifier(SpeakerModelConsent(workspace: workspace))
@@ -72,12 +72,28 @@ struct DubbingView: View {
             Text(deleteMessage(record))
         }
         .sheet(isPresented: Binding(get: { workspace.dubSession != nil }, set: { if !$0 && !isDubRunning { workspace.dubSession = nil } })) {
-            DubSessionSheet(workspace: workspace, cast: $workspace.cast, studioConnected: studioConnected, segmentCount: segments.count)
+            DubSessionSheet(workspace: workspace, cast: $workspace.cast, segmentCount: segments.count)
         }
     }
 
     private var isDubRunning: Bool { if case .running = workspace.dubSession?.phase { true } else { false } }
     private var bytes: String { ByteCountFormatter.string(fromByteCount: workspace.dubStorageBytes, countStyle: .file) }
+
+    // MARK: Engine
+
+    private var engines: some View {
+        @Bindable var app = app
+        return HStack(alignment: .top, spacing: Theme.Spacing.m) {
+            OptionCard(title: "ElevenLabs", systemImage: "cloud",
+                       detail: "Recomendado. Ouve o áudio, separa cada personagem, traduz e dubla com a voz de cada um, mantendo a emoção. Online, pago por minuto.",
+                       selected: online) { app.settings.dubbingEngine = .elevenLabs }
+                .hint("ElevenLabs", "Serviço online de dublagem automática: só o áudio do vídeo é enviado (nunca o vídeo). Não precisa de legenda. Usa a sua conta e os seus créditos da ElevenLabs.")
+            OptionCard(title: "Voz original no Mac", systemImage: "desktopcomputer",
+                       detail: "Gratuita e offline. Fala o texto da legenda traduzida com um clone da voz de cada personagem.",
+                       selected: !online) { app.settings.dubbingEngine = .original }
+                .hint("Voz original no Mac", "Tudo no próprio Mac (Pocket TTS da Kyutai, CC-BY-4.0). Precisa de uma legenda traduzida; fala português, espanhol, inglês, francês, alemão e italiano.")
+        }
+    }
 
     // MARK: What will be dubbed
 
@@ -85,79 +101,110 @@ struct DubbingView: View {
         Panel {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.l, verticalSpacing: Theme.Spacing.m) {
                 GridRow {
-                    rowTitle("Voz e fundo", "waveform")
-                    if workspace.audioTracks.count > 1 {
-                        Picker("Voz e fundo", selection: Binding(get: { workspace.dubAudioTrack?.id ?? -1 }, set: { workspace.selectDubAudio($0) })) {
-                            ForEach(workspace.audioTracks) { Text(WorkspaceModel.describe($0)).tag($0.id) }
-                        }
-                        .labelsHidden()
-                        .fixedSize()
-                        .disabled(workspace.isBusy)
-                        .hint("Áudio de base", "A faixa de onde saem as vozes originais (para recriar cada personagem) e a música e os efeitos que ficam por baixo. Use o áudio no idioma original. Trocar recomeça as vozes do zero.")
-                    } else {
-                        Text(workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "O vídeo não tem áudio")
-                            .hint("Áudio de base", "As vozes originais e a música e os efeitos saem desta faixa.")
-                    }
+                    rowTitle(online ? "Áudio enviado" : "Voz e fundo", "waveform")
+                    audioPicker
                 }
-                GridRow {
-                    rowTitle("Texto falado", "text.bubble")
-                    if isTranslated {
-                        Text("Legenda em \(language) · \(Plural.count(segments.count, "fala", "falas"))")
-                            .hint("Texto falado", "O app fala o texto da legenda traduzida, no tempo de cada fala. O áudio não é interpretado: corrigir a tradução muda o que é dito.")
-                    } else {
-                        HStack {
-                            Text("Ainda não há legenda traduzida.").foregroundStyle(.secondary)
-                            Button("Criar em Legendar") { app.show(.subtitles) }.buttonStyle(.link)
-                                .hint("Criar em Legendar", "A dublagem fala uma legenda traduzida. Crie uma em Legendar › Uma legenda nova.")
-                        }
-                    }
-                }
-                GridRow {
-                    rowTitle("Resultado", "square.and.arrow.down")
-                    Text("Nova faixa de áudio em \(language)")
-                        .hint("Resultado", "A faixa dublada entra no vídeo como padrão; o áudio original e as legendas continuam lá. Antes de gravar, o app pergunta: novo arquivo ou este arquivo.")
-                }
-                GridRow {
-                    rowTitle("Vozes", "person.wave.2")
-                    HStack {
-                        Text(voicesSummary)
-                            .hint("Vozes", app.settings.dubbingEngine == .original
-                                  ? "Cada personagem fala com a própria voz, recriada do áudio original deste vídeo. Quem fala cada linha vem do campo Personagem da legenda (ou é identificado pelo áudio)."
-                                  : "Vozes escolhidas pelo tom de cada personagem.")
-                        Button(voicesExpanded ? "Fechar ajustes" : "Ajustar") { withAnimation { voicesExpanded.toggle() } }.buttonStyle(.link)
-                    }
-                }
+                if online { onlineRows } else { localRows }
             }
             Divider().padding(.vertical, Theme.Spacing.xs)
             HStack {
-                if app.settings.dubbingEngine == .original && !ClonedVoiceSynthesizer.supports(app.settings.targetLanguage) {
-                    Label("A voz original ainda não fala \(language). Use as vozes do macOS ou o VoiceStudio.", systemImage: "exclamationmark.triangle")
-                        .font(.callout).foregroundStyle(Theme.warning)
-                } else if usesClones && studioConnected == false {
-                    Label("O VoiceStudio não está aberto.", systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(Theme.warning)
-                }
+                if let warning { Label(warning, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(Theme.warning) }
                 Spacer()
                 Button { workspace.startDubSession() } label: { Label("Dublar…", systemImage: "waveform") }
                     .buttonStyle(.glassProminent)
-                    .tint(.accentColor)
                     .controlSize(.large)
-                    .disabled(!isTranslated || segments.isEmpty || workspace.isBusy || unsupportedLanguage)
-                    .hintVerbatim("Dublar…", isTranslated
-                        ? "Mostra o resumo, pergunta onde gravar e então dubla o vídeo inteiro, mostrando cada etapa."
-                        : "Primeiro crie a legenda traduzida em Legendar.")
+                    .disabled(!workspace.canStartDub || workspace.isBusy || warning != nil)
+                    .hintVerbatim("Dublar…", "Mostra o resumo, pergunta onde gravar e então dubla o vídeo inteiro, mostrando cada etapa.")
             }
         }
     }
 
-    private var unsupportedLanguage: Bool {
-        app.settings.dubbingEngine == .original && !ClonedVoiceSynthesizer.supports(app.settings.targetLanguage)
+    private var warning: String? {
+        if workspace.audioTracks.isEmpty { return "O vídeo não tem áudio." }
+        if online { return app.elevenLabsKey == nil ? "Cole a sua chave da ElevenLabs acima." : nil }
+        if !ClonedVoiceSynthesizer.supports(app.settings.targetLanguage) { return "A voz do Mac ainda não fala \(language). Use a ElevenLabs." }
+        return isTranslated ? nil : "Crie a legenda traduzida em Legendar."
     }
 
-    private var voicesSummary: String {
-        switch app.settings.dubbingEngine {
-        case .original:
-            "A própria voz de cada personagem\(app.settings.dubbingPerLineVoice ? ", com a emoção de cada fala" : "") · \(app.settings.dubbingMode.label)"
-        default: "\(app.settings.dubbingEngine.label) · \(app.settings.dubbingMode.label)"
+    @ViewBuilder
+    private var audioPicker: some View {
+        if workspace.audioTracks.count > 1 {
+            Picker("Áudio", selection: Binding(get: { workspace.dubAudioTrack?.id ?? -1 }, set: { workspace.selectDubAudio($0) })) {
+                ForEach(workspace.audioTracks) { Text(WorkspaceModel.describe($0)).tag($0.id) }
+            }
+            .labelsHidden()
+            .fixedSize()
+            .disabled(workspace.isBusy)
+            .hint("Áudio de base", "A faixa com as vozes originais. Use o áudio no idioma original (geralmente o japonês).")
+        } else {
+            Text(workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "O vídeo não tem áudio")
+        }
+    }
+
+    @ViewBuilder
+    private var onlineRows: some View {
+        @Bindable var app = app
+        GridRow {
+            rowTitle("Idioma falado", "person.wave.2")
+            Picker("Idioma falado", selection: $app.settings.dubbingSourceLanguage) {
+                Text("Detectar automaticamente").tag(String?.none)
+                ForEach(TranscriptionLanguage.all, id: \.code) { Text($0.name).tag(Optional($0.code)) }
+            }
+            .labelsHidden().fixedSize()
+            .hint("Idioma falado", "O idioma em que os personagens falam. Deixe em automático se não souber.")
+        }
+        GridRow {
+            rowTitle("Dublar para", "globe")
+            HStack {
+                Picker("Dublar para", selection: $app.settings.targetLanguage) {
+                    ForEach(Languages.all, id: \.code) { Text($0.name).tag($0.code) }
+                }
+                .labelsHidden().fixedSize()
+                Text("nova faixa de áudio, padrão ao abrir").foregroundStyle(.secondary)
+            }
+            .hint("Dublar para", "A faixa dublada entra no vídeo; o áudio original e as legendas continuam lá. Antes de gravar, o app pergunta: novo arquivo ou este arquivo.")
+        }
+        GridRow {
+            rowTitle("Conta", "person.crop.circle")
+            ElevenLabsAccountView()
+        }
+        if let pending = workspace.project.remoteDub {
+            GridRow {
+                Text("").gridCellUnsizedAxes(.horizontal)
+                InlineMessage(kind: .info, text: "Há uma dublagem para \(Languages.name(for: pending.language)) enviada em \(pending.startedAt.formatted(date: .abbreviated, time: .shortened)). “Dublar…” retoma esse trabalho, sem enviar nem cobrar de novo.")
+            }
+        }
+        GridRow {
+            Text("").gridCellUnsizedAxes(.horizontal)
+            Text("Só o áudio é enviado, nunca o vídeo. A voz de cada personagem é clonada: use apenas em conteúdo que você tem direito de dublar.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private var localRows: some View {
+        GridRow {
+            rowTitle("Texto falado", "text.bubble")
+            if isTranslated {
+                Text("Legenda em \(language) · \(Plural.count(segments.count, "fala", "falas"))")
+                    .hint("Texto falado", "O app fala o texto da legenda traduzida, no tempo de cada fala. Corrigir a tradução muda o que é dito.")
+            } else {
+                HStack {
+                    Text("Ainda não há legenda traduzida.").foregroundStyle(.secondary)
+                    Button("Criar em Legendar") { app.show(.subtitles) }.buttonStyle(.link)
+                }
+            }
+        }
+        GridRow {
+            rowTitle("Vozes", "person.wave.2")
+            HStack {
+                Text("A própria voz de cada personagem\(app.settings.dubbingPerLineVoice ? ", com a emoção de cada fala" : "") · \(app.settings.dubbingMode.label)")
+                Button(voicesExpanded ? "Fechar ajustes" : "Ajustar") { withAnimation { voicesExpanded.toggle() } }.buttonStyle(.link)
+            }
+        }
+        GridRow {
+            rowTitle("Resultado", "square.and.arrow.down")
+            Text("Nova faixa de áudio em \(language)")
         }
     }
 
@@ -196,7 +243,7 @@ struct DubbingView: View {
                     if record.replacedOriginal { Tag(text: "Este arquivo") }
                     if !exists { Tag(text: "Não encontrado", tint: Theme.warning) }
                 }
-                Text("\(record.date.formatted(date: .abbreviated, time: .shortened)) · \(record.engine) · \(Plural.count(record.lines, "fala", "falas"))\(record.failedLines > 0 ? ", \(record.failedLines) sem voz" : "")")
+                Text("\(record.date.formatted(date: .abbreviated, time: .shortened)) · \(record.engine) · \(Languages.name(for: record.language))\(record.lines > 0 ? " · " + Plural.count(record.lines, "fala", "falas") : "")\(record.failedLines > 0 ? ", \(record.failedLines) sem voz" : "")")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             .hintVerbatim(record.outputURL.lastPathComponent, "\(record.mode) · áudio \(record.baseAudio) · \(Languages.name(for: record.language))\(ok ? " · verificada" : " · com avisos")\n\(record.outputPath)")
@@ -222,6 +269,7 @@ struct DubbingView: View {
         return "O arquivo não está mais no disco. \(reset)"
     }
 
+
     // MARK: Restart
 
     private var restart: some View {
@@ -237,19 +285,8 @@ struct DubbingView: View {
         }
     }
 
-    // MARK: Actions
 
-    private func checkStudio() async {
-        studioConnected = nil
-        let client = VoiceStudioClient(baseURL: app.settings.voiceStudioURL)
-        do {
-            _ = try await client.capabilities()
-            studioVoices = try await client.voices()
-            studioConnected = true
-        } catch {
-            studioConnected = false
-        }
-    }
+    // MARK: Actions
 
     private func rebuildCast() {
         var cast = workspace.cast

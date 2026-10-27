@@ -26,16 +26,16 @@ public enum EngineChoice: String, Sendable, Codable, CaseIterable, Identifiable 
 }
 
 public enum DubbingEngineChoice: String, Sendable, Codable, CaseIterable, Identifiable {
-    /// Clone of each character's original voice, made on the Mac (PocketTTS).
+    /// ElevenLabs automatic dubbing (online): speakers, translation and cloned voices.
+    case elevenLabs
+    /// Clone of each character's original voice, made on the Mac (PocketTTS), from the translated subtitle.
     case original
-    case voiceStudio, system
 
     public var id: String { rawValue }
     public var label: String {
         switch self {
-        case .original: "Voz original (no Mac)"
-        case .system: "Vozes do macOS (rascunho)"
-        case .voiceStudio: "Voz original pelo VoiceStudio"
+        case .elevenLabs: "ElevenLabs"
+        case .original: "Voz original no Mac"
         }
     }
 }
@@ -52,9 +52,9 @@ public struct AppSettings: Sendable, Hashable, Codable {
     public var makeDefault: Bool = true
     public var placeNewTrackFirst: Bool = false
     public var toolPaths: [String: String] = [:]
-    public var voiceStudioURL: URL = URL(string: "http://127.0.0.1:3900")!
-    public var dubbingEngine: DubbingEngineChoice = .original
-    public var dubbingDefaultVoice: String? = "Luciana"
+    public var dubbingEngine: DubbingEngineChoice = .elevenLabs
+    /// Language spoken in the audio, for ElevenLabs; nil = detect.
+    public var dubbingSourceLanguage: String? = nil
     public var dubbingMaxSpeedup: Double = 1.3
     public var dubbingMode: DubbingMode = .replaceDialogue
     /// With the original voice, each line is cloned from its own original audio (voice and
@@ -79,12 +79,9 @@ public struct AppSettings: Sendable, Hashable, Codable {
         TranslationOptions(sourceLanguage: sourceLanguage, targetLanguage: targetLanguage, contextLines: contextLines, translateKaraoke: translateKaraoke)
     }
 
+    /// The on-device voice (ElevenLabs is not a synthesizer: it dubs the whole audio).
     public func makeSynthesizer(paths: AppPaths = AppPaths()) -> any SpeechSynthesizer {
-        switch dubbingEngine {
-        case .original: ClonedVoiceSynthesizer(modelsDirectory: paths.voiceModels, language: targetLanguage)
-        case .system: SystemVoiceSynthesizer()
-        case .voiceStudio: VoiceStudioSynthesizer(client: VoiceStudioClient(baseURL: voiceStudioURL))
-        }
+        ClonedVoiceSynthesizer(modelsDirectory: paths.voiceModels, language: targetLanguage)
     }
 
     public func makeEngine(apiKey: String?) -> any TranslationEngine {
@@ -109,9 +106,8 @@ public struct AppSettings: Sendable, Hashable, Codable {
         makeDefault = (try? c.decode(Bool.self, forKey: .makeDefault)) ?? defaults.makeDefault
         placeNewTrackFirst = (try? c.decode(Bool.self, forKey: .placeNewTrackFirst)) ?? defaults.placeNewTrackFirst
         toolPaths = (try? c.decode([String: String].self, forKey: .toolPaths)) ?? defaults.toolPaths
-        voiceStudioURL = (try? c.decode(URL.self, forKey: .voiceStudioURL)) ?? defaults.voiceStudioURL
         dubbingEngine = (try? c.decode(DubbingEngineChoice.self, forKey: .dubbingEngine)) ?? defaults.dubbingEngine
-        dubbingDefaultVoice = (try? c.decodeIfPresent(String.self, forKey: .dubbingDefaultVoice)) ?? defaults.dubbingDefaultVoice
+        dubbingSourceLanguage = try? c.decodeIfPresent(String.self, forKey: .dubbingSourceLanguage)
         dubbingMaxSpeedup = (try? c.decode(Double.self, forKey: .dubbingMaxSpeedup)) ?? defaults.dubbingMaxSpeedup
         dubbingMode = (try? c.decode(DubbingMode.self, forKey: .dubbingMode)) ?? defaults.dubbingMode
         dubbingPerLineVoice = (try? c.decode(Bool.self, forKey: .dubbingPerLineVoice)) ?? defaults.dubbingPerLineVoice

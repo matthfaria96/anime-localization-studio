@@ -36,64 +36,90 @@ struct DubbingPlanTests {
     }
 }
 
-/// Serves canned VoiceStudio responses (test only).
-final class StubVoiceStudio: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var lastBody: Data?
-    override class func canInit(with request: URLRequest) -> Bool { request.url?.port == 3999 }
+/// Serves canned ElevenLabs responses (test only).
+final class StubElevenLabs: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var statusCalls = 0
+    nonisolated(unsafe) static var lastCreateBody: Data?
+    nonisolated(unsafe) static var lastKey: String?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
     override func startLoading() {
         let path = request.url?.path ?? ""
+        Self.lastKey = request.value(forHTTPHeaderField: "xi-api-key")
+        var code = 200
         var body = Data()
-        if let stream = request.httpBodyStream {
-            stream.open()
-            var buffer = [UInt8](repeating: 0, count: 4096)
-            while stream.hasBytesAvailable { let n = stream.read(&buffer, maxLength: buffer.count); if n <= 0 { break }; body.append(buffer, count: n) }
-            stream.close()
+        if Self.lastKey != "good-key" {
+            code = 401
+            body = Data(#"{"detail":{"status":"invalid_api_key","message":"Invalid API key"}}"#.utf8)
+        } else if request.httpMethod == "POST", path == "/v1/dubbing" {
+            Self.lastCreateBody = request.httpBody ?? request.httpBodyStream.map { stream in
+                stream.open(); defer { stream.close() }
+                var data = Data(); var buffer = [UInt8](repeating: 0, count: 4096)
+                while stream.hasBytesAvailable { let n = stream.read(&buffer, maxLength: buffer.count); if n <= 0 { break }; data.append(buffer, count: n) }
+                return data
+            }
+            body = Data(#"{"dubbing_id":"dub-1","expected_duration_sec":1}"#.utf8)
+        } else if path == "/v1/dubbing/dub-1" {
+            Self.statusCalls += 1
+            body = Data((Self.statusCalls < 2 ? #"{"dubbing_id":"dub-1","status":"dubbing"}"# : #"{"dubbing_id":"dub-1","status":"dubbed","target_languages":["pt"]}"#).utf8)
+        } else if path == "/v1/dubbing/dub-1/audio/pt" {
+            body = Data("ID3fake-mp3".utf8)
+        } else if path == "/v1/user/subscription" {
+            body = Data(#"{"tier":"creator","character_count":1000,"character_limit":100000}"#.utf8)
+        } else {
+            code = 404
         }
-        Self.lastBody = request.httpBody ?? body
-        let (code, payload): (Int, String) = switch path {
-        case "/.well-known/voicestudio-speech": (200, #"{"protocol":"voicestudio.speech.v1"}"#)
-        case "/v1/audio/voices": (200, #"{"voices":[{"voice_id":"p1","name":"Kirito PT","type":"profile"}]}"#)
-        case "/v1/audio/speech": (200, "RIFF....WAVE")
-        default: (404, "not found")
-        }
-        let response = HTTPURLResponse(url: request.url!, statusCode: code, httpVersion: nil, headerFields: nil)!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data(payload.utf8))
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: code, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
         client?.urlProtocolDidFinishLoading(self)
     }
+
     override func stopLoading() {}
 }
 
-@Suite("VoiceStudio client", .serialized)
-struct VoiceStudioClientTests {
-    let client: VoiceStudioClient = {
+@Suite("ElevenLabs dubbing client", .serialized)
+struct ElevenLabsDubbingTests {
+    private func client(key: String) -> ElevenLabsDubbing {
         let config = URLSessionConfiguration.ephemeral
-        config.protocolClasses = [StubVoiceStudio.self]
-        return VoiceStudioClient(baseURL: URL(string: "http://127.0.0.1:3999")!, session: URLSession(configuration: config))
-    }()
-
-    @Test func readsCapabilitiesAndVoices() async throws {
-        #expect(try await client.capabilities().protocolName == "voicestudio.speech.v1")
-        #expect(try await client.voices().map(\.name) == ["Kirito PT"])
+        config.protocolClasses = [StubElevenLabs.self]
+        return ElevenLabsDubbing(apiKey: key, session: URLSession(configuration: config))
     }
 
-    @Test func sendsOpenAICompatibleSpeechRequests() async throws {
-        let audio = try await client.speech("Olá", voice: "p1", speed: 9)
-        #expect(audio.starts(with: Data("RIFF".utf8)))
-        let body = try #require(StubVoiceStudio.lastBody)
-        let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
-        #expect(json["voice"] as? String == "p1")
-        #expect(json["response_format"] as? String == "wav")
-        #expect(json["speed"] as? Double == 4)
+    @Test func dubsAnAudioFileFromStartToDownload() async throws {
+        StubElevenLabs.statusCalls = 0
+        let audio = FileManager.default.temporaryDirectory.appendingPathComponent("als-el-\(UUID().uuidString).m4a")
+        try Data("fake-audio".utf8).write(to: audio)
+        defer { try? FileManager.default.removeItem(at: audio) }
+        let el = client(key: "good-key")
+        let job = try await el.createDub(audio: audio, name: "Episódio 1", targetLanguage: "pt-BR", sourceLanguage: "ja-JP")
+        #expect(job.dubbing_id == "dub-1")
+        let body = String(decoding: try #require(StubElevenLabs.lastCreateBody), as: UTF8.self)
+        #expect(body.contains("name=\"target_lang\"\r\n\r\npt\r\n"), "ElevenLabs takes ISO 639-1 codes")
+        #expect(body.contains("name=\"source_lang\"\r\n\r\nja\r\n"))
+        #expect(body.contains("fake-audio"))
+        try await el.waitUntilDubbed(job, every: .milliseconds(10))
+        #expect(StubElevenLabs.statusCalls == 2)
+        let out = audio.deletingPathExtension().appendingPathExtension("dub.mp3")
+        defer { try? FileManager.default.removeItem(at: out) }
+        try await el.downloadAudio("dub-1", language: "pt-BR", to: out)
+        #expect(try Data(contentsOf: out) == Data("ID3fake-mp3".utf8))
+        #expect(StubElevenLabs.lastKey == "good-key", "the key goes in xi-api-key")
     }
 
-    @Test func reportsWhenNotRunning() async {
-        let offline = VoiceStudioClient(baseURL: URL(string: "http://127.0.0.1:1")!)
-        await #expect(throws: VoiceStudioClient.ClientError.self) { try await offline.capabilities() }
+    @Test func explainsAWrongKeyAndAMissingOne() async throws {
+        await #expect(throws: ElevenLabsDubbing.ServiceError.invalidKey) { try await client(key: "bad").account() }
+        await #expect(throws: ElevenLabsDubbing.ServiceError.missingKey) { try await client(key: "").account() }
+        let account = try await client(key: "good-key").account()
+        #expect(account.remaining == 99_000)
+    }
+
+    @Test func mapsQuotaErrors() {
+        let error = ElevenLabsDubbing.error(code: 401, body: Data(#"{"detail":{"status":"quota_exceeded","message":"This request exceeds your quota"}}"#.utf8))
+        if case .noCredits = error {} else { Issue.record("expected noCredits, got \(error)") }
     }
 }
-
 @Suite("Dubbing plan edge cases")
 struct DubbingPlanEdgeTests {
     @Test func linesWithoutWordsAreNotSpoken() {

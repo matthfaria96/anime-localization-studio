@@ -42,8 +42,8 @@ public struct EpisodeWorkflow: Sendable {
         self.glossary = glossary
     }
 
-    private var tools: ToolLocator { settings.toolLocator }
-    private var store: ProjectStore { ProjectStore(paths: paths) }
+    var tools: ToolLocator { settings.toolLocator }
+    var store: ProjectStore { ProjectStore(paths: paths) }
 
     /// Makes sure the project has a source subtitle file and returns it with the media info.
     public func prepareSource(_ project: StudioProject) async throws -> (StudioProject, MediaInfo, URL) {
@@ -346,9 +346,9 @@ public struct EpisodeWorkflow: Sendable {
         }
     }
 
-    /// Gives every speaker without a voice one automatically: a clone of the original voice
-    /// (VoiceStudio) or a macOS voice of similar pitch. Voices made by another engine are replaced.
-    public func automaticCast(_ project: StudioProject, cast: VoiceCast, systemVoices: Set<String>, audioTrackID: Int? = nil,
+    /// Gives every speaker without a voice their own: the clip of their original voice, which
+    /// PocketTTS clones on the Mac. Voices made by another engine are replaced.
+    public func automaticCast(_ project: StudioProject, cast: VoiceCast, audioTrackID: Int? = nil,
                               progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> VoiceCast {
         let samples = try await voiceSamples(project, audioTrackID: audioTrackID, progress: progress)
         var cast = cast
@@ -359,18 +359,7 @@ public struct EpisodeWorkflow: Sendable {
             return member.voiceID == nil || member.engine != engine
         }
         guard !needing.isEmpty else { return cast }
-        let assigned: [String: String]
-        switch settings.dubbingEngine {
-        case .voiceStudio:
-            progress(WorkflowStep(fraction: 0.95, message: "Clonando as vozes originais no VoiceStudio…"))
-            assigned = try await AutoCasting.clonedVoices(for: needing, client: VoiceStudioClient(baseURL: settings.voiceStudioURL),
-                                                          prefix: project.title, language: settings.sourceLanguage)
-        case .original:
-            // The voice is the character's own clip: PocketTTS clones it on the Mac.
-            assigned = Dictionary(needing.map { ($0.speaker, $0.url.path) }, uniquingKeysWith: { a, _ in a })
-        case .system:
-            assigned = AutoCasting.systemVoices(for: needing, available: systemVoices)
-        }
+        let assigned = Dictionary(needing.map { ($0.speaker, $0.url.path) }, uniquingKeysWith: { a, _ in a })
         for i in cast.members.indices {
             if let voice = assigned[cast.members[i].name] {
                 cast.members[i].voiceID = voice
@@ -439,7 +428,7 @@ public struct EpisodeWorkflow: Sendable {
             }.mapValues(\.path)
         }
         let pipeline = DubbingPipeline(synthesizer: synthesizer, tools: tools, workDirectory: work, cast: cast,
-                                       options: DubbingOptions(maxSpeedup: settings.dubbingMaxSpeedup, defaultVoice: settings.dubbingDefaultVoice,
+                                       options: DubbingOptions(maxSpeedup: settings.dubbingMaxSpeedup, defaultVoice: nil,
                                                                mode: settings.dubbingMode, lineVoices: lineVoices))
         let report = try await pipeline.run(segments, media: info, audioTrack: audio, output: dubAudio) { value, message in
             progress(WorkflowStep(fraction: value * 0.85, message: message))

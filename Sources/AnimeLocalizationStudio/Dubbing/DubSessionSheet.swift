@@ -8,7 +8,6 @@ import SwiftUI
 struct DubSessionSheet: View {
     @Bindable var workspace: WorkspaceModel
     @Binding var cast: VoiceCast
-    let studioConnected: Bool?
     let segmentCount: Int
     @Environment(AppModel.self) private var app
     @Environment(\.undoManager) private var undoManager
@@ -29,7 +28,7 @@ struct DubSessionSheet: View {
     }
 
     private var isRunning: Bool { if case .running = workspace.dubSession?.phase { true } else { false } }
-    private var usesClones: Bool { app.settings.dubbingEngine == .voiceStudio }
+    private var online: Bool { workspace.dubsOnline }
     private var outputName: String {
         FileOps.uniqueURL(for: MuxPlan.defaultOutputURL(for: workspace.url, suffix: "\(app.settings.targetLanguage.uppercased()) DUB")).lastPathComponent
     }
@@ -43,18 +42,27 @@ struct DubSessionSheet: View {
             Text("Dublar “\(workspace.title)”").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 summary("waveform", "Áudio de base", workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "—")
-                summary("text.bubble", "Texto falado", "legenda traduzida, \(segmentCount) falas")
-                summary("globe", "Idioma do resultado", Locale.current.localizedString(forIdentifier: app.settings.targetLanguage) ?? app.settings.targetLanguage)
-                summary("waveform.badge.mic", "Vozes", app.settings.dubbingEngine == .original
-                        ? (app.settings.dubbingPerLineVoice ? "voz original, com a emoção de cada fala" : "voz original, uma amostra por personagem")
-                        : app.settings.dubbingEngine.label)
-                summary("slider.horizontal.3", "Modo", app.settings.dubbingMode.label)
-                summary("person.2", "Personagens", speakers > 0 ? Plural.count(speakers, "personagem", "personagens") : "identificados pelo áudio")
+                summary("globe", "Dublar para", Languages.name(for: app.settings.targetLanguage))
+                if online {
+                    summary("cloud", "Motor", "ElevenLabs: separa os personagens, traduz e dubla com a voz de cada um")
+                    summary("person.wave.2", "Idioma falado", app.settings.dubbingSourceLanguage.map { code in
+                        TranscriptionLanguage.all.first { $0.code == code }?.name ?? code } ?? "detectar automaticamente")
+                } else {
+                    summary("text.bubble", "Texto falado", "legenda traduzida, \(Plural.count(segmentCount, "fala", "falas"))")
+                    summary("waveform.badge.mic", "Vozes", app.settings.dubbingPerLineVoice ? "voz original, com a emoção de cada fala" : "voz original, uma amostra por personagem")
+                    summary("slider.horizontal.3", "Modo", app.settings.dubbingMode.label)
+                    summary("person.2", "Personagens", speakers > 0 ? Plural.count(speakers, "personagem", "personagens") : "identificados pelo áudio")
+                }
             }
-            if app.settings.dubbingEngine == .original && !workspace.voiceModelsInstalled {
+            if online {
+                InlineMessage(kind: .info, text: workspace.project.remoteDub != nil
+                              ? "Esta dublagem já foi enviada antes: o app retoma o trabalho na ElevenLabs, sem enviar nem cobrar de novo."
+                              : "O áudio deste vídeo (sem a imagem) será enviado para a ElevenLabs e a dublagem usa créditos da sua conta. Leva alguns minutos; você pode continuar usando o app.")
+            }
+            if !online && !workspace.voiceModelsInstalled {
                 InlineMessage(kind: .info, text: "Ao começar, o app baixa os modelos de voz uma única vez (\(ClonedVoiceSynthesizer.downloadSize); \(ClonedVoiceSynthesizer.modelCredits)). Tudo roda no Mac; o áudio não sai do computador.")
             }
-            if workspace.cachedDubLines > 0 || workspace.dubStorageBytes > 0 {
+            if !online && (workspace.cachedDubLines > 0 || workspace.dubStorageBytes > 0) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Toggle("Gerar tudo do zero", isOn: Binding(get: { workspace.dubSession?.regenerate ?? false },
                                                                 set: { workspace.dubSession?.regenerate = $0 }))
@@ -65,28 +73,24 @@ struct DubSessionSheet: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            if app.settings.dubbingEngine == .original {
+            if !online {
                 Text("Com a voz original, cada fala leva menos de um segundo no Mac; um episódio inteiro leva alguns minutos (mais na primeira vez, para baixar e preparar os modelos). Você pode continuar usando o app.")
                     .font(.caption).foregroundStyle(.secondary)
-            }
-            if usesClones && studioConnected != true {
-                InlineMessage(kind: .warning, text: "O VoiceStudio não está aberto neste Mac, então a voz original não pode ser clonada. Abra o VoiceStudio ou use as vozes do macOS.")
-                Button("Usar vozes do macOS") { app.settings.dubbingEngine = .system }
-                    .hint("Usar vozes do macOS", "Troca para as vozes do sistema, escolhidas pelo tom de cada personagem. Funcionam sem instalar nada.")
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 Text("Onde gravar").font(.headline)
                 destination(false, "Criar um novo arquivo", "“\(outputName)”, na mesma pasta do original. O original não muda.")
-                destination(true, "Gravar neste arquivo", "O áudio dublado e a legenda entram no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.")
+                destination(true, "Gravar neste arquivo", "O áudio dublado\(online ? "" : " e a legenda") entram no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.")
             }
             HStack {
                 Spacer()
                 Button("Cancelar") { workspace.dubSession = nil }.keyboardShortcut(.cancelAction)
-                Button("Começar a dublagem") { workspace.autoDub(cast: cast, undoManager: undoManager) }
+                Button(online ? "Enviar e dublar" : "Começar a dublagem") { workspace.startDub(cast: cast, undoManager: undoManager) }
                     .buttonStyle(.glassProminent)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(usesClones && studioConnected != true)
-                    .hint("Começar a dublagem", "Identifica quem fala, prepara as vozes, gera todas as falas, mixa e grava onde você escolheu. Pode levar alguns minutos.")
+                    .hintVerbatim("Começar a dublagem", online
+                        ? "Envia o áudio, espera a ElevenLabs dublar, baixa o resultado e grava onde você escolheu."
+                        : "Identifica quem fala, prepara as vozes, gera todas as falas, mixa e grava onde você escolheu. Pode levar alguns minutos.")
             }
         }
     }
@@ -119,11 +123,12 @@ struct DubSessionSheet: View {
 
     private var running: some View {
         let fraction = workspace.operation?.fraction ?? 0
-        let current = WorkspaceModel.DubStage.at(fraction)
+        let current = WorkspaceModel.DubStage.at(fraction, online: online)
+        let stages = WorkspaceModel.DubStage.stages(online: online)
         return VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             Text("Dublando “\(workspace.title)”…").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-                ForEach(WorkspaceModel.DubStage.allCases, id: \.self) { stage in
+                ForEach(stages, id: \.self) { stage in
                     HStack(spacing: Theme.Spacing.s) {
                         Group {
                             if stage.rawValue < current.rawValue { Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.translated) }
@@ -142,7 +147,7 @@ struct DubSessionSheet: View {
 
     // MARK: After
 
-    private func done(_ url: URL, _ report: DubbingReport, _ verification: VerificationReport, _ replaced: Bool) -> some View {
+    private func done(_ url: URL, _ report: DubbingReport?, _ verification: VerificationReport, _ replaced: Bool) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             Label("Dublagem pronta", systemImage: "checkmark.seal.fill").font(.title2.weight(.semibold)).foregroundStyle(Theme.translated)
             VStack(alignment: .leading, spacing: 4) {
@@ -151,7 +156,8 @@ struct DubSessionSheet: View {
                 Text("Pasta: \(url.deletingLastPathComponent().path)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 if replaced { Text("A versão anterior está na Lixeira.").font(.caption).foregroundStyle(.secondary) }
             }
-            Text("\(report.synthesized + report.reusedClips) falas dubladas · \(report.spedUp.count) aceleradas para caber · \(report.failed.count) sem voz. O áudio dublado é a faixa padrão; o original continua no arquivo.")
+            Text(report.map { "\(Plural.count($0.synthesized + $0.reusedClips, "fala dublada", "falas dubladas")) · \($0.spedUp.count) aceleradas para caber · \($0.failed.count) sem voz. " } ?? ""
+                 + "O áudio dublado é a faixa padrão; o original continua no arquivo.")
                 .font(.callout)
             if !verification.passed { InlineMessage(kind: .warning, text: verification.failures.joined(separator: " ")) }
             HStack {
@@ -173,11 +179,12 @@ struct DubSessionSheet: View {
             Label("A dublagem não terminou", systemImage: "exclamationmark.triangle.fill").font(.title2.weight(.semibold)).foregroundStyle(Theme.warning)
             Text(message).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
             HStack {
-                if usesClones {
-                    Button("Usar vozes do macOS e tentar de novo") {
-                        app.settings.dubbingEngine = .system
+                if online {
+                    Button("Usar a voz do Mac") {
+                        app.settings.dubbingEngine = .original
                         workspace.dubSession?.phase = .confirm
                     }
+                    .hint("Usar a voz do Mac", "Troca para a dublagem gratuita no Mac, que fala a legenda traduzida.")
                 }
                 Spacer()
                 Button("Tentar de novo") { workspace.dubSession?.phase = .confirm }

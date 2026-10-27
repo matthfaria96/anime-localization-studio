@@ -8,7 +8,7 @@ AnimeLocalizationStudio (SwiftUI, isolamento padrão MainActor)
  ├── StudioCore      projetos, séries/glossários, ajustes, Keychain, fila, logs, fluxo do episódio
  │    ├── TranslationKit   motores, glossário, pipeline em lotes com checkpoints
  │    │    └── SubtitleKit      ASS/SSA/SRT, tags, tempos, verificação de estrutura
- │    ├── DubbingKit       cliente VoiceStudio, elenco, plano de segmentos
+ │    ├── DubbingKit       ElevenLabs (online), voz original no Mac, elenco, plano de segmentos
  │    └── MediaKit         ferramentas externas, inspeção, extração, mux, verificação, prévia
 ```
 
@@ -22,7 +22,7 @@ AnimeLocalizationStudio (SwiftUI, isolamento padrão MainActor)
 | 4. Subtitle Editor | `App/Editor/*` | Pronto (lista, detalhe, busca/substituição, estilos, tempos, desfazer) |
 | 5. Translation Engine | `TranslationKit/*Engine.swift`, `TranslationPipeline.swift` | Pronto (3 motores) |
 | 6. Glossary Manager | `TranslationKit/Glossary.swift`, `StudioCore/ProjectStore.swift` (Series), `App/Translation/SeriesView.swift` | Pronto |
-| 7. VoiceStudio Adapter | `DubbingKit/VoiceStudioClient.swift`, `SpeechSynthesizer.swift` | Pronto (testado contra servidor simulado) |
+| 7. Dubbing service | `DubbingKit/ElevenLabsDubbing.swift`, `StudioCore/ElevenLabsWorkflow.swift` (o VoiceStudio foi removido na 0.15.0) | Pronto (testado contra servidor simulado) |
 | 8. Audio Separation and Mixing | `DubbingKit/VoiceSeparator.swift`, `AudioMixer.swift`, `DubbingPipeline.swift` | Pronto (separação nativa aproximada, voice-over e substituir falas) |
 | 9. Voice Casting | `DubbingKit/DubbingPlan.swift`, `App/Dubbing/DubbingView.swift` | Pronto (elenco salvo na série/projeto) |
 | 10. MKV Muxing Engine | `MediaKit/MKVMuxer.swift`, `IntegrityVerifier.swift` | Pronto (legendas; áudio usa o mesmo caminho) |

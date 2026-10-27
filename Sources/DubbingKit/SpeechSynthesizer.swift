@@ -20,8 +20,8 @@ public enum SynthesisError: Error, LocalizedError, Equatable {
     }
 }
 
-/// macOS's built-in voices through `/usr/bin/say` (Luciana, Eddy, Flo… for pt-BR).
-/// Always available and fully local, but robotic: meant for drafts and timing checks.
+/// macOS's built-in voices through `/usr/bin/say` (Luciana, Eddy, Flo… for pt-BR). Not offered
+/// in the app (robotic); kept because the tests use it to make speech to analyze.
 public struct SystemVoiceSynthesizer: SpeechSynthesizer {
     public let id = "system-say"
     let executable = URL(fileURLWithPath: "/usr/bin/say")
@@ -38,27 +38,5 @@ public struct SystemVoiceSynthesizer: SpeechSynthesizer {
             throw SynthesisError.failed(error.localizedDescription)
         }
         guard FileManager.default.fileExists(atPath: url.path) else { throw SynthesisError.failed("a voz “\(voice)” não gerou áudio") }
-    }
-}
-
-/// VoiceStudio's OpenAI-compatible `/v1/audio/speech` (cloned or designed voices).
-public struct VoiceStudioSynthesizer: SpeechSynthesizer {
-    public let client: VoiceStudioClient
-    public let model: String
-    public var id: String { "voicestudio:\(model)" }
-
-    public init(client: VoiceStudioClient, model: String = "omnivoice") {
-        self.client = client
-        self.model = model
-    }
-
-    public func synthesize(_ text: String, voice: String, style: String?, speed: Double, to url: URL) async throws {
-        do {
-            let audio = try await client.speech(text, voice: voice, language: "pt", speed: speed, model: model, instructions: style)
-            try audio.write(to: url, options: .atomic)
-        } catch let error as VoiceStudioClient.ClientError {
-            if case .notRunning = error { throw SynthesisError.engineUnavailable(error.localizedDescription) }
-            throw SynthesisError.failed(error.localizedDescription)
-        }
     }
 }

@@ -7,7 +7,6 @@ import TranslationKit
 struct DiagnosticsView: View {
     @Environment(AppModel.self) private var app
     @State private var engines: [(EngineChoice, EngineAvailability)] = []
-    @State private var voiceStudio: String?
     @State private var checking = false
 
     var body: some View {
@@ -32,13 +31,8 @@ struct DiagnosticsView: View {
                 if engines.isEmpty { ProgressView() }
             }
             Section("Dublagem") {
-                LabeledContent("VoiceStudio (\(app.settings.voiceStudioURL.absoluteString))") {
-                    if let voiceStudio {
-                        Label(voiceStudio, systemImage: voiceStudio == "Conectado" ? "checkmark.circle.fill" : "minus.circle")
-                            .foregroundStyle(voiceStudio == "Conectado" ? Theme.translated : .secondary)
-                    } else { ProgressView().controlSize(.small) }
-                }
-                Text("O VoiceStudio é um app separado (AGPL-3.0) que roda os modelos de voz no Apple silicon via Metal/MLX. Instale-o em voicestudio.sh; este app só conversa com a API local dele.")
+                LabeledContent("ElevenLabs") { ElevenLabsAccountView() }
+                Text("A dublagem online usa a sua conta da ElevenLabs; só o áudio do vídeo é enviado. A voz do Mac (Pocket TTS) roda sem internet.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Dados do app") {
@@ -76,12 +70,6 @@ struct DiagnosticsView: View {
             results.append((choice, availability))
         }
         engines = results
-        do {
-            _ = try await VoiceStudioClient(baseURL: settings.voiceStudioURL).capabilities()
-            voiceStudio = "Conectado"
-        } catch {
-            voiceStudio = "Não está em execução"
-        }
     }
 
     @ViewBuilder

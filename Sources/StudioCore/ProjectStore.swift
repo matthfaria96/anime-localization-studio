@@ -47,6 +47,23 @@ public struct DubRecord: Sendable, Hashable, Codable, Identifiable {
     public var outputURL: URL { URL(fileURLWithPath: outputPath) }
 }
 
+/// A dub running on ElevenLabs, remembered so an interrupted run can pick it up again.
+public struct RemoteDub: Sendable, Hashable, Codable {
+    public var id: String
+    public var language: String
+    public var audioTrackID: Int
+    public var startedAt: Date
+    public var expectedSeconds: Double?
+
+    public init(id: String, language: String, audioTrackID: Int, startedAt: Date = Date(), expectedSeconds: Double? = nil) {
+        self.id = id
+        self.language = language
+        self.audioTrackID = audioTrackID
+        self.startedAt = startedAt
+        self.expectedSeconds = expectedSeconds
+    }
+}
+
 public enum WorkStatus: String, Sendable, Codable, CaseIterable {
     case new, extracted, translating, translated, reviewed, muxed, failed
 
@@ -98,6 +115,8 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     public var referenceTrackID: Int?
     /// The subtitle was changed in the app and not yet written into the video.
     public var draftPending: Bool?
+    /// An ElevenLabs dub already sent and not yet downloaded (resumed instead of paid again).
+    public var remoteDub: RemoteDub?
     /// Finished dubs, newest first (optional so projects saved before it still load).
     public var dubHistory: [DubRecord]?
     public var createdAt: Date

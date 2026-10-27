@@ -78,7 +78,7 @@ válido por três anos, no caso da GPL) e documentar as opções de compilação
 
 | Serviço | Licença | Forma de uso |
 |---|---|---|
-| VoiceStudio — Palash Debnath e colaboradores | AGPL-3.0 (aplicação). Pesos de modelos, tokenizadores e vozes têm licenças próprias | Comunicação HTTP com o backend local (`127.0.0.1:3900`) quando o usuário o instala e executa. Nenhum código é incorporado |
+| ElevenLabs (serviço online, opcional) | Termos de uso da ElevenLabs; acessado pela API com a chave da pessoa. Nenhum código incorporado | Comunicação HTTP com o backend local (`127.0.0.1:3900`) quando o usuário o instala e executa. Nenhum código é incorporado |
 | Ollama, LM Studio ou outro servidor compatível com a API OpenAI | Licença de cada servidor e de cada modelo baixado | Requisições HTTP para tradução, configuradas pelo usuário |
 
 Os modelos usados por esses serviços **não** são baixados pelo aplicativo. Cada serviço mostra o

@@ -33,11 +33,13 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
 - **Um vídeo por vez**: a tela inicial explica o app e recebe um vídeo (arrastar ou escolher).
   Com ele aberto, três páginas no topo da janela: Visão geral, Legendar e Dublar. Não há menu
   lateral.
-- **Dublar episódio inteiro** a partir da legenda traduzida, com o áudio de base escolhido: uma voz por personagem (clone da voz original no Mac, vozes do macOS ou do VoiceStudio), cada
-  fala ajustada ao seu tempo, em dois modos: *voice-over* (por cima do original, que abaixa) ou
-  *substituir falas* (as vozes originais são separadas da trilha no próprio Mac e trocadas). O
-  resultado é um novo `Nome [PT-BR DUB].mkv` com o áudio dublado e a legenda em português. O
-  elenco fica salvo na série.
+- **Dublar o vídeo** de dois jeitos:
+  - **ElevenLabs** (online, com a sua conta): só o áudio é enviado; o serviço separa cada
+    personagem, traduz e fala com a voz de cada um, mantendo a emoção e a música. Não precisa de
+    legenda. Um trabalho interrompido é retomado sem enviar nem cobrar de novo.
+  - **Voz original no Mac** (gratuita, offline): fala a legenda traduzida com um clone da voz de
+    cada personagem e a emoção de cada fala (Pocket TTS), em *substituir falas* ou *voice-over*.
+  O resultado entra no MKV como faixa de áudio nova, verificada, num arquivo novo ou no próprio.
 - **Identificar quem fala** no áudio (no Mac), na transcrição ou numa legenda sem personagens,
   para montar o elenco da dublagem.
 - **Transcrever** o áudio de vídeos sem legenda, ou **reconhecer o texto (OCR)** de legendas em
@@ -45,9 +47,9 @@ Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
 
 ## O que ainda não está implementado
 
-- A separação de voz é aproximada: em cenas com música ou efeitos densos ficam restos das falas
-  originais. As vozes do macOS são robóticas; vozes naturais dependem do VoiceStudio, que só foi
-  testado contra um servidor simulado.
+- Na voz do Mac, a separação de voz é aproximada: em cenas com música densa ficam restos das
+  falas originais. A integração com a ElevenLabs foi testada contra um servidor simulado; o
+  primeiro uso real depende da sua chave.
 - OCR de legendas VobSub (DVD); PGS já é reconhecido.
 
 Detalhes e próximos passos em [ROADMAP.md](ROADMAP.md).
@@ -83,13 +85,13 @@ Com Ollama, por exemplo: `ollama pull qwen3:8b`, deixe o Ollama aberto e escolha
 
 Serviços online recebem o texto das legendas. Os motores locais não enviam nada para fora do Mac.
 
-## Dublagem com o VoiceStudio
+## Dublagem com a ElevenLabs
 
-O [VoiceStudio](https://github.com/debpalash/VoiceStudio) (AGPL-3.0) é instalado à parte
-(`curl -fsSL https://voicestudio.sh/install | sh` ou o DMG oficial para Apple silicon) e roda os
-modelos de voz com Metal/MLX. O Anime Localization Studio conversa com a API local dele em
-`http://127.0.0.1:3900` (configurável em Ajustes › Ferramentas). Os modelos são baixados pelo
-VoiceStudio, que mostra tamanho e licença antes. Clone vozes só com permissão de quem fala.
+Crie uma chave em [elevenlabs.io › Developers › API Keys](https://elevenlabs.io/app/developers/api-keys)
+e cole em Dublar (ou Ajustes › Ferramentas). A chave fica só no Keychain. O app usa a API de
+dublagem (`POST /v1/dubbing`, `GET /v1/dubbing/{id}`, `GET /v1/dubbing/{id}/audio/{idioma}`):
+envia só a faixa de áudio escolhida, nunca o vídeo, e cada dublagem usa créditos da sua conta.
+Clone vozes só em conteúdo que você tem direito de dublar.
 
 ## Compilar e executar
 

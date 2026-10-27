@@ -4,8 +4,7 @@ import MediaKit
 
 /// Samples of each character's original voice, taken from the episode itself: the dialogue is
 /// isolated from music and effects, and the longest lines of the speaker are joined into a
-/// clip of about 12 s. Used to recognize who is who, to clone the voice (VoiceStudio) and to
-/// pick a similar system voice when cloning is not available.
+/// clip of about 12 s. Used to recognize who is who and to clone the voice on the Mac.
 public struct OriginalVoices: Sendable {
     public let tools: ToolLocator
     public let workDirectory: URL
@@ -131,42 +130,5 @@ public struct OriginalVoices: Sendable {
         }
         guard !pitches.isEmpty else { return nil }
         return pitches.sorted()[pitches.count / 2]
-    }
-}
-
-/// Fills the cast automatically: a cloned voice per speaker when VoiceStudio is available,
-/// otherwise a distinct macOS voice of similar pitch (lower voices get male voices).
-public enum AutoCasting {
-    public static let lowSystemVoices = ["Eddy", "Reed", "Rocko", "Grandpa"]
-    public static let highSystemVoices = ["Luciana", "Flo", "Shelley", "Sandy", "Grandma"]
-
-    public static func systemVoices(for samples: [OriginalVoices.Sample], available: Set<String>) -> [String: String] {
-        var low = lowSystemVoices.filter(available.contains)
-        var high = highSystemVoices.filter(available.contains)
-        var result: [String: String] = [:]
-        for sample in samples.sorted(by: { ($0.pitch ?? 0) < ($1.pitch ?? 0) }) {
-            let isLow = (sample.pitch ?? 200) < 165
-            var pool = isLow ? low : high
-            if pool.isEmpty { pool = isLow ? high : low }
-            guard let voice = pool.first else { continue }
-            result[sample.speaker] = voice
-            low.removeAll { $0 == voice }
-            high.removeAll { $0 == voice }
-            if low.isEmpty && high.isEmpty {
-                low = lowSystemVoices.filter(available.contains)
-                high = highSystemVoices.filter(available.contains)
-            }
-        }
-        return result
-    }
-
-    /// Creates (or reuses) a VoiceStudio clone of each sample and returns speaker → profile id.
-    public static func clonedVoices(for samples: [OriginalVoices.Sample], client: VoiceStudioClient, prefix: String, language: String?) async throws -> [String: String] {
-        var result: [String: String] = [:]
-        for sample in samples {
-            result[sample.speaker] = try await client.createCloneProfile(name: "\(prefix) · \(sample.speaker)", referenceAudio: sample.url,
-                                                                         referenceText: sample.text, language: language)
-        }
-        return result
     }
 }
