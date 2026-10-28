@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.29.0 — 28/10/2026
+
+### Adicionado
+- **Interface em inglês.** O app fala português do Brasil ou inglês, conforme o idioma do macOS (em qualquer outro idioma, inglês). Menus, botões, balões, avisos, etapas das operações, erros e o relatório de verificação foram traduzidos (1.075 frases). Os nomes de idioma vêm do próprio macOS, e a faixa nova recebe o nome do idioma na língua do app (“Japonês” ou “Japanese”).
+- O idioma de saída padrão (Ajustes › Geral) passa a ser o do sistema quando o app o oferece; senão, inglês. Quem já tinha escolhido um idioma continua com ele.
+- `Scripts/localization.py`: lista as frases do código sem tradução para o inglês (`check`) e regrava as tabelas (`write`).
+- Ganchos de captura: `ALS_SETTINGS=<aba>` abre os Ajustes numa aba; `Scripts/ui-capture.sh` aceita `LANGUAGE=en` e `-` no lugar do vídeo para a tela inicial.
+
+### Corrigido
+- As instruções para os modelos de tradução pediam português coloquial e adaptavam honoríficos “para o português” mesmo traduzindo para outro idioma; agora seguem o idioma de saída.
+- Com uma legenda Ao lado, a lista de falas não mostra mais uma barra de rolagem horizontal.
+- Diagnóstico ainda citava a fila, o Pocket TTS e o VoiceStudio, que saíram do app.
+
 ## 0.28.0 — 28/10/2026
 
 ### Adicionado

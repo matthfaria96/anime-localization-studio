@@ -36,14 +36,14 @@ public struct IntegrityVerifier: Sendable {
         do {
             info = try await MediaInspector(tools: tools).inspect(output)
             report.outputInfo = info
-            report.add("Arquivo legível", info.isMatroska, info.container)
+            report.add(String(localized: "Arquivo legível"), info.isMatroska, info.container)
         } catch {
-            report.add("Arquivo legível", false, error.localizedDescription)
+            report.add(String(localized: "Arquivo legível"), false, error.localizedDescription)
             return report
         }
 
         let expected = plan.keptTracks.count + plan.newTracks.count
-        report.add("Número de faixas", info.tracks.count == expected, "\(info.tracks.count) de \(expected) esperadas")
+        report.add(String(localized: "Número de faixas"), info.tracks.count == expected, String(localized: "\(info.tracks.count) de \(expected) esperadas"))
 
         // Original tracks, matched in order within each kind.
         var missing: [String] = []
@@ -57,7 +57,7 @@ public struct IntegrityVerifier: Sendable {
                 }
             }
         }
-        report.add("Faixas originais preservadas", missing.isEmpty, missing.isEmpty ? "Todas presentes" : "Ausentes: " + missing.joined(separator: ", "))
+        report.add(String(localized: "Faixas originais preservadas"), missing.isEmpty, missing.isEmpty ? String(localized: "Todas presentes") : String(localized: "Ausentes: ") + missing.joined(separator: ", "))
 
         for new in plan.newTracks {
             let found = info.tracks(new.kind).first { track in
@@ -65,38 +65,38 @@ public struct IntegrityVerifier: Sendable {
                     && (track.name ?? "") == new.name
             }
             let flagsOK = found.map { $0.isDefault == new.isDefault && $0.isForced == new.isForced } ?? false
-            report.add("Nova faixa “\(new.name)”", found != nil && flagsOK,
-                       found == nil ? "Não encontrada" : flagsOK ? "Idioma \(new.language), \(new.isDefault ? "padrão" : "não padrão")" : "Flags padrão/forçada diferentes do pedido")
+            report.add(String(localized: "Nova faixa “\(new.name)”"), found != nil && flagsOK,
+                       found == nil ? String(localized: "Não encontrada") : flagsOK ? String(localized: "Idioma \(new.language), \(new.isDefault ? String(localized: "padrão") : String(localized: "não padrão"))") : String(localized: "Flags padrão/forçada diferentes do pedido"))
         }
 
         if plan.clearOtherDefaults {
             for kind in Set(plan.newTracks.filter(\.isDefault).map(\.kind)) {
                 let defaults = info.tracks(kind).filter(\.isDefault).count
-                report.add("Uma faixa padrão de \(kind.label.lowercased())", defaults == 1, "\(defaults) marcadas como padrão")
+                report.add(String(localized: "Uma faixa padrão de \(kind.label.lowercased())"), defaults == 1, String(localized: "\(defaults) marcadas como padrão"))
             }
         }
 
         let kept = plan.source.attachments.filter { !plan.excludedAttachmentIDs.contains($0.id) }.count
         let expectedAttachments = kept + plan.newAttachments.count
-        report.add("Anexos (fontes) preservados", info.attachments.count == expectedAttachments,
+        report.add(String(localized: "Anexos (fontes) preservados"), info.attachments.count == expectedAttachments,
                    "\(info.attachments.count) de \(expectedAttachments)")
         for file in plan.newAttachments {
             let found = info.attachments.contains { $0.fileName.caseInsensitiveCompare(file.lastPathComponent) == .orderedSame }
-            report.add("Fonte “\(file.lastPathComponent)” anexada", found, found ? "Presente" : "Não encontrada")
+            report.add(String(localized: "Fonte “\(file.lastPathComponent)” anexada"), found, found ? String(localized: "Presente") : String(localized: "Não encontrada"))
         }
-        report.add("Capítulos preservados", info.chapterCount == plan.source.chapterCount,
+        report.add(String(localized: "Capítulos preservados"), info.chapterCount == plan.source.chapterCount,
                    "\(info.chapterCount) de \(plan.source.chapterCount)")
 
         if let a = plan.source.durationMilliseconds, let b = info.durationMilliseconds {
-            report.add("Duração", abs(a - b) <= 1_000, "\(b / 1_000) s (original \(a / 1_000) s)")
+            report.add(String(localized: "Duração"), abs(a - b) <= 1_000, "\(b / 1_000) s (original \(a / 1_000) s)")
         }
 
         if !plan.source.tracks(.video).isEmpty {
             if tools.locate(.ffmpeg) != nil {
                 let (same, detail) = try await samePackets(plan.source.url, output)
-                report.add("Vídeo sem recodificação", same, detail)
+                report.add(String(localized: "Vídeo sem recodificação"), same, detail)
             } else {
-                report.add("Vídeo sem recodificação", true, "Comparação de pacotes indisponível sem FFmpeg; codec e resolução conferem.")
+                report.add(String(localized: "Vídeo sem recodificação"), true, String(localized: "Comparação de pacotes indisponível sem FFmpeg; codec e resolução conferem."))
             }
         }
         return report
@@ -115,9 +115,9 @@ public struct IntegrityVerifier: Sendable {
         async let left = packetHashes(ffmpeg, a)
         async let right = packetHashes(ffmpeg, b)
         let (x, y) = try await (left, right)
-        guard !x.isEmpty else { return (false, "Não foi possível ler os pacotes de vídeo do original.") }
+        guard !x.isEmpty else { return (false, String(localized: "Não foi possível ler os pacotes de vídeo do original.")) }
         let same = x == y
-        return (same, same ? "\(x.count) pacotes idênticos ao original" : "Os pacotes de vídeo diferem do original")
+        return (same, same ? String(localized: "\(x.count) pacotes idênticos ao original") : String(localized: "Os pacotes de vídeo diferem do original"))
     }
 
     private func packetHashes(_ ffmpeg: URL, _ url: URL) async throws -> [String] {

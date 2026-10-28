@@ -21,7 +21,7 @@ struct StorageSettings: View {
                             Text(ByteCountFormatter.string(fromByteCount: entry.bytes, countStyle: .file)).monospacedDigit()
                             Button("Apagar") { if entry.kind.losesWork { confirm = entry.kind } else { clear(entry.kind) } }
                                 .disabled(entry.bytes == 0)
-                                .hintVerbatim("Apagar \(entry.kind.title.lowercased())", entry.kind.detail)
+                                .hintVerbatim(String(localized: "Apagar \(entry.kind.title.lowercased())"), entry.kind.detail)
                         }
                     } label: {
                         Text(entry.kind.title)
@@ -39,7 +39,7 @@ struct StorageSettings: View {
                         .hint("Mostrar no Finder", "Abre a pasta de dados do app.")
                 }
             } footer: {
-                Text(message ?? "Os vídeos que você abriu e os arquivos que o app criou ao lado deles nunca são apagados aqui. Episódios abertos ou em processamento são pulados.")
+                Text(message ?? String(localized: "Os vídeos que você abriu e os arquivos que o app criou ao lado deles nunca são apagados aqui. Episódios abertos ou em processamento são pulados."))
             }
         }
         .formStyle(.grouped)
@@ -66,7 +66,7 @@ struct StorageSettings: View {
             message = "\(kind.title) apagados."
             if kind == .dubs { app.workspace?.voiceSamples = [:]; app.workspace?.refreshDubStorage() }
         } catch {
-            message = "Não foi possível apagar tudo: \(error.localizedDescription)"
+            message = String(localized: "Não foi possível apagar tudo: \(error.localizedDescription)")
         }
         confirm = nil
         Task { await measure() }

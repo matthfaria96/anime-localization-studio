@@ -20,14 +20,14 @@ public struct SpeakerDiarization: Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .modelsNotInstalled: "Os modelos de identificação de falantes ainda não foram baixados."
-            case .nothingFound: "Nenhuma voz foi encontrada no áudio."
+            case .modelsNotInstalled: String(localized: "Os modelos de identificação de falantes ainda não foram baixados.")
+            case .nothingFound: String(localized: "Nenhuma voz foi encontrada no áudio.")
             }
         }
     }
 
-    public static let downloadSize = "cerca de 22 MB"
-    public static let modelCredits = "pyannote Community-1, WeSpeaker e BUT Speech@FIT (CC-BY-4.0), conversão Core ML da Fluid Inference"
+    public static let downloadSize = String(localized: "cerca de 22 MB")
+    public static let modelCredits = String(localized: "pyannote Community-1, WeSpeaker e BUT Speech@FIT (CC-BY-4.0), conversão Core ML da Fluid Inference")
 
     public let modelsDirectory: URL
 
@@ -55,7 +55,7 @@ public struct SpeakerDiarization: Sendable {
             .sorted { $0.startTimeSeconds < $1.startTimeSeconds }
             .map { segment -> Turn in
                 let name = names[segment.speakerId] ?? {
-                    let label = "Voz \(names.count + 1)"
+                    let label = String(localized: "Voz \(names.count + 1)")
                     names[segment.speakerId] = label
                     return label
                 }()

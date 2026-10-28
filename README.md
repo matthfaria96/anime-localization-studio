@@ -8,6 +8,8 @@ documentários.
 
 Escrito em Swift e SwiftUI para macOS 27 em Apple silicon.
 
+A interface está em português do Brasil e em inglês (segue o idioma do macOS).
+
 ## O que já funciona
 
 - **Abrir e inspecionar** MKV, MP4 e MOV na Visão geral: tamanho, duração, codecs, faixas de

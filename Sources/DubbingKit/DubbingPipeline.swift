@@ -12,10 +12,10 @@ public enum DubbingMode: String, Sendable, Hashable, Codable, CaseIterable, Iden
     public var label: String {
         switch self {
         case .voiceOver: "Voice-over"
-        case .replaceDialogue: "Substituir falas"
+        case .replaceDialogue: String(localized: "Substituir falas")
         }
     }
-    public var trackSuffix: String { self == .voiceOver ? "voice-over" : "falas substituídas" }
+    public var trackSuffix: String { self == .voiceOver ? "voice-over" : String(localized: "falas substituídas") }
 }
 
 public struct DubbingOptions: Sendable, Hashable, Codable {
@@ -86,11 +86,11 @@ public struct DubbingPipeline: Sendable {
         var placements: [AudioMixer.Placement] = []
         for (n, segment) in segments.enumerated() {
             try Task.checkCancellation()
-            progress?(Double(n) / Double(max(1, segments.count)) * 0.8, "Gerando voz \(n + 1) de \(segments.count)…")
+            progress?(Double(n) / Double(max(1, segments.count)) * 0.8, String(localized: "Gerando voz \(n + 1) de \(segments.count)…"))
             let member = cast.member(for: segment.speaker)
             guard let voice = try await reference(line: options.lineVoices[segment.id], character: member?.voiceID ?? options.defaultVoice,
                                                   in: workDirectory) else {
-                report.failed[segment.id] = "\(segment.speaker) não tem voz no elenco"
+                report.failed[segment.id] = String(localized: "\(segment.speaker) não tem voz no elenco")
                 continue
             }
             let speed = member?.speed ?? 1
@@ -115,23 +115,23 @@ public struct DubbingPipeline: Sendable {
                 report.failed[segment.id] = error.localizedDescription
             }
         }
-        guard !placements.isEmpty else { throw SynthesisError.failed("nenhuma fala pôde ser gerada") }
+        guard !placements.isEmpty else { throw SynthesisError.failed(String(localized: "nenhuma fala pôde ser gerada")) }
         try Task.checkCancellation()
-        progress?(0.82, "Montando a trilha de voz…")
+        progress?(0.82, String(localized: "Montando a trilha de voz…"))
         let voiceTrack = workDirectory.appendingPathComponent("voice.wav")
         let total = media.durationMilliseconds ?? (placements.map(\.start).max() ?? 0) + 10_000
         report.delayed = try mixer.assembleVoiceTrack(placements, totalDuration: total, to: voiceTrack)
         switch options.mode {
         case .voiceOver:
-            progress?(0.85, "Mixando com o áudio original…")
+            progress?(0.85, String(localized: "Mixando com o áudio original…"))
             try await mixer.mixVoiceOver(media: media, audioTrack: audioTrack, voice: voiceTrack, to: output) { value in
-                progress?(0.85 + value * 0.15, "Mixando com o áudio original…")
+                progress?(0.85 + value * 0.15, String(localized: "Mixando com o áudio original…"))
             }
         case .replaceDialogue:
             let background = try await removeDialogue(media: media, audioTrack: audioTrack, progress: progress)
-            progress?(0.93, "Mixando as novas falas com a trilha…")
+            progress?(0.93, String(localized: "Mixando as novas falas com a trilha…"))
             try await mixer.mixReplacingDialogue(background: background, voice: voiceTrack, durationMilliseconds: media.durationMilliseconds, to: output) { value in
-                progress?(0.93 + value * 0.07, "Mixando as novas falas com a trilha…")
+                progress?(0.93 + value * 0.07, String(localized: "Mixando as novas falas com a trilha…"))
             }
         }
         report.finishedAt = Date()
@@ -148,11 +148,11 @@ public struct DubbingPipeline: Sendable {
             try? FileManager.default.removeItem(at: original)
             try? FileManager.default.removeItem(at: isolated)
         }
-        progress?(0.86, "Extraindo o áudio original…")
+        progress?(0.86, String(localized: "Extraindo o áudio original…"))
         _ = try await TrackExtractor(tools: tools).extractAudioWAV(audioTrack, from: media, to: original)
         let partial = workDirectory.appendingPathComponent(".background-\(UUID().uuidString.prefix(6)).wav")
         try await VoiceSeparator(tools: tools).separate(original, voice: isolated, background: partial) { value in
-            progress?(0.87 + value * 0.06, "Separando as falas da música e dos efeitos…")
+            progress?(0.87 + value * 0.06, String(localized: "Separando as falas da música e dos efeitos…"))
         }
         try FileOps.replaceItem(at: background, with: partial)
         return background

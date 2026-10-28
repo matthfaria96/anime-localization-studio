@@ -31,11 +31,11 @@ struct DiagnosticsView: View {
             }
             Section("Dublagem") {
                 LabeledContent("ElevenLabs") { ElevenLabsAccountView() }
-                Text("A dublagem online usa a sua conta da ElevenLabs; só o áudio do vídeo é enviado. A voz do Mac (Pocket TTS) roda sem internet.")
+                Text("A dublagem online usa a sua conta da ElevenLabs; só o áudio do vídeo é enviado. A voz original no Mac roda sem internet.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Dados do app") {
-                LabeledContent("Projetos, séries e fila") { pathButton(app.paths.root) }
+                LabeledContent("Projetos e séries") { pathButton(app.paths.root) }
                 LabeledContent("Pré-visualizações em cache") {
                     HStack {
                         pathButton(app.paths.previews)
@@ -50,7 +50,7 @@ struct DiagnosticsView: View {
         .navigationTitle("Diagnóstico")
         .toolbar {
             Button("Verificar de novo", systemImage: "arrow.clockwise") { Task { await check() } }.disabled(checking)
-                .hint("Verificar de novo", "Procura outra vez as ferramentas, os motores de tradução e o VoiceStudio.")
+                .hint("Verificar de novo", "Procura outra vez as ferramentas, os motores de tradução e os de voz.")
         }
         .task { await check() }
     }

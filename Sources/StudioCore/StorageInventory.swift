@@ -14,25 +14,25 @@ public struct StorageInventory: Sendable {
 
         public var title: String {
             switch self {
-            case .previews: "Pré-visualizações"
-            case .fonts: "Fontes extraídas"
-            case .work: "Arquivos temporários"
-            case .dubs: "Arquivos de dublagem"
-            case .projects: "Projetos (legendas e traduções)"
-            case .voiceModels: "Modelos de voz (Chatterbox)"
-            case .speakerModels: "Modelos de identificação de falantes"
+            case .previews: String(localized: "Pré-visualizações")
+            case .fonts: String(localized: "Fontes extraídas")
+            case .work: String(localized: "Arquivos temporários")
+            case .dubs: String(localized: "Arquivos de dublagem")
+            case .projects: String(localized: "Projetos (legendas e traduções)")
+            case .voiceModels: String(localized: "Modelos de voz (Chatterbox)")
+            case .speakerModels: String(localized: "Modelos de identificação de falantes")
             }
         }
 
         public var detail: String {
             switch self {
-            case .previews: "Cópias leves dos vídeos para tocar no app. São recriadas ao abrir o episódio."
-            case .fonts: "Fontes dos MKVs para a pré-visualização fiel. São extraídas de novo quando preciso."
-            case .work: "Sobras de operações interrompidas."
-            case .dubs: "Falas geradas, vozes separadas e música de fundo de cada episódio. Apagar faz a próxima dublagem gerar tudo do zero."
-            case .projects: "Legendas extraídas, traduções e revisões de cada episódio. Apagar perde as traduções e correções ainda não gravadas no vídeo."
-            case .voiceModels: "Baixados na primeira dublagem com a voz original. São baixados de novo quando preciso."
-            case .speakerModels: "Baixados na primeira identificação de falantes. São baixados de novo quando preciso."
+            case .previews: String(localized: "Cópias leves dos vídeos para tocar no app. São recriadas ao abrir o episódio.")
+            case .fonts: String(localized: "Fontes dos MKVs para a pré-visualização fiel. São extraídas de novo quando preciso.")
+            case .work: String(localized: "Sobras de operações interrompidas.")
+            case .dubs: String(localized: "Falas geradas, vozes separadas e música de fundo de cada episódio. Apagar faz a próxima dublagem gerar tudo do zero.")
+            case .projects: String(localized: "Legendas extraídas, traduções e revisões de cada episódio. Apagar perde as traduções e correções ainda não gravadas no vídeo.")
+            case .voiceModels: String(localized: "Baixados na primeira dublagem com a voz original. São baixados de novo quando preciso.")
+            case .speakerModels: String(localized: "Baixados na primeira identificação de falantes. São baixados de novo quando preciso.")
             }
         }
 

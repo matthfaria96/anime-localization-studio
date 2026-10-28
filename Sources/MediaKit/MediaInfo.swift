@@ -6,10 +6,10 @@ public struct MediaTrack: Sendable, Hashable, Codable, Identifiable {
 
         public var label: String {
             switch self {
-            case .video: "Vídeo"
-            case .audio: "Áudio"
-            case .subtitles: "Legenda"
-            case .other: "Outro"
+            case .video: String(localized: "Vídeo")
+            case .audio: String(localized: "Áudio")
+            case .subtitles: String(localized: "Legenda")
+            case .other: String(localized: "Outro")
             }
         }
     }

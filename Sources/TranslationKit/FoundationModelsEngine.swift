@@ -7,7 +7,7 @@ import FoundationModels
 /// cloud models but nothing leaves the Mac.
 public struct FoundationModelsEngine: TranslationEngine {
     public let id = "apple-foundation-models"
-    public let displayName = "Apple Intelligence (modelo local)"
+    public let displayName = String(localized: "Apple Intelligence (modelo local)")
     public let keepsPlaceholders = true
     public let usesContext = true
     public let preferredBatchSize = 10
@@ -39,15 +39,15 @@ public struct FoundationModelsEngine: TranslationEngine {
         case .available:
             let language = Locale.Language(identifier: target)
             let supported = model.supportedLanguages.contains { $0.languageCode == language.languageCode }
-            return supported ? .available : .unavailable("O modelo local não escreve em \(target).")
+            return supported ? .available : .unavailable(String(localized: "O modelo local não escreve em \(target)."))
         case .unavailable(.appleIntelligenceNotEnabled):
-            return .needsSetup("Ative a Apple Intelligence em Ajustes do Sistema para usar o modelo local.")
+            return .needsSetup(String(localized: "Ative a Apple Intelligence em Ajustes do Sistema para usar o modelo local."))
         case .unavailable(.modelNotReady):
-            return .needsSetup("O modelo da Apple Intelligence ainda está sendo baixado.")
+            return .needsSetup(String(localized: "O modelo da Apple Intelligence ainda está sendo baixado."))
         case .unavailable(.deviceNotEligible):
-            return .unavailable("Este Mac não é compatível com a Apple Intelligence.")
+            return .unavailable(String(localized: "Este Mac não é compatível com a Apple Intelligence."))
         case .unavailable:
-            return .unavailable("O modelo local não está disponível.")
+            return .unavailable(String(localized: "O modelo local não está disponível."))
         }
     }
 
@@ -62,13 +62,13 @@ public struct FoundationModelsEngine: TranslationEngine {
         } catch let error as LanguageModelError {
             switch error {
             case .contextSizeExceeded:
-                throw TranslationEngineError.invalidResponse("lote grande demais para o modelo local")
+                throw TranslationEngineError.invalidResponse(String(localized: "lote grande demais para o modelo local"))
             case .guardrailViolation, .refusal:
-                throw TranslationEngineError.invalidResponse("o modelo local recusou o trecho")
+                throw TranslationEngineError.invalidResponse(String(localized: "o modelo local recusou o trecho"))
             case .rateLimited, .timeout:
-                throw TranslationEngineError.transient("modelo local ocupado")
+                throw TranslationEngineError.transient(String(localized: "modelo local ocupado"))
             case .unsupportedLanguageOrLocale:
-                throw TranslationEngineError.permanent("O modelo local não suporta este idioma.")
+                throw TranslationEngineError.permanent(String(localized: "O modelo local não suporta este idioma."))
             default:
                 throw TranslationEngineError.permanent(error.localizedDescription)
             }

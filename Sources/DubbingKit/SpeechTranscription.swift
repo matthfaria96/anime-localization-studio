@@ -21,9 +21,9 @@ public struct SpeechTranscription: Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .unsupportedLanguage(let l): "A transcrição da Apple não reconhece o idioma \(l)."
-            case .modelDownloadRequired(let l): "O macOS precisa baixar o modelo de reconhecimento de fala para \(l)."
-            case .nothingRecognized: "Nenhuma fala foi reconhecida no áudio."
+            case .unsupportedLanguage(let l): String(localized: "A transcrição da Apple não reconhece o idioma \(l).")
+            case .modelDownloadRequired(let l): String(localized: "O macOS precisa baixar o modelo de reconhecimento de fala para \(l).")
+            case .nothingRecognized: String(localized: "Nenhuma fala foi reconhecida no áudio.")
             }
         }
     }

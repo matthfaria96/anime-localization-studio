@@ -67,7 +67,7 @@ public enum DubbingPlan {
                 && cue.plainText.contains { $0.isLetter || $0.isNumber }  // "♪ ♪" has nothing to say
         }.sorted { $0.start < $1.start }
         return cues.map { cue in
-            DubSegment(id: cue.id, start: cue.start, end: cue.end, speaker: cue.actor.isEmpty ? "Desconhecido" : cue.actor,
+            DubSegment(id: cue.id, start: cue.start, end: cue.end, speaker: cue.actor.isEmpty ? String(localized: "Desconhecido") : cue.actor,
                        text: cue.plainText.replacingOccurrences(of: "\n", with: " "))
         }
     }

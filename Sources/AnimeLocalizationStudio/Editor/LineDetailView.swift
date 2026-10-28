@@ -26,7 +26,7 @@ struct LineDetailView: View {
                             let beside = editor.editsOriginal ? editor.reference[index] : cue.plainText
                             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                                 Text("Ao lado · \(title)").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                                Text(beside ?? "Sem fala correspondente neste tempo.")
+                                Text(beside ?? String(localized: "Sem fala correspondente neste tempo."))
                                     .foregroundStyle(beside == nil ? .tertiary : .secondary)
                                     .textSelection(.enabled)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -74,7 +74,7 @@ struct LineDetailView: View {
     private func header(_ cue: SubtitleCue) -> some View {
         HStack(spacing: Theme.Spacing.s) {
             Text("Fala \(cue.id + 1)").font(.headline)
-            if cue.isComment { Tag(text: "Comentário") }
+            if cue.isComment { Tag(text: String(localized: "Comentário")) }
             Spacer()
             Button("Reproduzir fala", systemImage: "play.circle") { workspace.player.play(from: cue.start, to: cue.end) }
                 .labelStyle(.iconOnly)
@@ -153,7 +153,7 @@ struct LineDetailView: View {
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(row?.isInArea == false
-                         ? "Ponto livre · \(row?.screenPoint.map { ScreenPosition.name(ScreenPosition.area(of: $0)).lowercased() } ?? "")"
+                         ? String(localized: "Ponto livre · \(row?.screenPoint.map { ScreenPosition.name(ScreenPosition.area(of: $0)).lowercased() } ?? "")")
                          : ScreenPosition.name(alignment))
                         .font(.callout)
                     Text(positionSource(row, placeable: placeable)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -179,12 +179,12 @@ struct LineDetailView: View {
     }
 
     private func positionSource(_ row: EditorRow?, placeable: Bool) -> String {
-        guard editor.playResolution != nil else { return "Em SRT há só as posições da grade (\\an); arrastar e ponto exato são do ASS." }
-        if !placeable { return "Esta fala se move sozinha (\\move): a grade muda o lado de onde ela se ancora, e arrastar não se aplica." }
-        if row?.hasExactPosition == true { return "Num ponto exato definido nesta fala (\\pos), fora das áreas da grade. Clique numa área para pô-la lá." }
-        if row?.isInArea == false { return "As margens do estilo “\(row?.style ?? "")” põem a fala fora da área \(ScreenPosition.name(row?.alignment ?? 2).lowercased())." }
-        if row?.alignmentFromLine == true { return "Definida nesta fala." }
-        return "Vem do estilo “\(row?.style.isEmpty == false ? row!.style : "padrão")”."
+        guard editor.playResolution != nil else { return String(localized: "Em SRT há só as posições da grade (\\an); arrastar e ponto exato são do ASS.") }
+        if !placeable { return String(localized: "Esta fala se move sozinha (\\move): a grade muda o lado de onde ela se ancora, e arrastar não se aplica.") }
+        if row?.hasExactPosition == true { return String(localized: "Num ponto exato definido nesta fala (\\pos), fora das áreas da grade. Clique numa área para pô-la lá.") }
+        if row?.isInArea == false { return String(localized: "As margens do estilo “\(row?.style ?? "")” põem a fala fora da área \(ScreenPosition.name(row?.alignment ?? 2).lowercased()).") }
+        if row?.alignmentFromLine == true { return String(localized: "Definida nesta fala.") }
+        return String(localized: "Vem do estilo “\(row?.style.isEmpty == false ? row!.style : String(localized: "padrão"))”.")
     }
 
     /// ↑ ↓ ← →: 1% of the frame per click, 1 script pixel with ⌥.
@@ -197,7 +197,7 @@ struct LineDetailView: View {
                     editor.nudge(index, dx: dx * step, dy: dy * step, undoManager: undoManager)
                 }
                 .labelStyle(.iconOnly)
-                .hintVerbatim("Mover para \(name)", "Move a fala um pouco para \(name) (1% da tela; com ⌥, 1 ponto). Ela passa a ter um ponto exato (\\pos).")
+                .hintVerbatim(String(localized: "Mover para \(name)"), String(localized: "Move a fala um pouco para \(name) (1% da tela; com ⌥, 1 ponto). Ela passa a ter um ponto exato (\\pos)."))
             }
         }
     }
@@ -209,7 +209,7 @@ struct LineDetailView: View {
                 .textFieldStyle(.roundedBorder)
                 .monospacedDigit()
                 .frame(width: 54)
-                .hintVerbatim("Posição \(name)", "\(name == "X" ? "Distância da esquerda" : "Distância do topo") em pontos do script (\(name == "X" ? "PlayResX" : "PlayResY")). Digite e aperte Return.")
+                .hintVerbatim(String(localized: "Posição \(name)"), String(localized: "\(name == "X" ? String(localized: "Distância da esquerda") : String(localized: "Distância do topo")) em pontos do script (\(name == "X" ? "PlayResX" : "PlayResY")). Digite e aperte Return."))
         }
     }
 
@@ -246,7 +246,7 @@ struct LineDetailView: View {
 
     private func nudge(_ title: String, start: Int, end: Int, index: Int, cue: SubtitleCue) -> some View {
         Button(title) { editor.setTiming(start: cue.start + start, end: cue.end + end, index: index, undoManager: undoManager) }
-            .hintVerbatim(title, start < 0 ? "Adianta a fala inteira (início e fim) em 0,1 segundo." : "Atrasa a fala inteira (início e fim) em 0,1 segundo.")
+            .hintVerbatim(title, start < 0 ? String(localized: "Adianta a fala inteira (início e fim) em 0,1 segundo.") : String(localized: "Atrasa a fala inteira (início e fim) em 0,1 segundo."))
     }
 
     private func textEditor(_ title: LocalizedStringKey, text: Binding<String>, side: DocumentSide, index: Int, prominent: Bool) -> some View {
@@ -298,10 +298,10 @@ struct LineDetailView: View {
     private func warnings(_ cue: SubtitleCue) -> some View {
         let features = cue.features
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            if features.hasKaraoke { InlineMessage(kind: .info, text: "Linha de karaokê: por padrão não é traduzida, para não perder a sincronia das sílabas.") }
+            if features.hasKaraoke { InlineMessage(kind: .info, text: String(localized: "Linha de karaokê: por padrão não é traduzida, para não perder a sincronia das sílabas.")) }
             if !workspace.usesFaithfulPreview {
-                if features.hasDrawing { InlineMessage(kind: .info, text: "Desenho vetorial (\\p): preservado como está; ative a pré-visualização fiel (libass) em Ajustes para vê-lo.") }
-                if features.hasAnimation { InlineMessage(kind: .info, text: "Usa animação (\\t, \\move ou \\fad): preservada no arquivo; ative a pré-visualização fiel (libass) em Ajustes para vê-la.") }
+                if features.hasDrawing { InlineMessage(kind: .info, text: String(localized: "Desenho vetorial (\\p): preservado como está; ative a pré-visualização fiel (libass) em Ajustes para vê-lo.")) }
+                if features.hasAnimation { InlineMessage(kind: .info, text: String(localized: "Usa animação (\\t, \\move ou \\fad): preservada no arquivo; ative a pré-visualização fiel (libass) em Ajustes para vê-la.")) }
             }
         }
     }

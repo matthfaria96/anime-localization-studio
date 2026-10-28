@@ -22,7 +22,7 @@ struct ChoiceRow<Detail: View>: View {
             }
             .buttonStyle(.plain)
             .disabled(disabledReason != nil)
-            .hintVerbatim(title, disabledReason ?? "Escolhe esta opção.")
+            .hintVerbatim(title, disabledReason ?? String(localized: "Escolhe esta opção."))
             if let disabledReason {
                 Text(disabledReason).font(.caption).foregroundStyle(.secondary).padding(.leading, 24)
             } else if selected {

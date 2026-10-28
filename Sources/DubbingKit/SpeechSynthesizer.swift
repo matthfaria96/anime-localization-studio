@@ -15,7 +15,7 @@ public enum SynthesisError: Error, LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .engineUnavailable(let m): m
-        case .failed(let m): "A síntese da fala falhou: \(m)"
+        case .failed(let m): String(localized: "A síntese da fala falhou: \(m)")
         }
     }
 }
@@ -35,6 +35,6 @@ public struct SystemVoiceSynthesizer: SpeechSynthesizer {
         } catch let error as ProcessError {
             throw SynthesisError.failed(error.localizedDescription)
         }
-        guard FileManager.default.fileExists(atPath: url.path) else { throw SynthesisError.failed("a voz “\(voice)” não gerou áudio") }
+        guard FileManager.default.fileExists(atPath: url.path) else { throw SynthesisError.failed(String(localized: "a voz “\(voice)” não gerou áudio")) }
     }
 }

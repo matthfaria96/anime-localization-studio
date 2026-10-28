@@ -43,9 +43,9 @@ struct ElevenLabsAccountView: View {
     }
 
     private func accountText(_ account: ElevenLabsDubbing.Account) -> String {
-        var parts = ["Conectada"]
+        var parts = [String(localized: "Conectada")]
         if let tier = account.tier { parts.append("plano \(tier)") }
-        if let remaining = account.remaining { parts.append("\(remaining.formatted()) créditos restantes") }
+        if let remaining = account.remaining { parts.append(String(localized: "\(remaining.formatted()) créditos restantes")) }
         return parts.joined(separator: " · ")
     }
 

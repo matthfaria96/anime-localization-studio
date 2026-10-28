@@ -41,7 +41,7 @@ final class PlayerModel {
             await load(info.url)
             return
         }
-        state = .preparing(fraction: 0, message: "Preparando pré-visualização (sem recodificar o vídeo)…")
+        state = .preparing(fraction: 0, message: String(localized: "Preparando pré-visualização (sem recodificar o vídeo)…"))
         let proxy = PreviewProxy(tools: tools, cacheDirectory: cache)
         do {
             let (url, mode) = try await proxy.make(for: info, audioTrack: audioTrack) { value in
@@ -64,7 +64,7 @@ final class PlayerModel {
         do {
             let (length, playable) = try await asset.load(.duration, .isPlayable)
             guard playable else {
-                state = .failed("O AVFoundation não consegue reproduzir este arquivo.")
+                state = .failed(String(localized: "O AVFoundation não consegue reproduzir este arquivo."))
                 return
             }
             if let track = try await asset.loadTracks(withMediaType: .video).first {

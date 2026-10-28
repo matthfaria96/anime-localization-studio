@@ -43,10 +43,10 @@ extension WorkspaceModel {
     }
 
     func deleteTrack(_ track: MediaTrack, fonts: [MediaAttachment], replaceOriginal: Bool) {
-        guard !isBusy, claim("Excluir faixa") else { return }
+        guard !isBusy, claim(String(localized: "Excluir faixa")) else { return }
         editor.flush()
         notice = nil
-        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando…")
+        operation = RunningOperation(kind: .muxing, fraction: 0, message: String(localized: "Preparando…"))
         let workflow = workflow()
         let project = project
         task = Task {
@@ -61,14 +61,14 @@ extension WorkspaceModel {
                 let what = "“\(track.name ?? track.kind.label)”" + (fonts.isEmpty ? "" : " e \(Plural.count(fonts.count, "fonte", "fontes"))")
                 if replaceOriginal {
                     await reload()
-                    notice = (.success, "\(what) excluída deste arquivo, que foi conferido. A versão anterior está na Lixeira.")
+                    notice = (.success, String(localized: "\(what) excluída deste arquivo, que foi conferido. A versão anterior está na Lixeira."))
                 } else {
-                    notice = (.success, "Novo arquivo sem \(what): \(output.path). O original não mudou.")
-                    noticeAction = ("Mostrar no Finder", { NSWorkspace.shared.activateFileViewerSelecting([output]) })
+                    notice = (.success, String(localized: "Novo arquivo sem \(what): \(output.path). O original não mudou."))
+                    noticeAction = (String(localized: "Mostrar no Finder"), { NSWorkspace.shared.activateFileViewerSelecting([output]) })
                 }
                 return
             } catch is CancellationError {
-                notice = (.info, "Cancelado. Nenhum arquivo foi criado ou alterado.")
+                notice = (.info, String(localized: "Cancelado. Nenhum arquivo foi criado ou alterado."))
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }

@@ -220,12 +220,12 @@ struct LinesTable: View {
     /// Narrower in a narrow list, so the two text columns keep room.
     private var characterWidth: CGFloat { width < 760 ? 90 : 120 }
     /// Insets, cell spacing and the scroller of the table (kept generous: a column wider than
-    /// the room left makes the table scroll sideways).
-    private static let chrome: CGFloat = 110
+    /// the room left makes the table scroll sideways). The beside column brings its own spacing.
+    private var chrome: CGFloat { hasBeside ? 140 : 110 }
 
     private var hasBeside: Bool { !editor.editsOriginal || editor.referenceTitle != nil }
     private var textWidth: CGFloat {
-        let free = max(120, width - Self.numberWidth - Self.timeWidth - characterWidth - Self.chrome)
+        let free = max(120, width - Self.numberWidth - Self.timeWidth - characterWidth - chrome)
         return hasBeside ? floor(free / 2) : free
     }
 
@@ -236,9 +236,9 @@ struct LinesTable: View {
                     HStack(spacing: 5) {
                         Text("\(row.id + 1)").monospacedDigit().foregroundStyle(.secondary)
                         PositionGlyph(alignment: row.isInArea ? row.alignment : nil, fromLine: row.alignmentFromLine, point: row.screenPoint)
-                            .hintVerbatim("Posição na tela", row.isInArea
-                                          ? ScreenPosition.name(row.alignment) + (row.alignmentFromLine ? ", definida nesta fala." : ", do estilo.")
-                                          : "Ponto livre, \(row.screenPoint.map { ScreenPosition.name(ScreenPosition.area(of: $0)).lowercased() } ?? "fora das áreas da grade").")
+                            .hintVerbatim(String(localized: "Posição na tela"), row.isInArea
+                                          ? ScreenPosition.name(row.alignment) + (row.alignmentFromLine ? String(localized: ", definida nesta fala.") : String(localized: ", do estilo."))
+                                          : String(localized: "Ponto livre, \(row.screenPoint.map { ScreenPosition.name(ScreenPosition.area(of: $0)).lowercased() } ?? String(localized: "fora das áreas da grade"))."))
                     }
                 }
                 .width(Self.numberWidth)
@@ -260,7 +260,7 @@ struct LinesTable: View {
                 }
                 .width(characterWidth)
                 if hasBeside {
-                    TableColumn(LocalizedStringKey(editor.referenceTitle.map { "Ao lado · \($0)" } ?? "Ao lado")) { row in
+                    TableColumn(LocalizedStringKey(editor.referenceTitle.map { String(localized: "Ao lado · \($0)") } ?? String(localized: "Ao lado"))) { row in
                         Text((editor.editsOriginal ? editor.reference[row.id] : row.original)?.replacingOccurrences(of: "\n", with: " ⏎ ") ?? "—")
                             .lineLimit(2)
                             .foregroundStyle(.secondary)
@@ -330,7 +330,7 @@ private struct TranslationCell: View {
                 if row.readingSpeed > maxReadingSpeed {
                     Image(systemName: "gauge.with.dots.needle.67percent")
                         .foregroundStyle(Theme.warning)
-                        .hintVerbatim("Leitura rápida demais", "\(Int(row.readingSpeed)) caracteres por segundo. Fica difícil ler a tempo; encurte a frase ou aumente a duração da fala.")
+                        .hintVerbatim(String(localized: "Leitura rápida demais"), String(localized: "\(Int(row.readingSpeed)) caracteres por segundo. Fica difícil ler a tempo; encurte a frase ou aumente a duração da fala."))
                 }
             } else {
                 Text("Sem tradução").foregroundStyle(.tertiary).italic()
@@ -340,8 +340,9 @@ private struct TranslationCell: View {
 }
 
 enum TranscriptionLanguage {
-    static let all: [(code: String, name: String)] = [("ja-JP", "Japonês"), ("en-US", "Inglês"), ("ko-KR", "Coreano"), ("zh-CN", "Chinês"),
-                                                      ("es-ES", "Espanhol"), ("fr-FR", "Francês"), ("de-DE", "Alemão"), ("pt-BR", "Português (Brasil)")]
+    static var all: [(code: String, name: String)] {
+        ["ja-JP", "en-US", "ko-KR", "zh-CN", "es-ES", "fr-FR", "de-DE", "pt-BR"].map { ($0, Languages.name(for: $0 == "pt-BR" ? $0 : Languages.base($0))) }
+    }
 }
 
 /// Asks before downloading the speaker-identification models, with size, license and credits.

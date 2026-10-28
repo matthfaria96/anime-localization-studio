@@ -16,7 +16,7 @@ struct DeleteTrackSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Excluir \(track.kind == .audio ? "o áudio" : "a legenda") “\(title)”?").font(.title2.weight(.semibold))
+                Text("Excluir \(track.kind == .audio ? String(localized: "o áudio") : "a legenda") “\(title)”?").font(.title2.weight(.semibold))
                 Text("\(track.kind.label) · \(Languages.display(track.displayLanguage)) · \(track.codec)").foregroundStyle(.secondary)
             }
             if !warnings.isEmpty {
@@ -27,8 +27,8 @@ struct DeleteTrackSheet: View {
             if track.kind == .subtitles { fonts }
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 Text("Onde gravar").font(.headline)
-                choice(false, "Criar um novo arquivo sem ela", "“\(workspace.title) [editado].mkv”, ao lado do original. O original não muda.")
-                choice(true, "Excluir deste arquivo", "O arquivo é regravado sem a faixa (o vídeo não é recodificado), conferido, e a versão anterior vai para a Lixeira.")
+                choice(false, String(localized: "Criar um novo arquivo sem ela"), String(localized: "“\(workspace.title) [editado].mkv”, ao lado do original. O original não muda."))
+                choice(true, String(localized: "Excluir deste arquivo"), String(localized: "O arquivo é regravado sem a faixa (o vídeo não é recodificado), conferido, e a versão anterior vai para a Lixeira."))
             }
             HStack {
                 Spacer()
@@ -51,12 +51,12 @@ struct DeleteTrackSheet: View {
 
     private var warnings: [String] {
         var list: [String] = []
-        if track.isDefault { list.append("É a faixa padrão: os players vão abrir com outra.") }
-        if track.kind == .audio && workspace.audioTracks.count == 1 { list.append("É o único áudio: o vídeo fica sem som.") }
+        if track.isDefault { list.append(String(localized: "É a faixa padrão: os players vão abrir com outra.")) }
+        if track.kind == .audio && workspace.audioTracks.count == 1 { list.append(String(localized: "É o único áudio: o vídeo fica sem som.")) }
         if track.kind == .subtitles && track.id == workspace.project.sourceTrackID {
-            list.append("É a legenda aberta em Legendar: as alterações ainda não gravadas nela deixam de valer.")
+            list.append(String(localized: "É a legenda aberta em Legendar: as alterações ainda não gravadas nela deixam de valer."))
         }
-        if track.kind == .audio && track.id == workspace.dubAudioTrack?.id { list.append("É o áudio de base da dublagem: a dublagem passa a usar outro.") }
+        if track.kind == .audio && track.id == workspace.dubAudioTrack?.id { list.append(String(localized: "É o áudio de base da dublagem: a dublagem passa a usar outro.")) }
         return list
     }
 

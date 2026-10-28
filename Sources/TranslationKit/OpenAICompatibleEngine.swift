@@ -22,8 +22,8 @@ public struct OpenAICompatibleEngine: TranslationEngine {
             self.requestTimeout = requestTimeout
         }
 
-        public static let ollama = Configuration(name: "Ollama (local)", baseURL: URL(string: "http://localhost:11434/v1")!, model: "qwen3:8b")
-        public static let lmStudio = Configuration(name: "LM Studio (local)", baseURL: URL(string: "http://localhost:1234/v1")!, model: "")
+        public static let ollama = Configuration(name: String(localized: "Ollama (local)"), baseURL: URL(string: "http://localhost:11434/v1")!, model: "qwen3:8b")
+        public static let lmStudio = Configuration(name: String(localized: "LM Studio (local)"), baseURL: URL(string: "http://localhost:1234/v1")!, model: "")
 
         public var isLocal: Bool { ["localhost", "127.0.0.1", "::1"].contains(baseURL.host() ?? "") }
     }
@@ -45,18 +45,18 @@ public struct OpenAICompatibleEngine: TranslationEngine {
     }
 
     public func availability(source: String?, target: String) async -> EngineAvailability {
-        guard !configuration.model.isEmpty else { return .needsSetup("Informe o modelo a usar em Ajustes › Tradução.") }
+        guard !configuration.model.isEmpty else { return .needsSetup(String(localized: "Informe o modelo a usar em Ajustes › Tradução.")) }
         var request = URLRequest(url: configuration.baseURL.appendingPathComponent("models"), timeoutInterval: 5)
         authorize(&request)
         do {
             let (_, response) = try await session.data(for: request)
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if code == 401 || code == 403 { return .needsSetup("A chave de API foi recusada pelo servidor.") }
-            return (200..<300).contains(code) ? .available : .unavailable("O servidor respondeu com o código \(code).")
+            if code == 401 || code == 403 { return .needsSetup(String(localized: "A chave de API foi recusada pelo servidor.")) }
+            return (200..<300).contains(code) ? .available : .unavailable(String(localized: "O servidor respondeu com o código \(code)."))
         } catch {
             return .needsSetup(configuration.isLocal
-                ? "Não há servidor em \(configuration.baseURL.absoluteString). Abra o Ollama ou o LM Studio."
-                : "Sem conexão com \(configuration.baseURL.host() ?? "o servidor").")
+                ? String(localized: "Não há servidor em \(configuration.baseURL.absoluteString). Abra o Ollama ou o LM Studio.")
+                : String(localized: "Sem conexão com \(configuration.baseURL.host() ?? String(localized: "o servidor"))."))
         }
     }
 
@@ -85,13 +85,13 @@ public struct OpenAICompatibleEngine: TranslationEngine {
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         switch code {
         case 200..<300: break
-        case 401, 403: throw TranslationEngineError.permanent("A chave de API foi recusada (\(code)).")
-        case 404: throw TranslationEngineError.permanent("Modelo ou endereço não encontrado (\(code)). Confira o modelo “\(configuration.model)”.")
-        case 408, 409, 425, 429, 500...599: throw TranslationEngineError.transient("o servidor respondeu \(code)")
-        default: throw TranslationEngineError.permanent("O servidor respondeu com o código \(code).")
+        case 401, 403: throw TranslationEngineError.permanent(String(localized: "A chave de API foi recusada (\(code))."))
+        case 404: throw TranslationEngineError.permanent(String(localized: "Modelo ou endereço não encontrado (\(code)). Confira o modelo “\(configuration.model)”."))
+        case 408, 409, 425, 429, 500...599: throw TranslationEngineError.transient(String(localized: "o servidor respondeu \(code)"))
+        default: throw TranslationEngineError.permanent(String(localized: "O servidor respondeu com o código \(code)."))
         }
         guard let reply = try? JSONDecoder().decode(ChatResponse.self, from: data), let content = reply.choices.first?.message.content else {
-            throw TranslationEngineError.invalidResponse("resposta sem conteúdo")
+            throw TranslationEngineError.invalidResponse(String(localized: "resposta sem conteúdo"))
         }
         return try PromptBuilder.parseJSONTranslations(content)
     }

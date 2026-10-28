@@ -68,13 +68,13 @@ struct KaraokeSection: View {
                     Image(systemName: "minus").font(.system(size: 8, weight: .bold)).frame(width: 12, height: 12)
                 }
                 .accessibilityLabel("Mais curta")
-                .hintVerbatim("Mais curta", "Tira 0,05 s desta sílaba.")
+                .hintVerbatim(String(localized: "Mais curta"), String(localized: "Tira 0,05 s desta sílaba."))
                 Text((Double(syllable.centiseconds) / 100).formatted(.number.precision(.fractionLength(2)))).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
                 Button { update { $0.syllables[index].centiseconds += 5 } } label: {
                     Image(systemName: "plus").font(.system(size: 8, weight: .bold)).frame(width: 12, height: 12)
                 }
                 .accessibilityLabel("Mais longa")
-                .hintVerbatim("Mais longa", "Põe 0,05 s nesta sílaba.")
+                .hintVerbatim(String(localized: "Mais longa"), String(localized: "Põe 0,05 s nesta sílaba."))
             }
             .buttonStyle(.borderless)
         }

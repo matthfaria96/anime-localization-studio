@@ -4,14 +4,17 @@ import SwiftUI
 import TranslationKit
 
 struct SettingsView: View {
+    /// Test hook for captures: ALS_SETTINGS=general|translation|tools|storage|diagnostics|about.
+    @State private var tab = ProcessInfo.processInfo.environment["ALS_SETTINGS"] ?? "general"
+
     var body: some View {
-        TabView {
-            Tab("Geral", systemImage: "gearshape") { GeneralSettings() }
-            Tab("Tradução", systemImage: "translate") { TranslationSettings() }
-            Tab("Ferramentas", systemImage: "wrench.and.screwdriver") { ToolSettings() }
-            Tab("Armazenamento", systemImage: "internaldrive") { StorageSettings() }
-            Tab("Diagnóstico", systemImage: "stethoscope") { DiagnosticsView() }
-            Tab("Sobre", systemImage: "info.circle") { AboutSettings() }
+        TabView(selection: $tab) {
+            Tab("Geral", systemImage: "gearshape", value: "general") { GeneralSettings() }
+            Tab("Tradução", systemImage: "translate", value: "translation") { TranslationSettings() }
+            Tab("Ferramentas", systemImage: "wrench.and.screwdriver", value: "tools") { ToolSettings() }
+            Tab("Armazenamento", systemImage: "internaldrive", value: "storage") { StorageSettings() }
+            Tab("Diagnóstico", systemImage: "stethoscope", value: "diagnostics") { DiagnosticsView() }
+            Tab("Sobre", systemImage: "info.circle", value: "about") { AboutSettings() }
         }
         .frame(width: 660, height: 560)
         .scenePadding()
@@ -113,7 +116,7 @@ private struct TranslationSettings: View {
     private func saveKey() {
         do {
             try KeychainStore.write(apiKey, account: KeychainStore.account(for: app.settings.openAI.baseURL))
-            keyMessage = apiKey.isEmpty ? "Chave removida." : "Chave salva no Keychain."
+            keyMessage = apiKey.isEmpty ? String(localized: "Chave removida.") : String(localized: "Chave salva no Keychain.")
         } catch {
             keyMessage = error.localizedDescription
         }
@@ -130,7 +133,7 @@ private struct ToolSettings: View {
                 ForEach(ExternalTool.allCases) { tool in
                     TextField(tool.rawValue, text: Binding(get: { app.settings.toolPaths[tool.rawValue] ?? "" },
                                                            set: { app.settings.toolPaths[tool.rawValue] = $0.isEmpty ? nil : $0 }),
-                              prompt: Text(app.tools.locate(tool)?.path ?? "Não encontrado"))
+                              prompt: Text(app.tools.locate(tool)?.path ?? String(localized: "Não encontrado")))
                 }
             } header: {
                 Text("Caminhos (deixe vazio para detectar)")
@@ -156,7 +159,7 @@ private struct AboutSettings: View {
 
     private var version: String {
         let info = Bundle.main.infoDictionary
-        return "Versão \(info?["CFBundleShortVersionString"] as? String ?? "dev") (\(info?["CFBundleVersion"] as? String ?? "0"))"
+        return String(localized: "Versão \(info?["CFBundleShortVersionString"] as? String ?? "dev") (\(info?["CFBundleVersion"] as? String ?? "0"))")
     }
 
     var body: some View {
@@ -233,24 +236,24 @@ private struct CreditsView: View {
     }
 
     private let groups = [
-        Group(title: "Dentro do app", credits: [
-            Credit(name: "libass", detail: "Desenha as legendas ASS como no player (animações, karaokê, desenhos, fontes). ISC. Com FreeType (FTL), HarfBuzz (MIT), FriBidi e GLib (LGPL-2.1), libunibreak (Zlib), PCRE2 (BSD-3), Graphite2, libpng e Brotli.", link: "https://github.com/libass/libass"),
-            Credit(name: "FluidAudio", detail: "Identifica quem fala (diarização) no Neural Engine. Apache-2.0, Fluid Inference.", link: "https://github.com/FluidInference/FluidAudio"),
-            Credit(name: "speech-swift", detail: "Roda o Chatterbox no Mac (voz clonada da dublagem). Apache-2.0, soniqo.", link: "https://github.com/soniqo/speech-swift"),
-            Credit(name: "MLX e mlx-swift", detail: "Cálculo na GPU do Apple silicon para a voz. MIT, Apple.", link: "https://github.com/ml-explore/mlx-swift"),
-            Credit(name: "swift-transformers", detail: "Tokenizadores e download de modelos. Apache-2.0, Hugging Face.", link: "https://github.com/huggingface/swift-transformers"),
-            Credit(name: "Sparkle", detail: "Atualizações dentro do app. MIT, Andy Matuschak e colaboradores.", link: "https://github.com/sparkle-project/Sparkle"),
+        Group(title: String(localized: "Dentro do app"), credits: [
+            Credit(name: "libass", detail: String(localized: "Desenha as legendas ASS como no player (animações, karaokê, desenhos, fontes). ISC. Com FreeType (FTL), HarfBuzz (MIT), FriBidi e GLib (LGPL-2.1), libunibreak (Zlib), PCRE2 (BSD-3), Graphite2, libpng e Brotli."), link: "https://github.com/libass/libass"),
+            Credit(name: "FluidAudio", detail: String(localized: "Identifica quem fala (diarização) no Neural Engine. Apache-2.0, Fluid Inference."), link: "https://github.com/FluidInference/FluidAudio"),
+            Credit(name: "speech-swift", detail: String(localized: "Roda o Chatterbox no Mac (voz clonada da dublagem). Apache-2.0, soniqo."), link: "https://github.com/soniqo/speech-swift"),
+            Credit(name: "MLX e mlx-swift", detail: String(localized: "Cálculo na GPU do Apple silicon para a voz. MIT, Apple."), link: "https://github.com/ml-explore/mlx-swift"),
+            Credit(name: "swift-transformers", detail: String(localized: "Tokenizadores e download de modelos. Apache-2.0, Hugging Face."), link: "https://github.com/huggingface/swift-transformers"),
+            Credit(name: String(localized: "Sparkle"), detail: String(localized: "Atualizações dentro do app. MIT, Andy Matuschak e colaboradores."), link: "https://github.com/sparkle-project/Sparkle"),
         ]),
-        Group(title: "Modelos baixados quando você pede", credits: [
-            Credit(name: "Chatterbox Multilingual", detail: "Voz clonada de cada personagem, em 23 idiomas. MIT, Resemble AI.", link: "https://github.com/resemble-ai/chatterbox"),
-            Credit(name: "pyannote, WeSpeaker e BUT Speech@FIT", detail: "Modelos de identificação de falantes, convertidos para Core ML pela Fluid Inference. CC-BY-4.0.", link: "https://huggingface.co/FluidInference/speaker-diarization-coreml"),
+        Group(title: String(localized: "Modelos baixados quando você pede"), credits: [
+            Credit(name: String(localized: "Chatterbox Multilingual"), detail: String(localized: "Voz clonada de cada personagem, em 23 idiomas. MIT, Resemble AI."), link: "https://github.com/resemble-ai/chatterbox"),
+            Credit(name: String(localized: "pyannote, WeSpeaker e BUT Speech@FIT"), detail: String(localized: "Modelos de identificação de falantes, convertidos para Core ML pela Fluid Inference. CC-BY-4.0."), link: "https://huggingface.co/FluidInference/speaker-diarization-coreml"),
         ]),
-        Group(title: "Programas e serviços usados", credits: [
-            Credit(name: "MKVToolNix", detail: "Lê e grava o MKV sem recodificar (mkvmerge, mkvextract, mkvpropedit). GPL-2.0, Moritz Bunkus. Instalado à parte.", link: "https://mkvtoolnix.download"),
-            Credit(name: "FFmpeg", detail: "Pré-visualização, extração e mixagem de áudio. LGPL/GPL. Instalado à parte.", link: "https://ffmpeg.org"),
-            Credit(name: "ElevenLabs", detail: "Dublagem online opcional, com a sua conta e a sua chave. Serviço externo; nenhum código incluído.", link: "https://elevenlabs.io"),
-            Credit(name: "Apple", detail: "Tradução, Apple Intelligence, reconhecimento de fala e de texto (OCR) do próprio macOS.", link: "https://developer.apple.com"),
-            Credit(name: "Aegisub", detail: "Referência para o formato ASS e para marcar karaokê no tempo. Nenhum código incluído.", link: "https://github.com/Aegisub/Aegisub"),
+        Group(title: String(localized: "Programas e serviços usados"), credits: [
+            Credit(name: "MKVToolNix", detail: String(localized: "Lê e grava o MKV sem recodificar (mkvmerge, mkvextract, mkvpropedit). GPL-2.0, Moritz Bunkus. Instalado à parte."), link: "https://mkvtoolnix.download"),
+            Credit(name: "FFmpeg", detail: String(localized: "Pré-visualização, extração e mixagem de áudio. LGPL/GPL. Instalado à parte."), link: "https://ffmpeg.org"),
+            Credit(name: "ElevenLabs", detail: String(localized: "Dublagem online opcional, com a sua conta e a sua chave. Serviço externo; nenhum código incluído."), link: "https://elevenlabs.io"),
+            Credit(name: String(localized: "Apple"), detail: String(localized: "Tradução, Apple Intelligence, reconhecimento de fala e de texto (OCR) do próprio macOS."), link: "https://developer.apple.com"),
+            Credit(name: String(localized: "Aegisub"), detail: String(localized: "Referência para o formato ASS e para marcar karaokê no tempo. Nenhum código incluído."), link: "https://github.com/Aegisub/Aegisub"),
         ]),
     ]
 

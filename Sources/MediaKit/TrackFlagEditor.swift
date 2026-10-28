@@ -36,7 +36,7 @@ public struct TrackFlagEditor: Sendable {
     @discardableResult
     public func apply(_ defaults: Defaults, to info: MediaInfo, copyTo: URL? = nil) async throws -> URL {
         let tool = try tools.require(.mkvpropedit)
-        guard info.isMatroska else { throw MediaInspectionError.unreadable("Só arquivos MKV podem ter as faixas padrão alteradas sem regravar.") }
+        guard info.isMatroska else { throw MediaInspectionError.unreadable(String(localized: "Só arquivos MKV podem ter as faixas padrão alteradas sem regravar.")) }
         let args = Self.arguments(for: info, defaults: defaults)
         guard !args.isEmpty else { return info.url }
         var target = info.url

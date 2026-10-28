@@ -24,8 +24,8 @@ public struct TranslatableText: Sendable, Hashable, Codable {
 
         public var errorDescription: String? {
             switch self {
-            case .placeholderMismatch: return "A tradução não devolveu as marcações de formatação da fala."
-            case .segmentCountMismatch: return "A tradução por partes devolveu um número de partes diferente do original."
+            case .placeholderMismatch: return String(localized: "A tradução não devolveu as marcações de formatação da fala.")
+            case .segmentCountMismatch: return String(localized: "A tradução por partes devolveu um número de partes diferente do original.")
             }
         }
     }

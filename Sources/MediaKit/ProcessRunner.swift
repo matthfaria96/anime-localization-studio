@@ -15,10 +15,10 @@ public enum ProcessError: Error, LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .launchFailed(let tool, let reason): "Não foi possível iniciar \(tool): \(reason)"
+        case .launchFailed(let tool, let reason): String(localized: "Não foi possível iniciar \(tool): \(reason)")
         case .failed(let tool, let code, let message):
-            message.isEmpty ? "\(tool) terminou com erro (código \(code))." : "\(tool) terminou com erro (código \(code)): \(message)"
-        case .cancelled: "Operação cancelada."
+            message.isEmpty ? String(localized: "\(tool) terminou com erro (código \(code)).") : String(localized: "\(tool) terminou com erro (código \(code)): \(message)")
+        case .cancelled: String(localized: "Operação cancelada.")
         }
     }
 }

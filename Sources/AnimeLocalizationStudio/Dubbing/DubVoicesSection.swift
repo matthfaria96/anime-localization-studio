@@ -38,12 +38,12 @@ struct DubVoicesSection: View {
             .hint("Voz e emoção de cada fala", "Ligado (recomendado): o trecho original de cada fala, sem a música, mais a amostra de ~12 s do personagem servem de referência para a mesma fala dublada. Desligado: só a amostra do personagem.")
             SectionLabel("Modo", systemImage: "slider.horizontal.3")
             HStack(spacing: Theme.Spacing.m) {
-                OptionCard(title: "Substituir falas", systemImage: "person.2.slash",
-                           detail: "As vozes originais saem e as novas entram no lugar, com a música e os efeitos.",
+                OptionCard(title: String(localized: "Substituir falas"), systemImage: "person.2.slash",
+                           detail: String(localized: "As vozes originais saem e as novas entram no lugar, com a música e os efeitos."),
                            selected: app.settings.dubbingMode == .replaceDialogue) { app.settings.dubbingMode = .replaceDialogue }
                     .hint("Substituir falas", "Como uma dublagem de TV: o app separa as vozes originais da música e dos efeitos, tira as vozes e coloca as dubladas no lugar. A separação é feita no Mac e é aproximada: em cenas com muita música podem sobrar restos da voz original.")
                 OptionCard(title: "Voice-over", systemImage: "person.2.wave.2",
-                           detail: "A voz nova fala por cima; o áudio original abaixa enquanto ela fala.",
+                           detail: String(localized: "A voz nova fala por cima; o áudio original abaixa enquanto ela fala."),
                            selected: app.settings.dubbingMode == .voiceOver) { app.settings.dubbingMode = .voiceOver }
                     .hint("Voice-over", "Como em documentários: o áudio original continua, só que mais baixo enquanto a voz dublada fala por cima.")
             }
@@ -61,7 +61,7 @@ struct DubVoicesSection: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if workspace.hasAutoSpeakers || workspace.cast.members.contains(where: { $0.name.hasPrefix("Falante ") || $0.name.hasPrefix("Voz ") }) {
+                if workspace.hasAutoSpeakers || workspace.cast.members.contains(where: { $0.name.hasPrefix(String(localized: "Falante ")) || $0.name.hasPrefix(String(localized: "Voz ")) }) {
                     Button("Limpar", systemImage: "xmark.circle") { workspace.clearIdentifiedSpeakers(undoManager: undoManager) }
                         .disabled(workspace.isBusy)
                         .hint("Limpar personagens identificados", "Esquece as “Voz 1, Voz 2…” achadas pelo áudio (e tira da legenda os “Falante N” que versões antigas gravavam). A próxima dublagem identifica de novo, sem gravar nada na legenda.")
@@ -102,7 +102,7 @@ struct DubVoicesSection: View {
             Spacer()
             Button("Ouvir dublada", systemImage: "play.circle") { Task { await sample(member.wrappedValue, line: lines.first?.text) } }
                 .disabled(member.wrappedValue.voiceID == nil)
-                .hintVerbatim("Ouvir dublada", "Toca uma fala deste personagem em \(Languages.name(for: workspace.dubLanguage)) com a voz preparada na última dublagem.")
+                .hintVerbatim(String(localized: "Ouvir dublada"), String(localized: "Toca uma fala deste personagem em \(Languages.name(for: workspace.dubLanguage)) com a voz preparada na última dublagem."))
             if let state = sampleState[member.wrappedValue.id] { Text(state).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
         }
         .padding(Theme.Spacing.s)
@@ -120,11 +120,11 @@ struct DubVoicesSection: View {
 
     private func sample(_ member: CastMember, line: String?) async {
         guard let voice = member.voiceID else { return }
-        sampleState[member.id] = "Gerando…"
+        sampleState[member.id] = String(localized: "Gerando…")
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("als-sample-\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: file) }
         do {
-            guard let line else { sampleState[member.id] = "Este personagem não tem falas no texto escolhido."; return }
+            guard let line else { sampleState[member.id] = String(localized: "Este personagem não tem falas no texto escolhido."); return }
             try await app.settings.makeSynthesizer(paths: app.paths, language: workspace.dubLanguage).synthesize(line, voice: voice, to: file)
             audioPlayer = try AVAudioPlayer(data: Data(contentsOf: file))
             audioPlayer?.play()

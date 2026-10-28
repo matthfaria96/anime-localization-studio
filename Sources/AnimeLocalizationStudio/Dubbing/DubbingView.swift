@@ -90,11 +90,11 @@ struct DubbingView: View {
         @Bindable var app = app
         return HStack(alignment: .top, spacing: Theme.Spacing.m) {
             OptionCard(title: "ElevenLabs", systemImage: "cloud",
-                       detail: "Recomendado. Ouve o áudio, separa cada personagem, traduz e dubla com a voz de cada um, mantendo a emoção. Online, pago por minuto.",
+                       detail: String(localized: "Recomendado. Ouve o áudio, separa cada personagem, traduz e dubla com a voz de cada um, mantendo a emoção. Online, pago por minuto."),
                        selected: online) { app.settings.dubbingEngine = .elevenLabs; engineChosen = true }
                 .hint("ElevenLabs", "Serviço online de dublagem automática: só o áudio do vídeo é enviado (nunca o vídeo). Não precisa de legenda. Usa a sua conta e os seus créditos da ElevenLabs.")
-            OptionCard(title: "Voz original no Mac", systemImage: "desktopcomputer",
-                       detail: "Gratuita e offline. Lê uma legenda (do vídeo ou traduzida no app) com um clone da voz de cada personagem.",
+            OptionCard(title: String(localized: "Voz original no Mac"), systemImage: "desktopcomputer",
+                       detail: String(localized: "Gratuita e offline. Lê uma legenda (do vídeo ou traduzida no app) com um clone da voz de cada personagem."),
                        selected: !online) { app.settings.dubbingEngine = .original; engineChosen = true }
                 .hint("Voz original no Mac", "Tudo no próprio Mac (Chatterbox Multilingual da Resemble AI, MIT), pela GPU do Apple silicon. Fala 23 idiomas, inclusive português e japonês. Precisa de uma legenda traduzida.")
         }
@@ -106,7 +106,7 @@ struct DubbingView: View {
         Panel {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Theme.Spacing.l, verticalSpacing: Theme.Spacing.m) {
                 GridRow {
-                    rowTitle(online ? "Áudio enviado" : "Voz e fundo", "waveform")
+                    rowTitle(online ? String(localized: "Áudio enviado") : String(localized: "Voz e fundo"), "waveform")
                     audioPicker
                 }
                 if online { onlineRows } else { localRows }
@@ -119,17 +119,17 @@ struct DubbingView: View {
                     .buttonStyle(.glassProminent)
                     .controlSize(.large)
                     .disabled(!workspace.canStartDub || workspace.isBusy || warning != nil)
-                    .hintVerbatim("Dublar…", "Mostra o resumo, pergunta onde gravar e então dubla o vídeo inteiro, mostrando cada etapa.")
+                    .hintVerbatim(String(localized: "Dublar…"), String(localized: "Mostra o resumo, pergunta onde gravar e então dubla o vídeo inteiro, mostrando cada etapa."))
             }
         }
     }
 
     private var warning: String? {
-        if workspace.audioTracks.isEmpty { return "O vídeo não tem áudio." }
-        if online { return app.elevenLabsKey == nil ? "Cole a sua chave da ElevenLabs acima." : nil }
-        if workspace.dubText == nil { return "Escolha o texto falado ou crie uma tradução em Legendar." }
-        if !ClonedVoiceSynthesizer.supports(workspace.dubLanguage) { return "A voz do Mac ainda não fala \(language). Use a ElevenLabs." }
-        return segments.isEmpty ? "A legenda escolhida não tem falas para dublar." : nil
+        if workspace.audioTracks.isEmpty { return String(localized: "O vídeo não tem áudio.") }
+        if online { return app.elevenLabsKey == nil ? String(localized: "Cole a sua chave da ElevenLabs acima.") : nil }
+        if workspace.dubText == nil { return String(localized: "Escolha o texto falado ou crie uma tradução em Legendar.") }
+        if !ClonedVoiceSynthesizer.supports(workspace.dubLanguage) { return String(localized: "A voz do Mac ainda não fala \(language). Use a ElevenLabs.") }
+        return segments.isEmpty ? String(localized: "A legenda escolhida não tem falas para dublar.") : nil
     }
 
     @ViewBuilder
@@ -143,7 +143,7 @@ struct DubbingView: View {
             .disabled(workspace.isBusy)
             .hint("Áudio de base", "A faixa com as vozes originais. Use o áudio no idioma original (geralmente o japonês).")
         } else {
-            Text(workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "O vídeo não tem áudio")
+            Text(workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? String(localized: "O vídeo não tem áudio"))
         }
     }
 
@@ -151,7 +151,7 @@ struct DubbingView: View {
     private var onlineRows: some View {
         @Bindable var app = app
         GridRow {
-            rowTitle("Idioma falado", "person.wave.2")
+            rowTitle(String(localized: "Idioma falado"), "person.wave.2")
             Picker("Idioma falado", selection: $app.settings.dubbingSourceLanguage) {
                 Text("Detectar automaticamente").tag(String?.none)
                 ForEach(TranscriptionLanguage.all, id: \.code) { Text($0.name).tag(Optional($0.code)) }
@@ -160,7 +160,7 @@ struct DubbingView: View {
             .hint("Idioma falado", "O idioma em que os personagens falam. Deixe em automático se não souber.")
         }
         GridRow {
-            rowTitle("Dublar para", "globe")
+            rowTitle(String(localized: "Dublar para"), "globe")
             HStack {
                 Picker("Dublar para", selection: $app.settings.targetLanguage) {
                     ForEach(Languages.all, id: \.code) { Text($0.name).tag($0.code) }
@@ -171,13 +171,13 @@ struct DubbingView: View {
             .hint("Dublar para", "A faixa dublada entra no vídeo; o áudio original e as legendas continuam lá. Antes de gravar, o app pergunta: novo arquivo ou este arquivo.")
         }
         GridRow {
-            rowTitle("Conta", "person.crop.circle")
+            rowTitle(String(localized: "Conta"), "person.crop.circle")
             ElevenLabsAccountView()
         }
         if let pending = workspace.project.remoteDub {
             GridRow {
                 Text("").gridCellUnsizedAxes(.horizontal)
-                InlineMessage(kind: .info, text: "Há uma dublagem para \(Languages.name(for: pending.language)) enviada em \(pending.startedAt.formatted(date: .abbreviated, time: .shortened)). “Dublar…” retoma esse trabalho, sem enviar nem cobrar de novo.")
+                InlineMessage(kind: .info, text: String(localized: "Há uma dublagem para \(Languages.name(for: pending.language)) enviada em \(pending.startedAt.formatted(date: .abbreviated, time: .shortened)). “Dublar…” retoma esse trabalho, sem enviar nem cobrar de novo."))
             }
         }
         GridRow {
@@ -190,7 +190,7 @@ struct DubbingView: View {
     @ViewBuilder
     private var localRows: some View {
         GridRow {
-            rowTitle("Texto falado", "text.bubble")
+            rowTitle(String(localized: "Texto falado"), "text.bubble")
             if workspace.hasTranslationDraft || !workspace.dubTextTracks.isEmpty {
                 HStack {
                     Picker("Texto falado", selection: Binding(get: { workspace.dubTextChoice }, set: { if let value = $0 { workspace.chooseDubText(value) } })) {
@@ -215,14 +215,14 @@ struct DubbingView: View {
             }
         }
         GridRow {
-            rowTitle("Vozes", "person.wave.2")
+            rowTitle(String(localized: "Vozes"), "person.wave.2")
             HStack {
-                Text("A própria voz de cada personagem\(app.settings.dubbingPerLineVoice ? ", com a emoção de cada fala" : "") · \(app.settings.dubbingMode.label)")
+                Text("A própria voz de cada personagem\(app.settings.dubbingPerLineVoice ? String(localized: ", com a emoção de cada fala") : "") · \(app.settings.dubbingMode.label)")
                 Button(voicesExpanded ? "Fechar ajustes" : "Ajustar") { withAnimation { voicesExpanded.toggle() } }.buttonStyle(.link)
             }
         }
         GridRow {
-            rowTitle("Resultado", "square.and.arrow.down")
+            rowTitle(String(localized: "Resultado"), "square.and.arrow.down")
             Text("Nova faixa de áudio em \(language)")
         }
     }
@@ -230,8 +230,8 @@ struct DubbingView: View {
     /// “Legenda do vídeo: Dialogue@Ryuumaru · Inglês”, without repeating a name that is the language.
     static func trackLabel(_ track: MediaTrack) -> String {
         let language = Languages.name(for: EpisodeWorkflow.language(of: track))
-        guard let name = track.name, !name.isEmpty, name.caseInsensitiveCompare(language) != .orderedSame else { return "Legenda do vídeo em \(language)" }
-        return "Legenda do vídeo: \(name) · \(language)"
+        guard let name = track.name, !name.isEmpty, name.caseInsensitiveCompare(language) != .orderedSame else { return String(localized: "Legenda do vídeo em \(language)") }
+        return String(localized: "Legenda do vídeo: \(name) · \(language)")
     }
 
     private func rowTitle(_ title: String, _ icon: String) -> some View {
@@ -266,13 +266,13 @@ struct DubbingView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: Theme.Spacing.xs) {
                     Text(record.outputURL.lastPathComponent).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
-                    if record.replacedOriginal { Tag(text: "Este arquivo") }
-                    if !exists { Tag(text: "Não encontrado", tint: Theme.warning) }
+                    if record.replacedOriginal { Tag(text: String(localized: "Este arquivo")) }
+                    if !exists { Tag(text: String(localized: "Não encontrado"), tint: Theme.warning) }
                 }
-                Text("\(record.date.formatted(date: .abbreviated, time: .shortened)) · \(record.engine) · \(Languages.name(for: record.language))\(record.lines > 0 ? " · " + Plural.count(record.lines, "fala", "falas") : "")\(record.failedLines > 0 ? ", \(record.failedLines) sem voz" : "")")
+                Text("\(record.date.formatted(date: .abbreviated, time: .shortened)) · \(record.engine) · \(Languages.name(for: record.language))\(record.lines > 0 ? " · " + Plural.count(record.lines, "fala", "falas") : "")\(record.failedLines > 0 ? String(localized: ", \(record.failedLines) sem voz") : "")")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            .hintVerbatim(record.outputURL.lastPathComponent, "\(record.mode) · áudio \(record.baseAudio) · \(Languages.name(for: record.language))\(ok ? " · verificada" : " · com avisos")\n\(record.outputPath)")
+            .hintVerbatim(record.outputURL.lastPathComponent, String(localized: "\(record.mode) · áudio \(record.baseAudio) · \(Languages.name(for: record.language))\(ok ? String(localized: " · verificada") : String(localized: " · com avisos"))\n\(record.outputPath)"))
             Spacer(minLength: Theme.Spacing.s)
             if exists {
                 Button("Mostrar no Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([record.outputURL]) }
@@ -289,10 +289,10 @@ struct DubbingView: View {
     }
 
     private func deleteMessage(_ record: DubRecord) -> String {
-        let reset = "Recomeçar do zero também apaga as vozes de cada personagem e os arquivos guardados desta dublagem (\(bytes)); a próxima dublagem refaz tudo."
-        if workspace.canTrashOutput(of: record) { return "“\(record.outputURL.lastPathComponent)” vai para a Lixeira. \(reset)" }
-        if record.replacedOriginal { return "Esta dublagem foi gravada neste arquivo, que não é apagado. \(reset)" }
-        return "O arquivo não está mais no disco. \(reset)"
+        let reset = String(localized: "Recomeçar do zero também apaga as vozes de cada personagem e os arquivos guardados desta dublagem (\(bytes)); a próxima dublagem refaz tudo.")
+        if workspace.canTrashOutput(of: record) { return String(localized: "“\(record.outputURL.lastPathComponent)” vai para a Lixeira. \(reset)") }
+        if record.replacedOriginal { return String(localized: "Esta dublagem foi gravada neste arquivo, que não é apagado. \(reset)") }
+        return String(localized: "O arquivo não está mais no disco. \(reset)")
     }
 
 
@@ -316,7 +316,7 @@ struct DubbingView: View {
 
     private func rebuildCast() {
         var cast = workspace.cast
-        cast.addMissing(from: DubbingPlan.speakers(in: segments).filter { $0 != "Desconhecido" })
+        cast.addMissing(from: DubbingPlan.speakers(in: segments).filter { $0 != String(localized: "Desconhecido") })
         workspace.updateCast(cast)
     }
 }

@@ -13,11 +13,11 @@ public enum WorkflowError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .noTextSubtitle: "O arquivo não tem legenda de texto (ASS, SSA ou SRT) para traduzir. Abra uma legenda externa no editor."
-        case .bitmapOnly: "As legendas deste arquivo são imagens. Use “Reconhecer texto (OCR)” para legendas PGS; VobSub ainda não é suportado."
-        case .notTranslated: "Traduza o episódio antes de dublar: a dublagem usa as falas da tradução e os tempos da legenda."
-        case .noAudio: "O arquivo não tem faixa de áudio para servir de base à dublagem."
-        case .noBitmapSubtitle: "O arquivo não tem legenda PGS. Legendas VobSub (DVD) ainda não são reconhecidas."
+        case .noTextSubtitle: String(localized: "O arquivo não tem legenda de texto (ASS, SSA ou SRT) para traduzir. Abra uma legenda externa no editor.")
+        case .bitmapOnly: String(localized: "As legendas deste arquivo são imagens. Use “Reconhecer texto (OCR)” para legendas PGS; VobSub ainda não é suportado.")
+        case .notTranslated: String(localized: "Traduza o episódio antes de dublar: a dublagem usa as falas da tradução e os tempos da legenda.")
+        case .noAudio: String(localized: "O arquivo não tem faixa de áudio para servir de base à dublagem.")
+        case .noBitmapSubtitle: String(localized: "O arquivo não tem legenda PGS. Legendas VobSub (DVD) ainda não são reconhecidas.")
         }
     }
 }
@@ -86,7 +86,7 @@ public struct EpisodeWorkflow: Sendable {
     /// or edited by hand are kept unless `retranslateAll` is set (the old file is backed up first).
     public func translate(_ project: StudioProject, retranslateAll: Bool = false,
                           progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> (StudioProject, TranslationReport) {
-        progress(WorkflowStep(fraction: 0.02, message: "Analisando faixas…"))
+        progress(WorkflowStep(fraction: 0.02, message: String(localized: "Analisando faixas…")))
         var (project, _, sourceURL) = try await prepareSource(project)
         let source = try SubtitleDocument.load(sourceURL)
         if project.sourceFormat == nil { project.sourceFormat = source.format }
@@ -108,7 +108,7 @@ public struct EpisodeWorkflow: Sendable {
             project.translationStatus = report.isComplete ? .translated : .failed
             project.lastReport = report
             try store.save(project)
-            progress(WorkflowStep(fraction: 1, message: "Tradução concluída"))
+            progress(WorkflowStep(fraction: 1, message: String(localized: "Tradução concluída")))
             return (project, report)
         } catch {
             project.translationStatus = .failed
@@ -124,7 +124,7 @@ public struct EpisodeWorkflow: Sendable {
         var project = project
         guard let translation = store.translationURL(for: project, language: settings.targetLanguage),
               FileManager.default.fileExists(atPath: translation.path) else { throw WorkflowError.noTextSubtitle }
-        progress(WorkflowStep(fraction: 0.02, message: "Preparando a gravação…"))
+        progress(WorkflowStep(fraction: 0.02, message: String(localized: "Preparando a gravação…")))
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         let track = NewTrack(file: translation, kind: .subtitles, language: settings.targetLanguage, name: settings.trackName,
                              isDefault: settings.makeDefault)
@@ -133,7 +133,7 @@ public struct EpisodeWorkflow: Sendable {
         plan.replaceSource = replaceOriginal
         plan.attachments = store.addedFontURLs(for: project)
         let (url, report) = try await MKVMuxer(tools: tools).mux(plan) { value in
-            progress(WorkflowStep(fraction: value, message: value < 0.9 ? "Gravando novo MKV…" : "Verificando integridade…"))
+            progress(WorkflowStep(fraction: value, message: value < 0.9 ? String(localized: "Gravando novo MKV…") : String(localized: "Verificando integridade…")))
         }
         project.translationStatus = .muxed
         project.lastOutputPath = url.path
@@ -148,11 +148,8 @@ public struct EpisodeWorkflow: Sendable {
     }
 
 
-    /// “Japonês”, “Português (Brasil)”: how players name a track in that language.
-    public static func trackName(for language: String) -> String {
-        let name = Locale(identifier: "pt_BR").localizedString(forIdentifier: language) ?? language
-        return name.prefix(1).uppercased() + name.dropFirst()
-    }
+    /// “Japonês”, “Português (Brasil)”: how players name a track in that language (in the app's language).
+    public static func trackName(for language: String) -> String { InterfaceLanguage.name(of: language) }
 
     /// A blank subtitle (one empty line) to write from scratch, sized to the video.
     public func startBlankSubtitle(_ project: StudioProject, language: String, name: String? = nil) async throws -> StudioProject {
@@ -216,7 +213,7 @@ public struct EpisodeWorkflow: Sendable {
                            identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false, audioTrackID: Int? = nil,
                            progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> StudioProject {
         var project = project
-        progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
+        progress(WorkflowStep(fraction: 0.01, message: String(localized: "Analisando faixas…")))
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
         else { throw WorkflowError.noAudio }
@@ -225,18 +222,18 @@ public struct EpisodeWorkflow: Sendable {
         let wav = directory.appendingPathComponent(".transcription-\(UUID().uuidString.prefix(6)).wav")
         defer { try? FileManager.default.removeItem(at: wav) }
         _ = try await TrackExtractor(tools: tools).extractAudioWAV(audio, from: info, to: wav, sampleRate: 16_000, mono: true) { value in
-            progress(WorkflowStep(fraction: value * 0.15, message: "Extraindo o áudio…"))
+            progress(WorkflowStep(fraction: value * 0.15, message: String(localized: "Extraindo o áudio…")))
         }
         let diarizer = SpeakerDiarization(modelsDirectory: paths.diarizationModels)
         if identifySpeakers, !diarizer.modelsInstalled, !allowDiarizationDownload { throw SpeakerDiarization.DiarizationError.modelsNotInstalled }
         let share = identifySpeakers ? 0.6 : 0.85
         let lines = try await SpeechTranscription().transcribe(wav, language: language, allowModelDownload: allowModelDownload) { value in
-            progress(WorkflowStep(fraction: 0.15 + value * share, message: "Transcrevendo a fala…"))
+            progress(WorkflowStep(fraction: 0.15 + value * share, message: String(localized: "Transcrevendo a fala…")))
         }
         let document: SubtitleDocument
         if identifySpeakers {
             let turns = try await diarizer.diarize(wav, allowModelDownload: allowDiarizationDownload) { value in
-                progress(WorkflowStep(fraction: 0.75 + value * 0.25, message: "Identificando quem fala…"))
+                progress(WorkflowStep(fraction: 0.75 + value * 0.25, message: String(localized: "Identificando quem fala…")))
             }
             // Who speaks is kept in the project (for the dub), not written into the subtitle.
             let speakers = SpeakerDiarization.assign(turns, to: lines.map { ($0.start, $0.end) })
@@ -271,10 +268,10 @@ public struct EpisodeWorkflow: Sendable {
         let wav = directory.appendingPathComponent(".diarization-\(UUID().uuidString.prefix(6)).wav")
         defer { try? FileManager.default.removeItem(at: wav) }
         _ = try await TrackExtractor(tools: tools).extractAudioWAV(audio, from: info, to: wav, sampleRate: 16_000, mono: true) { value in
-            progress(WorkflowStep(fraction: value * 0.2, message: "Extraindo o áudio…"))
+            progress(WorkflowStep(fraction: value * 0.2, message: String(localized: "Extraindo o áudio…")))
         }
         let turns = try await diarizer.diarize(wav, allowModelDownload: allowModelDownload) { value in
-            progress(WorkflowStep(fraction: 0.2 + value * 0.8, message: "Identificando quem fala…"))
+            progress(WorkflowStep(fraction: 0.2 + value * 0.8, message: String(localized: "Identificando quem fala…")))
         }
         let spoken = DubbingPlan.segments(from: document.withSideSpeakers(project.lineSpeakers ?? [:]))
         let speakers = SpeakerDiarization.assign(turns, to: spoken.map { ($0.start, $0.end) })
@@ -288,7 +285,7 @@ public struct EpisodeWorkflow: Sendable {
     public func recognizeBitmapSubtitle(_ project: StudioProject, language: String,
                                         progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> (StudioProject, skipped: Int) {
         var project = project
-        progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
+        progress(WorkflowStep(fraction: 0.01, message: String(localized: "Analisando faixas…")))
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         let pgs = info.tracks(.subtitles).filter { ["S_HDMV/PGS", "HDMV_PGS_SUBTITLE"].contains($0.codecID.uppercased()) }
         let languageCodes = [language.lowercased(), IntegrityVerifier.iso6392(for: language), String(language.prefix(2)).lowercased()]
@@ -298,10 +295,10 @@ public struct EpisodeWorkflow: Sendable {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let sup = directory.appendingPathComponent(".ocr-\(UUID().uuidString.prefix(6)).sup")
         defer { try? FileManager.default.removeItem(at: sup) }
-        progress(WorkflowStep(fraction: 0.05, message: "Extraindo a legenda em imagem…"))
+        progress(WorkflowStep(fraction: 0.05, message: String(localized: "Extraindo a legenda em imagem…")))
         _ = try await TrackExtractor(tools: tools).extractRaw(track, from: info, to: sup)
         let (document, skipped) = try await SubtitleOCR().document(fromPGS: try Data(contentsOf: sup), language: language) { value in
-            progress(WorkflowStep(fraction: 0.1 + value * 0.9, message: "Reconhecendo o texto das legendas…"))
+            progress(WorkflowStep(fraction: 0.1 + value * 0.9, message: String(localized: "Reconhecendo o texto das legendas…")))
         }
         let url = directory.appendingPathComponent("source.srt")
         try document.write(to: url)
@@ -321,7 +318,7 @@ public struct EpisodeWorkflow: Sendable {
         else { throw WorkflowError.noAudio }
         let text = try await dubText(project, trackID: textTrackID, info: info)
         let lines = spokenSegments(text, project: project)
-            .filter { $0.speaker != "Desconhecido" }
+            .filter { $0.speaker != String(localized: "Desconhecido") }
             .map { OriginalVoices.Line(id: $0.id, start: $0.start, end: $0.end, speaker: $0.speaker, text: $0.text) }
         guard !lines.isEmpty else { return [] }
         let work = dubWorkDirectory(project)
@@ -365,13 +362,13 @@ public struct EpisodeWorkflow: Sendable {
         let language = old?.languageIETF ?? old?.language ?? project.newTrackLanguage ?? settings.targetLanguage
         let track = NewTrack(file: sourceURL, kind: .subtitles, language: language,
                              name: old?.name ?? project.newTrackName ?? Self.trackName(for: language), isDefault: old?.isDefault ?? settings.makeDefault, isForced: old?.isForced ?? false)
-        var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "editado"),
+        var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: String(localized: "editado")),
                            newTracks: [track], clearOtherDefaults: track.isDefault, placeNewTracksFirst: false)
         if let old { plan.excludedTrackIDs = [old.id] }
         plan.replaceSource = replaceOriginal
         plan.attachments = store.addedFontURLs(for: project)
         let (url, report) = try await MKVMuxer(tools: tools).mux(plan) { value in
-            progress(WorkflowStep(fraction: value, message: value < 0.9 ? "Gravando o MKV…" : "Verificando integridade…"))
+            progress(WorkflowStep(fraction: value, message: value < 0.9 ? String(localized: "Gravando o MKV…") : String(localized: "Verificando integridade…")))
         }
         if replaceOriginal, let output = report.outputInfo {
             Self.remapTrackIDs(&project, from: info, removed: plan.excludedTrackIDs, to: output)
@@ -401,7 +398,7 @@ public struct EpisodeWorkflow: Sendable {
                     textTrackID: Int? = nil,
                     progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> (StudioProject, URL, DubbingReport, VerificationReport) {
         var project = project
-        progress(WorkflowStep(fraction: 0.01, message: "Analisando faixas…"))
+        progress(WorkflowStep(fraction: 0.01, message: String(localized: "Analisando faixas…")))
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first
         else { throw WorkflowError.noAudio }
@@ -425,7 +422,7 @@ public struct EpisodeWorkflow: Sendable {
             progress(WorkflowStep(fraction: value * 0.85, message: message))
         }
         var tracks = [NewTrack(file: dubAudio, kind: .audio, language: language,
-                               name: "\(Self.trackName(for: language)) · dublagem IA (\(settings.dubbingMode.trackSuffix))", isDefault: settings.makeDefault)]
+                               name: String(localized: "\(Self.trackName(for: language)) · dublagem IA (\(settings.dubbingMode.trackSuffix))"), isDefault: settings.makeDefault)]
         // The translation goes in with its dub; a subtitle of the video is already there.
         if !text.isVideoTrack {
             tracks.append(NewTrack(file: text.file, kind: .subtitles, language: language, name: settings.trackName, isDefault: settings.makeDefault))
@@ -436,7 +433,7 @@ public struct EpisodeWorkflow: Sendable {
         plan.attachments = store.addedFontURLs(for: project)
         AppLog.shared.info("Dublagem: \(segments.count) falas, \(report.synthesized) geradas, \(report.failed.count) sem voz; gravando em \(replaceOriginal ? "o próprio arquivo" : plan.output.lastPathComponent)")
         let (url, verification) = try await MKVMuxer(tools: tools).mux(plan) { value in
-            progress(WorkflowStep(fraction: 0.85 + value * 0.15, message: value < 0.9 ? "Gravando novo MKV…" : "Verificando integridade…"))
+            progress(WorkflowStep(fraction: 0.85 + value * 0.15, message: value < 0.9 ? String(localized: "Gravando novo MKV…") : String(localized: "Verificando integridade…")))
         }
         project.dubbingStatus = report.failed.isEmpty ? .muxed : .failed
         project.lastDubReport = report

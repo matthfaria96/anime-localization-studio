@@ -10,17 +10,17 @@ public enum EngineChoice: String, Sendable, Codable, CaseIterable, Identifiable 
     public var id: String { rawValue }
     public var label: String {
         switch self {
-        case .appleTranslation: "Tradução da Apple (no dispositivo)"
-        case .foundationModels: "Apple Intelligence (modelo local)"
-        case .openAICompatible: "Servidor compatível com OpenAI"
+        case .appleTranslation: String(localized: "Tradução da Apple (no dispositivo)")
+        case .foundationModels: String(localized: "Apple Intelligence (modelo local)")
+        case .openAICompatible: String(localized: "Servidor compatível com OpenAI")
         }
     }
 
     public var summary: String {
         switch self {
-        case .appleTranslation: "Rápida e privada. Traduz fala por fala, sem contexto nem glossário."
-        case .foundationModels: "Privada, usa contexto, glossário e notas da obra. Modelo pequeno."
-        case .openAICompatible: "Ollama, LM Studio ou um serviço online. Melhor qualidade com modelos grandes."
+        case .appleTranslation: String(localized: "Rápida e privada. Traduz fala por fala, sem contexto nem glossário.")
+        case .foundationModels: String(localized: "Privada, usa contexto, glossário e notas da obra. Modelo pequeno.")
+        case .openAICompatible: String(localized: "Ollama, LM Studio ou um serviço online. Melhor qualidade com modelos grandes.")
         }
     }
 }
@@ -35,7 +35,7 @@ public enum DubbingEngineChoice: String, Sendable, Codable, CaseIterable, Identi
     public var label: String {
         switch self {
         case .elevenLabs: "ElevenLabs"
-        case .original: "Voz original no Mac"
+        case .original: String(localized: "Voz original no Mac")
         }
     }
 }
@@ -45,10 +45,10 @@ public struct AppSettings: Sendable, Hashable, Codable {
     public var openAI: OpenAICompatibleEngine.Configuration = .ollama
     /// `nil` = detect from the subtitle.
     public var sourceLanguage: String? = nil
-    public var targetLanguage: String = "pt-BR"
+    public var targetLanguage: String = InterfaceLanguage.defaultOutput
     public var contextLines: Int = 6
     public var translateKaraoke: Bool = false
-    public var trackName: String = "Português (Brasil)"
+    public var trackName: String = EpisodeWorkflow.trackName(for: InterfaceLanguage.defaultOutput)
     public var makeDefault: Bool = true
     public var placeNewTrackFirst: Bool = false
     public var toolPaths: [String: String] = [:]
@@ -150,7 +150,7 @@ public enum KeychainStore {
             status = SecItemAdd(item as CFDictionary, nil)
         }
         guard status == errSecSuccess else {
-            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Não foi possível salvar a chave no Keychain."])
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status), userInfo: [NSLocalizedDescriptionKey: String(localized: "Não foi possível salvar a chave no Keychain.")])
         }
     }
 

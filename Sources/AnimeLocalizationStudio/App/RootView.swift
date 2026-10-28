@@ -4,6 +4,7 @@ import SwiftUI
 /// pages (Visão geral, Legendar, Dublar) switched at the top.
 struct RootView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         Group {
@@ -16,7 +17,11 @@ struct RootView: View {
         .alert(item: Bindable(app).alert) { alert in
             Alert(title: Text(alert.title), message: Text(alert.message))
         }
-        .task { await app.refreshTools() }
+        .task {
+            // Test hook for captures: ALS_SETTINGS=<tab> opens Settings on that tab (see SettingsView).
+            if ProcessInfo.processInfo.environment["ALS_SETTINGS"] != nil { openSettings() }
+            await app.refreshTools()
+        }
     }
 }
 
@@ -38,7 +43,7 @@ private struct WelcomeView: View {
                 dropZone
                 screens
                 if !app.missingTools.isEmpty {
-                    InlineMessage(kind: .warning, text: "Faltam ferramentas: \(app.missingTools.map(\.tool.rawValue).joined(separator: ", ")). Veja Ajustes › Diagnóstico para instalar.")
+                    InlineMessage(kind: .warning, text: String(localized: "Faltam ferramentas: \(app.missingTools.map(\.tool.rawValue).joined(separator: ", ")). Veja Ajustes › Diagnóstico para instalar."))
                         .frame(maxWidth: 560)
                 }
             }

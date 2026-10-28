@@ -81,7 +81,7 @@ public enum TranslationPipelineError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .engineUnavailable(let m): m
-        case .aborted(let m, let completed): "\(m) O progresso (\(completed) falas) foi salvo e pode ser retomado."
+        case .aborted(let m, let completed): String(localized: "\(m) O progresso (\(completed) falas) foi salvo e pode ser retomado.")
         }
     }
 }
@@ -146,7 +146,7 @@ public struct TranslationPipeline: Sendable {
                                          notes: glossary.notes, keepHonorifics: glossary.keepHonorifics)
         let batchSize = max(1, options.batchSize ?? engine.preferredBatchSize)
         let pending = units.filter { state.checkpoint.translations[$0.index] == nil }
-        progress?(TranslationProgress(completed: units.count - pending.count, total: units.count, message: "Traduzindo…"))
+        progress?(TranslationProgress(completed: units.count - pending.count, total: units.count, message: String(localized: "Traduzindo…")))
 
         for start in stride(from: 0, to: pending.count, by: batchSize) {
             try Task.checkCancellation()
@@ -164,7 +164,7 @@ public struct TranslationPipeline: Sendable {
             }
             try saveCheckpoint(state)
             let done = units.count - pending.count + start + batch.count
-            progress?(TranslationProgress(completed: done, total: units.count, message: "Traduzindo… \(done) de \(units.count)"))
+            progress?(TranslationProgress(completed: done, total: units.count, message: String(localized: "Traduzindo… \(done) de \(units.count)")))
         }
 
         var output = source
@@ -173,7 +173,7 @@ public struct TranslationPipeline: Sendable {
         if let reparsed = try? SubtitleDocument.parse(output.encoded(), format: source.format) {
             structure.problems += StructureCheck.compare(source: source, translated: reparsed).problems
         } else {
-            structure.problems.append("A legenda traduzida não pôde ser lida de volta.")
+            structure.problems.append(String(localized: "A legenda traduzida não pôde ser lida de volta."))
         }
         let plainSource = Dictionary(uniqueKeysWithValues: units.map { ($0.index, $0.template.body) })
         let plainTranslation = Dictionary(uniqueKeysWithValues: units.compactMap { unit in
@@ -208,7 +208,7 @@ public struct TranslationPipeline: Sendable {
                 let lines = whole.enumerated().map { TranslationLine(id: $0.offset + 1, text: $0.element.template.body, speaker: $0.element.speaker) }
                 let result = try await withRetries { try await engine.translate(lines, context: context) }
                 for (offset, unit) in whole.enumerated() {
-                    guard let text = result[offset + 1] else { state.failures[unit.index] = "sem resposta para a fala"; continue }
+                    guard let text = result[offset + 1] else { state.failures[unit.index] = String(localized: "sem resposta para a fala"); continue }
                     do {
                         state.checkpoint.translations[unit.index] = try unit.template.rebuild(translation: text)
                         state.failures[unit.index] = nil
@@ -250,7 +250,7 @@ public struct TranslationPipeline: Sendable {
                     if let text = result[n + 1] { segments[entry.segment] = text } else { complete = false }
                 }
                 guard complete, let rebuilt = try? unit.template.rebuild(segments: segments) else {
-                    state.failures[unit.index] = "o motor não devolveu todas as partes da fala"
+                    state.failures[unit.index] = String(localized: "o motor não devolveu todas as partes da fala")
                     continue
                 }
                 state.checkpoint.translations[unit.index] = rebuilt

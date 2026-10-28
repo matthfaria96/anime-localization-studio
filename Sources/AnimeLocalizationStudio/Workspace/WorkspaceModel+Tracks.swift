@@ -64,9 +64,9 @@ extension WorkspaceModel {
                 try store.save(updated)
                 chooseSubtitleTask(.edit)
                 await reload()
-                notice = (.info, "Legenda em branco criada. Use + para inserir falas e Salvar › Gravar no vídeo… para gravá-la como faixa nova.")
+                notice = (.info, String(localized: "Legenda em branco criada. Use + para inserir falas e Salvar › Gravar no vídeo… para gravá-la como faixa nova."))
             } catch {
-                app.report(error, context: "A legenda em branco não foi criada")
+                app.report(error, context: String(localized: "A legenda em branco não foi criada"))
             }
         }
     }
@@ -112,8 +112,8 @@ extension WorkspaceModel {
             editor.reference = [:]
             let base = subtitleTracks.first { $0.id == project.sourceTrackID }
             editor.referenceTitle = project.externalSubtitlePath != nil
-                ? (project.newTrackName ?? project.newTrackLanguage.map(Languages.name(for:)) ?? "Legenda aberta")
-                : base.map { "\($0.name ?? $0.codec) · \(Languages.display($0.displayLanguage))" } ?? "Original"
+                ? (project.newTrackName ?? project.newTrackLanguage.map(Languages.name(for:)) ?? String(localized: "Legenda aberta"))
+                : base.map { "\($0.name ?? $0.codec) · \(Languages.display($0.displayLanguage))" } ?? String(localized: "Original")
             return
         }
         guard project.subtitleTask == .edit, let id = project.referenceTrackID, id != project.sourceTrackID,
@@ -134,7 +134,7 @@ extension WorkspaceModel {
             if let source = editor.source, source.isBlank, document.differsInTiming(from: source) { pendingTimingOffer = track }
         } catch {
             referenceLines = [:]
-            notice = (.warning, "A referência não pôde ser carregada: \(LogRedactor.redact(error.localizedDescription))")
+            notice = (.warning, String(localized: "A referência não pôde ser carregada: \(LogRedactor.redact(error.localizedDescription))"))
         }
     }
 
@@ -170,7 +170,7 @@ extension WorkspaceModel {
         editor.flush()
         referenceLines = TranslationAlignment.reference(document, for: copy)
         editor.reference = referenceLines
-        notice = (.success, "\(Plural.count(copy.count, "fala criada", "falas criadas")) com os tempos da legenda ao lado, em branco para você escrever.")
+        notice = (.success, String(localized: "\(Plural.count(copy.count, "fala criada", "falas criadas")) com os tempos da legenda ao lado, em branco para você escrever."))
     }
 
     /// “Não”: nothing beside.
@@ -209,10 +209,10 @@ extension WorkspaceModel {
         panel.allowedContentTypes = [UTType(filenameExtension: ext) ?? .data]
         panel.nameFieldStringValue = "\(title).\(track.id).\(track.displayLanguage).\(ext)"
         panel.directoryURL = url.deletingLastPathComponent()
-        panel.message = "Onde salvar a faixa “\(Self.describe(track))”? O arquivo original não é alterado."
-        guard panel.runModal() == .OK, let destination = panel.url, claim("Extração de faixa") else { return }
+        panel.message = String(localized: "Onde salvar a faixa “\(Self.describe(track))”? O arquivo original não é alterado.")
+        guard panel.runModal() == .OK, let destination = panel.url, claim(String(localized: "Extração de faixa")) else { return }
         notice = nil
-        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Extraindo a faixa…")
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: String(localized: "Extraindo a faixa…"))
         let tools = app.tools
         task = Task {
             do {
@@ -221,10 +221,10 @@ extension WorkspaceModel {
                 let file = track.textSubtitleExtension != nil
                     ? try await extractor.extractSubtitle(track, from: info, to: destination, progress: progress)
                     : try await extractor.extractRaw(track, from: info, to: destination, progress: progress)
-                notice = (.success, "Faixa salva em \(file.path).")
-                noticeAction = ("Mostrar no Finder", { NSWorkspace.shared.activateFileViewerSelecting([file]) })
+                notice = (.success, String(localized: "Faixa salva em \(file.path)."))
+                noticeAction = (String(localized: "Mostrar no Finder"), { NSWorkspace.shared.activateFileViewerSelecting([file]) })
             } catch is CancellationError {
-                notice = (.info, "Extração cancelada.")
+                notice = (.info, String(localized: "Extração cancelada."))
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }
@@ -237,10 +237,10 @@ extension WorkspaceModel {
 
     /// Puts the corrected subtitle in the MKV in place of the track it came from.
     func saveEditedSubtitle(replaceOriginal: Bool) {
-        guard !isBusy, editor.source != nil, claim("Salvar a legenda editada") else { return }
+        guard !isBusy, editor.source != nil, claim(String(localized: "Salvar a legenda editada")) else { return }
         editor.flush()
         notice = nil
-        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando…")
+        operation = RunningOperation(kind: .muxing, fraction: 0, message: String(localized: "Preparando…"))
         let workflow = workflow()
         let project = project
         task = Task {
@@ -255,14 +255,14 @@ extension WorkspaceModel {
                 operation = nil
                 if replaceOriginal {
                     await reload()
-                    notice = (.success, "Legenda corrigida gravada no próprio arquivo, no lugar da antiga. A versão anterior do arquivo está na Lixeira.")
+                    notice = (.success, String(localized: "Legenda corrigida gravada no próprio arquivo, no lugar da antiga. A versão anterior do arquivo está na Lixeira."))
                 } else {
-                    notice = (.success, "Novo arquivo com a legenda corrigida: \(output.path). O original não foi alterado.")
-                    noticeAction = ("Mostrar no Finder", { NSWorkspace.shared.activateFileViewerSelecting([output]) })
+                    notice = (.success, String(localized: "Novo arquivo com a legenda corrigida: \(output.path). O original não foi alterado."))
+                    noticeAction = (String(localized: "Mostrar no Finder"), { NSWorkspace.shared.activateFileViewerSelecting([output]) })
                 }
                 return
             } catch is CancellationError {
-                notice = (.info, "Cancelado. Nenhum arquivo foi criado ou alterado.")
+                notice = (.info, String(localized: "Cancelado. Nenhum arquivo foi criado ou alterado."))
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }

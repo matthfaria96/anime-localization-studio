@@ -20,8 +20,8 @@ public struct VoiceSeparator: Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .unitUnavailable: "O isolamento de voz da Apple (AUSoundIsolation) não está disponível neste Mac."
-            case .renderFailed(let m): "A separação de voz falhou: \(m)"
+            case .unitUnavailable: String(localized: "O isolamento de voz da Apple (AUSoundIsolation) não está disponível neste Mac.")
+            case .renderFailed(let m): String(localized: "A separação de voz falhou: \(m)")
             }
         }
     }

@@ -169,7 +169,7 @@ private struct SubtitleSessionBar: View {
     }
 
     private var openSubtitleName: String {
-        workspace.project.newTrackName ?? workspace.project.newTrackLanguage.map(Languages.name(for:)) ?? "Legenda nova"
+        workspace.project.newTrackName ?? workspace.project.newTrackLanguage.map(Languages.name(for:)) ?? String(localized: "Legenda nova")
     }
 
     private var tracks: some View {
@@ -215,7 +215,7 @@ private struct SubtitleSessionBar: View {
                   ? "O vídeo não tem outra legenda de texto para mostrar ao lado."
                   : "Outra legenda do vídeo exibida ao lado de cada fala, só para consulta. As falas são casadas pelo tempo.")
         } else {
-            Picker("Ao lado", selection: .constant(0)) { Text(editor.referenceTitle ?? "Original").tag(0) }
+            Picker("Ao lado", selection: .constant(0)) { Text(editor.referenceTitle ?? String(localized: "Original")).tag(0) }
                 .labelsHidden()
                 .frame(maxWidth: 220)
                 .disabled(true)

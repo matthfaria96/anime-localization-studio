@@ -39,11 +39,11 @@ public enum TranslationSkipReason: String, Sendable, Codable, CaseIterable {
 
     public var label: String {
         switch self {
-        case .comment: "Comentário"
-        case .karaoke: "Karaokê"
-        case .drawing: "Desenho vetorial"
-        case .noText: "Sem texto"
-        case .nonDialogue: "Evento não textual"
+        case .comment: String(localized: "Comentário")
+        case .karaoke: String(localized: "Karaokê")
+        case .drawing: String(localized: "Desenho vetorial")
+        case .noText: String(localized: "Sem texto")
+        case .nonDialogue: String(localized: "Evento não textual")
         }
     }
 }

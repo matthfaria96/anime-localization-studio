@@ -6,7 +6,7 @@ import SubtitleKit
 enum DocumentSide: String, CaseIterable, Identifiable {
     case original, translation
     var id: String { rawValue }
-    var label: String { self == .original ? "Original" : "Tradução" }
+    var label: String { self == .original ? String(localized: "Original") : String(localized: "Tradução") }
 }
 
 enum LineFilter: String, CaseIterable, Identifiable {
@@ -14,11 +14,11 @@ enum LineFilter: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .all: "Todas as falas"
-        case .untranslated: "Sem tradução"
-        case .skipped: "Não traduzíveis"
-        case .longLines: "Leitura rápida demais"
-        case .spelling: "Possíveis erros de ortografia"
+        case .all: String(localized: "Todas as falas")
+        case .untranslated: String(localized: "Sem tradução")
+        case .skipped: String(localized: "Não traduzíveis")
+        case .longLines: String(localized: "Leitura rápida demais")
+        case .spelling: String(localized: "Possíveis erros de ortografia")
         }
     }
 }
@@ -180,20 +180,20 @@ final class EditorModel {
     func setText(_ raw: String, side: DocumentSide, index: Int, undoManager: UndoManager?) {
         if side == .translation && translation == nil { translation = source }
         guard raw != displayRaw(side, index) else { return }
-        mutate("Editar fala", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Editar fala"), undoManager: undoManager) { source, translation in
             if side == .original { source?.setRawText(raw, at: index) } else { translation?.setRawText(raw, at: index) }
         }
     }
 
     func setTiming(start: Int, end: Int, index: Int, undoManager: UndoManager?) {
-        mutate("Alterar tempo", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Alterar tempo"), undoManager: undoManager) { source, translation in
             source?.setTiming(start: start, end: end, at: index)
             translation?.setTiming(start: start, end: end, at: index)
         }
     }
 
     func setActor(_ actor: String, index: Int, undoManager: UndoManager?) {
-        mutate("Alterar personagem", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Alterar personagem"), undoManager: undoManager) { source, translation in
             source?.setActor(actor, at: index)
             translation?.setActor(actor, at: index)
         }
@@ -202,7 +202,7 @@ final class EditorModel {
     /// Sets the character of many lines at once (speaker identification), in both documents.
     func setActors(_ actors: [Int: String], undoManager: UndoManager?) {
         guard !actors.isEmpty else { return }
-        mutate("Identificar falantes", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Identificar falantes"), undoManager: undoManager) { source, translation in
             for (index, actor) in actors {
                 source?.setActor(actor, at: index)
                 translation?.setActor(actor, at: index)
@@ -215,7 +215,7 @@ final class EditorModel {
         let name = new.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty, name != old else { return }
         let indices = rows.filter { $0.actor == old }.map(\.id)
-        mutate("Renomear personagem", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Renomear personagem"), undoManager: undoManager) { source, translation in
             for index in indices {
                 source?.setActor(name, at: index)
                 translation?.setActor(name, at: index)
@@ -224,7 +224,7 @@ final class EditorModel {
     }
 
     func setStyle(_ style: String, index: Int, undoManager: UndoManager?) {
-        mutate("Alterar estilo", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Alterar estilo"), undoManager: undoManager) { source, translation in
             source?.setStyle(style, at: index)
             translation?.setStyle(style, at: index)
         }
@@ -233,7 +233,7 @@ final class EditorModel {
     /// Adds an empty line after `index` in both documents and selects it.
     func insertLine(after index: Int, undoManager: UndoManager?) {
         var newIndex = index + 1
-        mutate("Inserir fala", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Inserir fala"), undoManager: undoManager) { source, translation in
             newIndex = source?.insertLine(after: index) ?? newIndex
             translation?.insertLine(after: index)
         }
@@ -243,7 +243,7 @@ final class EditorModel {
     func removeLines(_ indices: Set<Int>, undoManager: UndoManager?) {
         guard !indices.isEmpty else { return }
         draftIndex = nil
-        mutate(indices.count == 1 ? "Excluir fala" : "Excluir falas", undoManager: undoManager) { source, translation in
+        mutate(indices.count == 1 ? String(localized: "Excluir fala") : String(localized: "Excluir falas"), undoManager: undoManager) { source, translation in
             for index in indices.sorted(by: >) {
                 source?.removeLine(at: index)
                 translation?.removeLine(at: index)
@@ -254,7 +254,7 @@ final class EditorModel {
 
     func shift(by offset: Int, onlySelection: Bool, undoManager: UndoManager?) {
         let indices = onlySelection ? selection : nil
-        mutate("Deslocar tempos", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Deslocar tempos"), undoManager: undoManager) { source, translation in
             source?.shift(by: offset, indices: indices)
             translation?.shift(by: offset, indices: indices)
         }
@@ -265,7 +265,7 @@ final class EditorModel {
         guard !searchQuery.isEmpty else { return 0 }
         var changed = 0
         let (query, replacement, caseSensitive, side) = (searchQuery, replacement, caseSensitive, searchSide)
-        mutate("Substituir tudo", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Substituir tudo"), undoManager: undoManager) { source, translation in
             if side == .original {
                 changed = source?.replace(query, with: replacement, caseSensitive: caseSensitive) ?? 0
             } else {
@@ -284,7 +284,7 @@ final class EditorModel {
         guard case .ass(let doc) = source, doc.styleCount > 0 else { return nil }
         let from = styleIndex.flatMap { doc.styles.indices.contains($0) ? $0 : nil } ?? 0
         var added: Int?
-        mutate("Novo estilo", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Novo estilo"), undoManager: undoManager) { source, translation in
             if case .ass(var d) = source { added = d.duplicateStyle(at: from, named: name); source = .ass(d) }
             if case .ass(var d) = translation { d.duplicateStyle(at: from, named: name); translation = .ass(d) }
         }
@@ -292,14 +292,14 @@ final class EditorModel {
     }
 
     func renameStyle(at styleIndex: Int, to name: String, undoManager: UndoManager?) {
-        mutate("Renomear estilo", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Renomear estilo"), undoManager: undoManager) { source, translation in
             if case .ass(var d) = source { d.renameStyle(at: styleIndex, to: name); source = .ass(d) }
             if case .ass(var d) = translation { d.renameStyle(at: styleIndex, to: name); translation = .ass(d) }
         }
     }
 
     func removeStyle(at styleIndex: Int, movingLinesTo replacement: String, undoManager: UndoManager?) {
-        mutate("Apagar estilo", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Apagar estilo"), undoManager: undoManager) { source, translation in
             if case .ass(var d) = source { d.removeStyle(at: styleIndex, movingEventsTo: replacement); source = .ass(d) }
             if case .ass(var d) = translation { d.removeStyle(at: styleIndex, movingEventsTo: replacement); translation = .ass(d) }
         }
@@ -351,7 +351,7 @@ final class EditorModel {
             let aligned = ASSText.settingAlignment(alignment, in: raw)
             return ASSText.hasMovement(raw) ? aligned : ASSText.settingPosition(nil, in: aligned)
         }
-        mutate(alignment == nil ? "Usar a posição do estilo" : "Mudar a posição", undoManager: undoManager) { source, translation in
+        mutate(alignment == nil ? String(localized: "Usar a posição do estilo") : String(localized: "Mudar a posição"), undoManager: undoManager) { source, translation in
             for index in lines {
                 if let raw = source?.rawText(at: index) { source?.setRawText(place(raw), at: index) }
                 if let raw = translation?.rawText(at: index) { translation?.setRawText(place(raw), at: index) }
@@ -382,7 +382,7 @@ final class EditorModel {
     func setPosition(_ point: ASSPoint, line index: Int, undoManager: UndoManager?) {
         guard canPlace(index), let frame = playResolution else { return }
         let x = min(max(0, point.x), frame.width), y = min(max(0, point.y), frame.height)
-        mutate("Mover a fala", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Mover a fala"), undoManager: undoManager) { source, translation in
             if let raw = source?.rawText(at: index) { source?.setRawText(ASSText.settingPosition((x, y), in: raw), at: index) }
             if let raw = translation?.rawText(at: index) { translation?.setRawText(ASSText.settingPosition((x, y), in: raw), at: index) }
         }
@@ -395,7 +395,7 @@ final class EditorModel {
     }
 
     func updateStyle(_ info: ASSStyleInfo, at styleIndex: Int, undoManager: UndoManager?) {
-        mutate("Editar estilo", undoManager: undoManager) { source, translation in
+        mutate(String(localized: "Editar estilo"), undoManager: undoManager) { source, translation in
             if case .ass(var doc) = source { doc.updateStyle(at: styleIndex) { info.apply(to: &$0) }; source = .ass(doc) }
             if case .ass(var doc) = translation { doc.updateStyle(at: styleIndex) { info.apply(to: &$0) }; translation = .ass(doc) }
         }
@@ -405,12 +405,12 @@ final class EditorModel {
     func replaceSource(_ document: SubtitleDocument, undoManager: UndoManager?) {
         selection = []
         draftIndex = nil
-        mutate("Usar os tempos da legenda ao lado", undoManager: undoManager) { source, _ in source = document }
+        mutate(String(localized: "Usar os tempos da legenda ao lado"), undoManager: undoManager) { source, _ in source = document }
     }
 
     /// Replaces the whole translation (after “Traduzir episódio inteiro”), undoably.
     func applyTranslation(_ document: SubtitleDocument, undoManager: UndoManager?) {
-        mutate("Traduzir episódio", undoManager: undoManager) { _, translation in translation = document }
+        mutate(String(localized: "Traduzir episódio"), undoManager: undoManager) { _, translation in translation = document }
     }
 
     private func mutate(_ name: String, undoManager: UndoManager?, _ change: (inout SubtitleDocument?, inout SubtitleDocument?) -> Void) {

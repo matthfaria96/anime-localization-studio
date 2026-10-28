@@ -11,9 +11,9 @@ enum EpisodeScreen: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .overview: "Visão geral"
-        case .subtitles: "Legendar"
-        case .dubbing: "Dublar"
+        case .overview: String(localized: "Visão geral")
+        case .subtitles: String(localized: "Legendar")
+        case .dubbing: String(localized: "Dublar")
         }
     }
     var systemImage: String {
@@ -25,9 +25,9 @@ enum EpisodeScreen: String, CaseIterable, Identifiable {
     }
     var hint: String {
         switch self {
-        case .overview: "Dados e faixas do vídeo: tamanho, codecs, áudio e legenda padrão, extração."
-        case .subtitles: "Corrigir uma legenda do vídeo ou criar uma nova a partir de outra."
-        case .dubbing: "Criar uma faixa de áudio dublada com a voz de cada personagem (ElevenLabs, ou no Mac a partir de uma legenda)."
+        case .overview: String(localized: "Dados e faixas do vídeo: tamanho, codecs, áudio e legenda padrão, extração.")
+        case .subtitles: String(localized: "Corrigir uma legenda do vídeo ou criar uma nova a partir de outra.")
+        case .dubbing: String(localized: "Criar uma faixa de áudio dublada com a voz de cada personagem (ElevenLabs, ou no Mac a partir de uma legenda).")
         }
     }
 }
@@ -50,7 +50,7 @@ final class AppModel {
             if settings.targetLanguage != oldValue.targetLanguage, settings.trackName == Languages.name(for: oldValue.targetLanguage) {
                 settings.trackName = Languages.name(for: settings.targetLanguage)
             }
-            do { try SettingsStore(paths: paths).save(settings) } catch { report(error, context: "Ajustes não salvos") }
+            do { try SettingsStore(paths: paths).save(settings) } catch { report(error, context: String(localized: "Ajustes não salvos")) }
         }
     }
 
@@ -161,15 +161,15 @@ final class AppModel {
         panel.allowedContentTypes = Self.videoTypes
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.message = "Escolha um vídeo (MKV, MP4 ou MOV)"
-        panel.prompt = "Abrir"
+        panel.message = String(localized: "Escolha um vídeo (MKV, MP4 ou MOV)")
+        panel.prompt = String(localized: "Abrir")
         if panel.runModal() == .OK, let url = panel.url { open(url) }
     }
 
     /// Accepts exactly one video file dropped on the window.
     func openDropped(_ urls: [URL]) -> Bool {
         guard urls.count == 1, let url = urls.first, !url.hasDirectoryPath else {
-            alert = AppAlert(title: "Um vídeo por vez", message: "Solte um único arquivo de vídeo (MKV, MP4 ou MOV). Pastas e vários arquivos não são aceitos.")
+            alert = AppAlert(title: String(localized: "Um vídeo por vez"), message: String(localized: "Solte um único arquivo de vídeo (MKV, MP4 ou MOV). Pastas e vários arquivos não são aceitos."))
             return false
         }
         open(url)
@@ -190,7 +190,7 @@ final class AppModel {
         do {
             try SeriesStore(paths: paths).save(value)
             series = SeriesStore(paths: paths).all()
-        } catch { report(error, context: "Série não salva") }
+        } catch { report(error, context: String(localized: "Série não salva")) }
     }
 
     func deleteSeries(_ id: UUID) {

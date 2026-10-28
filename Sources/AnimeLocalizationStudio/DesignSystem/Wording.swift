@@ -1,15 +1,11 @@
 import Foundation
+import StudioCore
 
 /// Languages offered as output, with the name players show for the track.
 enum Languages {
-    static let all: [(code: String, name: String)] = [
-        ("pt-BR", "Português (Brasil)"), ("pt-PT", "Português (Portugal)"), ("es", "Espanhol"), ("en", "Inglês"),
-        ("fr", "Francês"), ("de", "Alemão"), ("it", "Italiano"), ("ja", "Japonês"), ("ko", "Coreano"), ("zh", "Chinês")
-    ]
+    static var all: [(code: String, name: String)] { InterfaceLanguage.outputs.map { ($0, name(for: $0)) } }
 
-    static func name(for code: String) -> String {
-        all.first { $0.code == code }?.name ?? Locale.current.localizedString(forIdentifier: code) ?? code
-    }
+    static func name(for code: String) -> String { InterfaceLanguage.name(of: code) }
 
     /// `pt-BR` → `pt`, `ja-JP` → `ja`: to compare languages whatever the region.
     static func base(_ code: String) -> String {
@@ -18,11 +14,13 @@ enum Languages {
 
     /// A track's language as people read it (“und” is “sem idioma”).
     static func display(_ code: String) -> String {
-        code.isEmpty || code == "und" ? "sem idioma" : code.uppercased()
+        code.isEmpty || code == "und" ? String(localized: "sem idioma") : code.uppercased()
     }
 }
 
-/// “1 fala”, “2 falas”: Portuguese count agreement in one place.
+/// “1 fala”, “2 falas”: count agreement in one place (the words are translated).
 enum Plural {
-    static func count(_ n: Int, _ one: String, _ many: String) -> String { "\(n) \(n == 1 ? one : many)" }
+    static func count(_ n: Int, _ one: String.LocalizationValue, _ many: String.LocalizationValue) -> String {
+        "\(n) \(String(localized: n == 1 ? one : many))"
+    }
 }

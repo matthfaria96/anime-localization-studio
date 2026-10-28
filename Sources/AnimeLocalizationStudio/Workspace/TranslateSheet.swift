@@ -43,8 +43,8 @@ struct TranslateSheet: View {
             Text("Traduzir").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: Theme.Spacing.m) {
                 Text("Traduzir de").font(.headline)
-                ChoiceRow(title: "Legenda do vídeo", selected: !fromAudio,
-                          disabledReason: hasSubtitle ? nil : "O vídeo não tem legenda de texto.", action: { fromAudio = false }) {
+                ChoiceRow(title: String(localized: "Legenda do vídeo"), selected: !fromAudio,
+                          disabledReason: hasSubtitle ? nil : String(localized: "O vídeo não tem legenda de texto."), action: { fromAudio = false }) {
                     Picker("Legenda", selection: $subtitle) {
                         if hasOpenSubtitle { Text("A legenda aberta (nova ou importada)").tag(-2) }
                         ForEach(textTracks) { Text("\($0.name ?? $0.codec) · \(Languages.display($0.displayLanguage))").tag($0.id) }
@@ -53,8 +53,8 @@ struct TranslateSheet: View {
                     .fixedSize()
                     .hint("Legenda de origem", "A legenda que é traduzida, com estilos, tempos e tags preservados.")
                 }
-                ChoiceRow(title: "Áudio do vídeo", selected: fromAudio,
-                          disabledReason: hasAudio ? nil : "O vídeo não tem áudio.", action: { fromAudio = true }) {
+                ChoiceRow(title: String(localized: "Áudio do vídeo"), selected: fromAudio,
+                          disabledReason: hasAudio ? nil : String(localized: "O vídeo não tem áudio."), action: { fromAudio = true }) {
                     VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                         HStack {
                             Picker("Idioma falado", selection: $spoken) {
@@ -102,7 +102,7 @@ struct TranslateSheet: View {
                         }
                         .labelsHidden()
                         .fixedSize()
-                        .hintVerbatim("Motor de tradução", app.settings.engine.summary)
+                        .hintVerbatim(String(localized: "Motor de tradução"), app.settings.engine.summary)
                     }
                     GridRow {
                         Text("Glossário").foregroundStyle(.secondary)

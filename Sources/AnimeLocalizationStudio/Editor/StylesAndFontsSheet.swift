@@ -70,9 +70,9 @@ private struct StylesPane: View {
                     }
                     Divider()
                     HStack(spacing: Theme.Spacing.xs) {
-                        Button("Novo estilo", systemImage: "plus") { add(named: "Novo estilo") }
+                        Button("Novo estilo", systemImage: "plus") { add(named: String(localized: "Novo estilo")) }
                             .hint("Novo estilo", "Cria um estilo a partir do selecionado. Depois mude o nome, a fonte e as cores.")
-                        Button("Duplicar", systemImage: "plus.square.on.square") { add(named: current?.name ?? "Estilo") }
+                        Button("Duplicar", systemImage: "plus.square.on.square") { add(named: current?.name ?? String(localized: "Estilo")) }
                             .hint("Duplicar estilo", "Cria uma cópia do estilo selecionado.")
                         Button("Apagar…", systemImage: "minus") {
                             replacement = styles.first { $0.name != current?.name }?.name ?? ""
@@ -212,7 +212,7 @@ private struct StylesPane: View {
     }
 
     private func alignmentName(_ value: Int) -> String {
-        let vertical = ["Inferior", "Meio", "Superior"][(value - 1) / 3]
+        let vertical = [String(localized: "Inferior"), String(localized: "Meio"), String(localized: "Superior")][(value - 1) / 3]
         let horizontal = ["esquerda", "centro", "direita"][(value - 1) % 3]
         return "\(vertical) · \(horizontal) (\(value))"
     }

@@ -34,7 +34,7 @@ public enum SubtitleDecodingError: Error, LocalizedError, Equatable {
     case undecodable
 
     public var errorDescription: String? {
-        "O arquivo de legenda não está em UTF-8, UTF-16 nem Windows-1252 e não pôde ser lido."
+        String(localized: "O arquivo de legenda não está em UTF-8, UTF-16 nem Windows-1252 e não pôde ser lido.")
     }
 }
 

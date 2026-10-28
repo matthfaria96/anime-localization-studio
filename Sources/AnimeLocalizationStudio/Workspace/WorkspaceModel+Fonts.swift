@@ -44,7 +44,7 @@ extension WorkspaceModel {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = ["ttf", "otf", "ttc"].compactMap { UTType(filenameExtension: $0) }
         panel.allowsMultipleSelection = true
-        panel.message = "Escolha as fontes. Elas serão anexadas ao vídeo quando você gravar a legenda."
+        panel.message = String(localized: "Escolha as fontes. Elas serão anexadas ao vídeo quando você gravar a legenda.")
         guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
         let folder = store.fontsDirectory(for: project)
         do {
@@ -60,9 +60,9 @@ extension WorkspaceModel {
             project.draftPending = true
             try store.save(project)
             Task { await loadAddedFonts() }
-            notice = (.success, "\(Plural.count(panel.urls.count, "fonte adicionada", "fontes adicionadas")). Ela vai junto com a legenda em “Gravar no vídeo…”.")
+            notice = (.success, String(localized: "\(Plural.count(panel.urls.count, "fonte adicionada", "fontes adicionadas")). Ela vai junto com a legenda em “Gravar no vídeo…”."))
         } catch {
-            app.report(error, context: "A fonte não foi adicionada")
+            app.report(error, context: String(localized: "A fonte não foi adicionada"))
         }
     }
 
@@ -79,18 +79,18 @@ extension WorkspaceModel {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
-        panel.prompt = "Extrair aqui"
-        panel.message = "Pasta onde salvar as \(Plural.count(info.attachments.filter(\.isFont).count, "fonte", "fontes")) do vídeo"
+        panel.prompt = String(localized: "Extrair aqui")
+        panel.message = String(localized: "Pasta onde salvar as \(Plural.count(info.attachments.filter(\.isFont).count, "fonte", "fontes")) do vídeo")
         panel.directoryURL = url.deletingLastPathComponent()
-        guard panel.runModal() == .OK, let folder = panel.url, let mkvextract = app.tools.locate(.mkvextract), claim("Extração de fontes") else { return }
+        guard panel.runModal() == .OK, let folder = panel.url, let mkvextract = app.tools.locate(.mkvextract), claim(String(localized: "Extração de fontes")) else { return }
         let fonts = info.attachments.filter(\.isFont)
-        operation = RunningOperation(kind: .extracting, fraction: nil, message: "Extraindo as fontes…")
+        operation = RunningOperation(kind: .extracting, fraction: nil, message: String(localized: "Extraindo as fontes…"))
         task = Task {
             do {
                 let specs = fonts.map { "\($0.id):\(FileOps.uniqueURL(for: folder.appendingPathComponent($0.fileName)).path)" }
                 try await ProcessRunner.runChecked(mkvextract, [info.url.path, "attachments"] + specs, acceptedExitCodes: [0, 1])
                 notice = (.success, "\(Plural.count(fonts.count, "fonte extraída", "fontes extraídas")) para \(folder.path).")
-                noticeAction = ("Mostrar no Finder", { NSWorkspace.shared.activateFileViewerSelecting([folder]) })
+                noticeAction = (String(localized: "Mostrar no Finder"), { NSWorkspace.shared.activateFileViewerSelecting([folder]) })
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }

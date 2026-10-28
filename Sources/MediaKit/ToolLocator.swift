@@ -14,11 +14,11 @@ public enum ExternalTool: String, CaseIterable, Sendable, Codable, Identifiable 
 
     public var purpose: String {
         switch self {
-        case .mkvmerge: "Ler o MKV e gravar faixas nele sem recodificar"
-        case .mkvextract: "Extrair legendas e áudio do MKV sem perdas"
-        case .mkvpropedit: "Trocar faixa padrão e nomes no próprio MKV, sem regravar"
-        case .ffmpeg: "Pré-visualização, extração de áudio e verificação de quadros"
-        case .ffprobe: "Inspecionar arquivos que não são Matroska"
+        case .mkvmerge: String(localized: "Ler o MKV e gravar faixas nele sem recodificar")
+        case .mkvextract: String(localized: "Extrair legendas e áudio do MKV sem perdas")
+        case .mkvpropedit: String(localized: "Trocar faixa padrão e nomes no próprio MKV, sem regravar")
+        case .ffmpeg: String(localized: "Pré-visualização, extração de áudio e verificação de quadros")
+        case .ffprobe: String(localized: "Inspecionar arquivos que não são Matroska")
         }
     }
 
@@ -53,7 +53,7 @@ public enum ToolError: Error, LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .missing(let tool):
-            "\(tool.rawValue) (\(tool.package)) não foi encontrado. Instale com “\(tool.installCommand)” ou indique o caminho em Ajustes › Ferramentas."
+            String(localized: "\(tool.rawValue) (\(tool.package)) não foi encontrado. Instale com “\(tool.installCommand)” ou indique o caminho em Ajustes › Ferramentas.")
         }
     }
 }
@@ -93,12 +93,12 @@ public struct ToolLocator: Sendable {
     }
 
     public func status(of tool: ExternalTool) async -> ToolStatus {
-        guard let url = locate(tool) else { return ToolStatus(tool: tool, url: nil, version: nil, problem: "Não encontrado") }
+        guard let url = locate(tool) else { return ToolStatus(tool: tool, url: nil, version: nil, problem: String(localized: "Não encontrado")) }
         do {
             let result = try await ProcessRunner.run(url, tool.versionArguments)
             let first = result.stdoutText.split(whereSeparator: \.isNewline).first.map(String.init)
             guard result.exitCode == 0, let first else {
-                return ToolStatus(tool: tool, url: url, version: nil, problem: "Não respondeu a \(tool.versionArguments.joined(separator: " "))")
+                return ToolStatus(tool: tool, url: url, version: nil, problem: String(localized: "Não respondeu a \(tool.versionArguments.joined(separator: " "))"))
             }
             return ToolStatus(tool: tool, url: url, version: Self.shortVersion(first, tool: tool), problem: nil)
         } catch {

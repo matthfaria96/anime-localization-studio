@@ -1,2 +1,1222 @@
-/* Texts are written in Brazilian Portuguese in the source; this table makes macOS use pt-BR for system menus and dialogs. */
+/* Brazilian Portuguese: each text as itself, so macOS never falls back to English. */
+
+/* Sources/ASSRendering/ASSRenderer.swift */
+"O renderizador libass não pôde ser iniciado." = "O renderizador libass não pôde ser iniciado.";
+"O libass não conseguiu ler a legenda." = "O libass não conseguiu ler a legenda.";
+
+/* Sources/AnimeLocalizationStudio/App/AnimeLocalizationStudioApp.swift */
 "Anime Localization Studio" = "Anime Localization Studio";
+"Abrir vídeo…" = "Abrir vídeo…";
+"Fechar vídeo" = "Fechar vídeo";
+"Nova legenda…" = "Nova legenda…";
+"Importar arquivo de legenda…" = "Importar arquivo de legenda…";
+"Gravar legenda no vídeo…" = "Gravar legenda no vídeo…";
+"Exportar legenda…" = "Exportar legenda…";
+"Episódio" = "Episódio";
+"Traduzir…" = "Traduzir…";
+"Cancelar operação" = "Cancelar operação";
+"Reproduzir ou pausar" = "Reproduzir ou pausar";
+"Fala anterior" = "Fala anterior";
+"Próxima fala" = "Próxima fala";
+
+/* Sources/AnimeLocalizationStudio/App/AppModel.swift */
+"Visão geral" = "Visão geral";
+"Legendar" = "Legendar";
+"Dublar" = "Dublar";
+"Dados e faixas do vídeo: tamanho, codecs, áudio e legenda padrão, extração." = "Dados e faixas do vídeo: tamanho, codecs, áudio e legenda padrão, extração.";
+"Corrigir uma legenda do vídeo ou criar uma nova a partir de outra." = "Corrigir uma legenda do vídeo ou criar uma nova a partir de outra.";
+"Criar uma faixa de áudio dublada com a voz de cada personagem (ElevenLabs, ou no Mac a partir de uma legenda)." = "Criar uma faixa de áudio dublada com a voz de cada personagem (ElevenLabs, ou no Mac a partir de uma legenda).";
+"Ajustes não salvos" = "Ajustes não salvos";
+"Escolha um vídeo (MKV, MP4 ou MOV)" = "Escolha um vídeo (MKV, MP4 ou MOV)";
+"Abrir" = "Abrir";
+"Um vídeo por vez" = "Um vídeo por vez";
+"Solte um único arquivo de vídeo (MKV, MP4 ou MOV). Pastas e vários arquivos não são aceitos." = "Solte um único arquivo de vídeo (MKV, MP4 ou MOV). Pastas e vários arquivos não são aceitos.";
+"Série não salva" = "Série não salva";
+
+/* Sources/AnimeLocalizationStudio/App/RootView.swift */
+"Corrija, traduza e duble a legenda de um anime, série ou filme, direto no MKV. O vídeo nunca é recodificado e o arquivo original só muda se você pedir." = "Corrija, traduza e duble a legenda de um anime, série ou filme, direto no MKV. O vídeo nunca é recodificado e o arquivo original só muda se você pedir.";
+"Faltam ferramentas: %@. Veja Ajustes › Diagnóstico para instalar." = "Faltam ferramentas: %@. Veja Ajustes › Diagnóstico para instalar.";
+"Solte um vídeo aqui" = "Solte um vídeo aqui";
+"Um arquivo por vez: MKV, MP4 ou MOV." = "Um arquivo por vez: MKV, MP4 ou MOV.";
+"Escolher vídeo…" = "Escolher vídeo…";
+"Escolher vídeo (⌘O)" = "Escolher vídeo (⌘O)";
+"Abre um vídeo. As faixas são lidas sem alterar o arquivo." = "Abre um vídeo. As faixas são lidas sem alterar o arquivo.";
+"Tamanho, codecs e faixas do vídeo. Escolha o áudio e a legenda padrão e extraia faixas." = "Tamanho, codecs e faixas do vídeo. Escolha o áudio e a legenda padrão e extraia faixas.";
+"Corrija uma legenda, traduza para outro idioma ou crie uma ouvindo o áudio, preservando estilos e tags." = "Corrija uma legenda, traduza para outro idioma ou crie uma ouvindo o áudio, preservando estilos e tags.";
+"Uma faixa de áudio dublada com a voz de cada personagem: pela ElevenLabs ou no próprio Mac." = "Uma faixa de áudio dublada com a voz de cada personagem: pela ElevenLabs ou no próprio Mac.";
+
+/* Sources/AnimeLocalizationStudio/DesignSystem/ChoiceRow.swift */
+"Escolhe esta opção." = "Escolhe esta opção.";
+
+/* Sources/AnimeLocalizationStudio/DesignSystem/PositionPad.swift */
+"Em cima" = "Em cima";
+"No meio" = "No meio";
+"Embaixo" = "Embaixo";
+"à esquerda" = "à esquerda";
+"no centro" = "no centro";
+"à direita" = "à direita";
+"Coloca esta fala %@ da tela." = "Coloca esta fala %@ da tela.";
+"Ponto livre" = "Ponto livre";
+
+/* Sources/AnimeLocalizationStudio/DesignSystem/Theme.swift */
+"Cancelar" = "Cancelar";
+"Interrompe a operação. O progresso de traduções é salvo e pode ser retomado." = "Interrompe a operação. O progresso de traduções é salvo e pode ser retomado.";
+
+/* Sources/AnimeLocalizationStudio/DesignSystem/VerificationList.swift */
+"%@ %@" = "%@ %@";
+"— %@" = "— %@";
+
+/* Sources/AnimeLocalizationStudio/DesignSystem/Wording.swift */
+"sem idioma" = "sem idioma";
+
+/* Sources/AnimeLocalizationStudio/Diagnostics/DiagnosticsView.swift */
+"Ferramentas de mídia" = "Ferramentas de mídia";
+"O app procura em /opt/homebrew/bin, /usr/local/bin, /opt/local/bin e no MKVToolNix.app. Outro caminho pode ser definido em Ajustes › Ferramentas." = "O app procura em /opt/homebrew/bin, /usr/local/bin, /opt/local/bin e no MKVToolNix.app. Outro caminho pode ser definido em Ajustes › Ferramentas.";
+"Motores de tradução" = "Motores de tradução";
+"Dublagem" = "Dublagem";
+"ElevenLabs" = "ElevenLabs";
+"A dublagem online usa a sua conta da ElevenLabs; só o áudio do vídeo é enviado. A voz original no Mac roda sem internet." = "A dublagem online usa a sua conta da ElevenLabs; só o áudio do vídeo é enviado. A voz original no Mac roda sem internet.";
+"Dados do app" = "Dados do app";
+"Projetos e séries" = "Projetos e séries";
+"Pré-visualizações em cache" = "Pré-visualizações em cache";
+"Limpar" = "Limpar";
+"Limpar pré-visualizações" = "Limpar pré-visualizações";
+"Apaga as cópias de pré-visualização em cache. Elas são refeitas quando você abrir o episódio de novo." = "Apaga as cópias de pré-visualização em cache. Elas são refeitas quando você abrir o episódio de novo.";
+"Registros" = "Registros";
+"Diagnóstico" = "Diagnóstico";
+"Verificar de novo" = "Verificar de novo";
+"Procura outra vez as ferramentas, os motores de tradução e os de voz." = "Procura outra vez as ferramentas, os motores de tradução e os de voz.";
+"Disponível" = "Disponível";
+"Mostrar no Finder" = "Mostrar no Finder";
+"Copiar" = "Copiar";
+"Copiar comando" = "Copiar comando";
+"Copia o comando de instalação para colar no Terminal." = "Copia o comando de instalação para colar no Terminal.";
+
+/* Sources/AnimeLocalizationStudio/Dubbing/DubSessionSheet.swift */
+"Dublar “%@”" = "Dublar “%@”";
+"Áudio de base" = "Áudio de base";
+"Dublar para" = "Dublar para";
+"Motor" = "Motor";
+"ElevenLabs: separa os personagens, traduz e dubla com a voz de cada um" = "ElevenLabs: separa os personagens, traduz e dubla com a voz de cada um";
+"Idioma falado" = "Idioma falado";
+"detectar automaticamente" = "detectar automaticamente";
+"Texto falado" = "Texto falado";
+"legenda do vídeo" = "legenda do vídeo";
+"tradução feita no app" = "tradução feita no app";
+"fala" = "fala";
+"falas" = "falas";
+"Vozes" = "Vozes";
+"voz original, com a emoção de cada fala" = "voz original, com a emoção de cada fala";
+"voz original, uma amostra por personagem" = "voz original, uma amostra por personagem";
+"Modo" = "Modo";
+"Personagens" = "Personagens";
+"personagem" = "personagem";
+"personagens" = "personagens";
+"identificados pelo áudio" = "identificados pelo áudio";
+"Esta dublagem já foi enviada antes: o app retoma o trabalho na ElevenLabs, sem enviar nem cobrar de novo." = "Esta dublagem já foi enviada antes: o app retoma o trabalho na ElevenLabs, sem enviar nem cobrar de novo.";
+"O áudio deste vídeo (sem a imagem) será enviado para a ElevenLabs e a dublagem usa créditos da sua conta. Leva alguns minutos; você pode continuar usando o app." = "O áudio deste vídeo (sem a imagem) será enviado para a ElevenLabs e a dublagem usa créditos da sua conta. Leva alguns minutos; você pode continuar usando o app.";
+"Ao começar, o app baixa os modelos de voz uma única vez (%@; %@). Tudo roda no Mac; o áudio não sai do computador." = "Ao começar, o app baixa os modelos de voz uma única vez (%@; %@). Tudo roda no Mac; o áudio não sai do computador.";
+"Gerar tudo do zero" = "Gerar tudo do zero";
+"Apaga as falas, as vozes e a música de fundo já geradas deste episódio e faz tudo de novo, inclusive a escolha das vozes. Use quando o resultado anterior saiu errado." = "Apaga as falas, as vozes e a música de fundo já geradas deste episódio e faz tudo de novo, inclusive a escolha das vozes. Use quando o resultado anterior saiu errado.";
+"As falas, vozes e o fundo já preparados serão apagados e refeitos." = "As falas, vozes e o fundo já preparados serão apagados e refeitos.";
+"%lld falas já geradas serão reaproveitadas; só o que falta ou mudou é gerado de novo." = "%lld falas já geradas serão reaproveitadas; só o que falta ou mudou é gerado de novo.";
+"Com a voz original, cada fala leva menos de um segundo no Mac; um episódio inteiro leva alguns minutos (mais na primeira vez, para baixar e preparar os modelos). Você pode continuar usando o app." = "Com a voz original, cada fala leva menos de um segundo no Mac; um episódio inteiro leva alguns minutos (mais na primeira vez, para baixar e preparar os modelos). Você pode continuar usando o app.";
+"Onde gravar" = "Onde gravar";
+"Criar um novo arquivo" = "Criar um novo arquivo";
+"“%@”, na mesma pasta do original. O original não muda." = "“%@”, na mesma pasta do original. O original não muda.";
+"Gravar neste arquivo" = "Gravar neste arquivo";
+"O áudio dublado e a legenda traduzida entram no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira." = "O áudio dublado e a legenda traduzida entram no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.";
+"O áudio dublado entra no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira." = "O áudio dublado entra no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.";
+"Enviar e dublar" = "Enviar e dublar";
+"Começar a dublagem" = "Começar a dublagem";
+"Envia o áudio, espera a ElevenLabs dublar, baixa o resultado e grava onde você escolheu." = "Envia o áudio, espera a ElevenLabs dublar, baixa o resultado e grava onde você escolheu.";
+"Identifica quem fala, prepara as vozes, gera todas as falas, mixa e grava onde você escolheu. Pode levar alguns minutos." = "Identifica quem fala, prepara as vozes, gera todas as falas, mixa e grava onde você escolheu. Pode levar alguns minutos.";
+"Dublando “%@”…" = "Dublando “%@”…";
+"Você pode continuar usando o app; esta janela mostra quando terminar." = "Você pode continuar usando o app; esta janela mostra quando terminar.";
+"Dublagem pronta" = "Dublagem pronta";
+"Gravada no próprio arquivo:" = "Gravada no próprio arquivo:";
+"Novo arquivo:" = "Novo arquivo:";
+"Pasta: %@" = "Pasta: %@";
+"A versão anterior está na Lixeira." = "A versão anterior está na Lixeira.";
+"%@ · %lld aceleradas para caber · %lld sem voz. " = "%@ · %lld aceleradas para caber · %lld sem voz. ";
+"fala dublada" = "fala dublada";
+"falas dubladas" = "falas dubladas";
+"O áudio dublado é a faixa padrão; o original continua no arquivo." = "O áudio dublado é a faixa padrão; o original continua no arquivo.";
+"Abre a pasta com o arquivo dublado selecionado." = "Abre a pasta com o arquivo dublado selecionado.";
+"Abrir no app" = "Abrir no app";
+"Abre o arquivo dublado aqui para assistir e conferir." = "Abre o arquivo dublado aqui para assistir e conferir.";
+"Fechar" = "Fechar";
+"A dublagem não terminou" = "A dublagem não terminou";
+"Usar a voz do Mac" = "Usar a voz do Mac";
+"Troca para a dublagem gratuita no Mac, que fala a legenda traduzida." = "Troca para a dublagem gratuita no Mac, que fala a legenda traduzida.";
+"Tentar de novo" = "Tentar de novo";
+
+/* Sources/AnimeLocalizationStudio/Dubbing/DubVoicesSection.swift */
+"Voz" = "Voz";
+"Voz e emoção de cada fala" = "Voz e emoção de cada fala";
+"Cada fala é recriada a partir do próprio trecho original (a emoção: grito, sussurro…) seguido da amostra do personagem (a voz). Falas com menos de 1,5 s usam só a amostra." = "Cada fala é recriada a partir do próprio trecho original (a emoção: grito, sussurro…) seguido da amostra do personagem (a voz). Falas com menos de 1,5 s usam só a amostra.";
+"Uma amostra de ~12 s por personagem: voz estável, mas sem a emoção de cada fala." = "Uma amostra de ~12 s por personagem: voz estável, mas sem a emoção de cada fala.";
+"Ligado (recomendado): o trecho original de cada fala, sem a música, mais a amostra de ~12 s do personagem servem de referência para a mesma fala dublada. Desligado: só a amostra do personagem." = "Ligado (recomendado): o trecho original de cada fala, sem a música, mais a amostra de ~12 s do personagem servem de referência para a mesma fala dublada. Desligado: só a amostra do personagem.";
+"Substituir falas" = "Substituir falas";
+"As vozes originais saem e as novas entram no lugar, com a música e os efeitos." = "As vozes originais saem e as novas entram no lugar, com a música e os efeitos.";
+"Como uma dublagem de TV: o app separa as vozes originais da música e dos efeitos, tira as vozes e coloca as dubladas no lugar. A separação é feita no Mac e é aproximada: em cenas com muita música podem sobrar restos da voz original." = "Como uma dublagem de TV: o app separa as vozes originais da música e dos efeitos, tira as vozes e coloca as dubladas no lugar. A separação é feita no Mac e é aproximada: em cenas com muita música podem sobrar restos da voz original.";
+"A voz nova fala por cima; o áudio original abaixa enquanto ela fala." = "A voz nova fala por cima; o áudio original abaixa enquanto ela fala.";
+"Voice-over" = "Voice-over";
+"Como em documentários: o áudio original continua, só que mais baixo enquanto a voz dublada fala por cima." = "Como em documentários: o áudio original continua, só que mais baixo enquanto a voz dublada fala por cima.";
+"identificados pelo áudio (guardados no app, fora da legenda)" = "identificados pelo áudio (guardados no app, fora da legenda)";
+"do campo Personagem da legenda" = "do campo Personagem da legenda";
+"Falante " = "Falante ";
+"Voz " = "Voz ";
+"Limpar personagens identificados" = "Limpar personagens identificados";
+"Esquece as “Voz 1, Voz 2…” achadas pelo áudio (e tira da legenda os “Falante N” que versões antigas gravavam). A próxima dublagem identifica de novo, sem gravar nada na legenda." = "Esquece as “Voz 1, Voz 2…” achadas pelo áudio (e tira da legenda os “Falante N” que versões antigas gravavam). A próxima dublagem identifica de novo, sem gravar nada na legenda.";
+"Identificar falantes no áudio" = "Identificar falantes no áudio";
+"Descobre pelo áudio quem fala em cada linha sem personagem (“Voz 1”, “Voz 2”…), para dar uma voz a cada um. Fica guardado no app: a legenda não muda. A dublagem faz isso sozinha quando precisa." = "Descobre pelo áudio quem fala em cada linha sem personagem (“Voz 1”, “Voz 2”…), para dar uma voz a cada um. Fica guardado no app: a legenda não muda. A dublagem faz isso sozinha quando precisa.";
+"A legenda ainda não diz quem fala. Ao dublar, o app identifica os falantes pelo áudio; ou clique em “Identificar falantes no áudio” para ver e renomear antes." = "A legenda ainda não diz quem fala. Ao dublar, o app identifica os falantes pelo áudio; ou clique em “Identificar falantes no áudio” para ver e renomear antes.";
+"Abra uma legenda para começar." = "Abra uma legenda para começar.";
+"Ouvir original" = "Ouvir original";
+"Ouvir a voz original" = "Ouvir a voz original";
+"Toca um trecho da voz deste personagem no episódio, sem a música, para você saber quem é." = "Toca um trecho da voz deste personagem no episódio, sem a música, para você saber quem é.";
+"Velocidade %@" = "Velocidade %@";
+"Velocidade" = "Velocidade";
+"Deixa as falas deste personagem mais lentas (abaixo de 1) ou mais rápidas (acima de 1) na dublagem. Falas que não cabem no tempo ainda são aceleradas um pouco." = "Deixa as falas deste personagem mais lentas (abaixo de 1) ou mais rápidas (acima de 1) na dublagem. Falas que não cabem no tempo ainda são aceleradas um pouco.";
+"Ouvir dublada" = "Ouvir dublada";
+"Toca uma fala deste personagem em %@ com a voz preparada na última dublagem." = "Toca uma fala deste personagem em %@ com a voz preparada na última dublagem.";
+"Gerando…" = "Gerando…";
+"Este personagem não tem falas no texto escolhido." = "Este personagem não tem falas no texto escolhido.";
+"Personagem" = "Personagem";
+"Nome do personagem" = "Nome do personagem";
+"Digite o nome e aperte Return (ex.: Voz 1 → Kirito). Todas as falas dessa voz passam a usar o nome; a legenda do vídeo não muda." = "Digite o nome e aperte Return (ex.: Voz 1 → Kirito). Todas as falas dessa voz passam a usar o nome; a legenda do vídeo não muda.";
+
+/* Sources/AnimeLocalizationStudio/Dubbing/DubbingView.swift */
+"Ajustar vozes e personagens" = "Ajustar vozes e personagens";
+"Emoção por fala, modo de mixagem e os personagens. O app escolhe tudo sozinho; abra só se quiser mudar." = "Emoção por fala, modo de mixagem e os personagens. O app escolhe tudo sozinho; abra só se quiser mudar.";
+"Recomeçar a dublagem do zero?" = "Recomeçar a dublagem do zero?";
+"Recomeçar do zero" = "Recomeçar do zero";
+"Apaga as falas geradas, as vozes de cada personagem e a música de fundo deste vídeo (%@). A próxima dublagem refaz tudo. Os vídeos já dublados e o histórico não são apagados." = "Apaga as falas geradas, as vozes de cada personagem e a música de fundo deste vídeo (%@). A próxima dublagem refaz tudo. Os vídeos já dublados e o histórico não são apagados.";
+"Apagar esta dublagem?" = "Apagar esta dublagem?";
+"Apagar o vídeo dublado e recomeçar do zero" = "Apagar o vídeo dublado e recomeçar do zero";
+"Tirar do histórico e recomeçar do zero" = "Tirar do histórico e recomeçar do zero";
+"Só tirar do histórico" = "Só tirar do histórico";
+"Recomendado. Ouve o áudio, separa cada personagem, traduz e dubla com a voz de cada um, mantendo a emoção. Online, pago por minuto." = "Recomendado. Ouve o áudio, separa cada personagem, traduz e dubla com a voz de cada um, mantendo a emoção. Online, pago por minuto.";
+"Serviço online de dublagem automática: só o áudio do vídeo é enviado (nunca o vídeo). Não precisa de legenda. Usa a sua conta e os seus créditos da ElevenLabs." = "Serviço online de dublagem automática: só o áudio do vídeo é enviado (nunca o vídeo). Não precisa de legenda. Usa a sua conta e os seus créditos da ElevenLabs.";
+"Voz original no Mac" = "Voz original no Mac";
+"Gratuita e offline. Lê uma legenda (do vídeo ou traduzida no app) com um clone da voz de cada personagem." = "Gratuita e offline. Lê uma legenda (do vídeo ou traduzida no app) com um clone da voz de cada personagem.";
+"Tudo no próprio Mac (Chatterbox Multilingual da Resemble AI, MIT), pela GPU do Apple silicon. Fala 23 idiomas, inclusive português e japonês. Precisa de uma legenda traduzida." = "Tudo no próprio Mac (Chatterbox Multilingual da Resemble AI, MIT), pela GPU do Apple silicon. Fala 23 idiomas, inclusive português e japonês. Precisa de uma legenda traduzida.";
+"Áudio enviado" = "Áudio enviado";
+"Voz e fundo" = "Voz e fundo";
+"Dublar…" = "Dublar…";
+"Mostra o resumo, pergunta onde gravar e então dubla o vídeo inteiro, mostrando cada etapa." = "Mostra o resumo, pergunta onde gravar e então dubla o vídeo inteiro, mostrando cada etapa.";
+"O vídeo não tem áudio." = "O vídeo não tem áudio.";
+"Cole a sua chave da ElevenLabs acima." = "Cole a sua chave da ElevenLabs acima.";
+"Escolha o texto falado ou crie uma tradução em Legendar." = "Escolha o texto falado ou crie uma tradução em Legendar.";
+"A voz do Mac ainda não fala %@. Use a ElevenLabs." = "A voz do Mac ainda não fala %@. Use a ElevenLabs.";
+"A legenda escolhida não tem falas para dublar." = "A legenda escolhida não tem falas para dublar.";
+"Áudio" = "Áudio";
+"A faixa com as vozes originais. Use o áudio no idioma original (geralmente o japonês)." = "A faixa com as vozes originais. Use o áudio no idioma original (geralmente o japonês).";
+"O vídeo não tem áudio" = "O vídeo não tem áudio";
+"Detectar automaticamente" = "Detectar automaticamente";
+"O idioma em que os personagens falam. Deixe em automático se não souber." = "O idioma em que os personagens falam. Deixe em automático se não souber.";
+"nova faixa de áudio, padrão ao abrir" = "nova faixa de áudio, padrão ao abrir";
+"A faixa dublada entra no vídeo; o áudio original e as legendas continuam lá. Antes de gravar, o app pergunta: novo arquivo ou este arquivo." = "A faixa dublada entra no vídeo; o áudio original e as legendas continuam lá. Antes de gravar, o app pergunta: novo arquivo ou este arquivo.";
+"Conta" = "Conta";
+"" = "";
+"Há uma dublagem para %@ enviada em %@. “Dublar…” retoma esse trabalho, sem enviar nem cobrar de novo." = "Há uma dublagem para %@ enviada em %@. “Dublar…” retoma esse trabalho, sem enviar nem cobrar de novo.";
+"Só o áudio é enviado, nunca o vídeo. A voz de cada personagem é clonada: use apenas em conteúdo que você tem direito de dublar." = "Só o áudio é enviado, nunca o vídeo. A voz de cada personagem é clonada: use apenas em conteúdo que você tem direito de dublar.";
+"Tradução feita no app · %@" = "Tradução feita no app · %@";
+"A legenda que a voz lê, no tempo de cada fala: uma legenda que o vídeo já tem (por exemplo a em português) ou a tradução feita no app. A dublagem sai no idioma dessa legenda." = "A legenda que a voz lê, no tempo de cada fala: uma legenda que o vídeo já tem (por exemplo a em português) ou a tradução feita no app. A dublagem sai no idioma dessa legenda.";
+"O vídeo não tem legenda de texto." = "O vídeo não tem legenda de texto.";
+"Criar em Legendar" = "Criar em Legendar";
+"A própria voz de cada personagem%@ · %@" = "A própria voz de cada personagem%@ · %@";
+", com a emoção de cada fala" = ", com a emoção de cada fala";
+"Fechar ajustes" = "Fechar ajustes";
+"Ajustar" = "Ajustar";
+"Resultado" = "Resultado";
+"Nova faixa de áudio em %@" = "Nova faixa de áudio em %@";
+"Legenda do vídeo em %@" = "Legenda do vídeo em %@";
+"Legenda do vídeo: %@ · %@" = "Legenda do vídeo: %@ · %@";
+"Dublagens feitas" = "Dublagens feitas";
+"Nenhuma ainda. Cada dublagem terminada aparece aqui." = "Nenhuma ainda. Cada dublagem terminada aparece aqui.";
+"Este arquivo" = "Este arquivo";
+"Não encontrado" = "Não encontrado";
+"%@ · %@ · %@%@%@" = "%@ · %@ · %@%@%@";
+", %lld sem voz" = ", %lld sem voz";
+"%@ · áudio %@ · %@%@\n%@" = "%@ · áudio %@ · %@%@\n%@";
+" · verificada" = " · verificada";
+" · com avisos" = " · com avisos";
+"Abre a pasta do vídeo dublado com ele selecionado." = "Abre a pasta do vídeo dublado com ele selecionado.";
+"Apagar…" = "Apagar…";
+"Apagar esta dublagem" = "Apagar esta dublagem";
+"Pergunta antes: apagar e recomeçar as vozes do zero, ou só tirar do histórico." = "Pergunta antes: apagar e recomeçar as vozes do zero, ou só tirar do histórico.";
+"Recomeçar do zero também apaga as vozes de cada personagem e os arquivos guardados desta dublagem (%@); a próxima dublagem refaz tudo." = "Recomeçar do zero também apaga as vozes de cada personagem e os arquivos guardados desta dublagem (%@); a próxima dublagem refaz tudo.";
+"“%@” vai para a Lixeira. %@" = "“%@” vai para a Lixeira. %@";
+"Esta dublagem foi gravada neste arquivo, que não é apagado. %@" = "Esta dublagem foi gravada neste arquivo, que não é apagado. %@";
+"O arquivo não está mais no disco. %@" = "O arquivo não está mais no disco. %@";
+"Arquivos guardados para a próxima dublagem: %@" = "Arquivos guardados para a próxima dublagem: %@";
+"Nenhum arquivo guardado." = "Nenhum arquivo guardado.";
+"Arquivos guardados" = "Arquivos guardados";
+"Falas geradas, vozes separadas e música de fundo. Deixam a próxima dublagem mais rápida: só o que mudou é refeito." = "Falas geradas, vozes separadas e música de fundo. Deixam a próxima dublagem mais rápida: só o que mudou é refeito.";
+"Recomeçar do zero…" = "Recomeçar do zero…";
+"Pergunta antes. Apaga as vozes escolhidas e os arquivos guardados, para a próxima dublagem refazer tudo." = "Pergunta antes. Apaga as vozes escolhidas e os arquivos guardados, para a próxima dublagem refazer tudo.";
+"Desconhecido" = "Desconhecido";
+"Última dublagem" = "Última dublagem";
+"%@ · %lld aceleradas · %lld sem voz" = "%@ · %lld aceleradas · %lld sem voz";
+"Fala %lld: %@" = "Fala %lld: %@";
+"Revisar a fala" = "Revisar a fala";
+"Abre esta fala em Legendar. Corrigir o texto e dublar de novo refaz só as falas alteradas." = "Abre esta fala em Legendar. Corrigir o texto e dublar de novo refaz só as falas alteradas.";
+
+/* Sources/AnimeLocalizationStudio/Dubbing/ElevenLabsAccountView.swift */
+"Cole aqui a sua chave de API" = "Cole aqui a sua chave de API";
+"Salvar" = "Salvar";
+"Chave da ElevenLabs" = "Chave da ElevenLabs";
+"A chave fica só no Keychain do macOS e nunca é gravada em arquivos ou registros." = "A chave fica só no Keychain do macOS e nunca é gravada em arquivos ou registros.";
+"Criar uma chave em elevenlabs.io › Developers › API Keys" = "Criar uma chave em elevenlabs.io › Developers › API Keys";
+"Conferindo a conta…" = "Conferindo a conta…";
+"Trocar chave" = "Trocar chave";
+"Cole outra chave da ElevenLabs." = "Cole outra chave da ElevenLabs.";
+"Conectada" = "Conectada";
+"%@ créditos restantes" = "%@ créditos restantes";
+
+/* Sources/AnimeLocalizationStudio/Editor/CharacterSheet.swift */
+"Quem fala %@?" = "Quem fala %@?";
+"nesta fala" = "nesta fala";
+"nestas %lld falas" = "nestas %lld falas";
+"Esta legenda é SRT, que não tem campo de personagem: o nome fica guardado no app e o arquivo não muda." = "Esta legenda é SRT, que não tem campo de personagem: o nome fica guardado no app e o arquivo não muda.";
+"O nome vai no campo “Name” do ASS, que nunca aparece na tela. ⌘Z desfaz." = "O nome vai no campo “Name” do ASS, que nunca aparece na tela. ⌘Z desfaz.";
+"Definir" = "Definir";
+
+/* Sources/AnimeLocalizationStudio/Editor/EditorModel.swift */
+"Original" = "Original";
+"Tradução" = "Tradução";
+"Todas as falas" = "Todas as falas";
+"Sem tradução" = "Sem tradução";
+"Não traduzíveis" = "Não traduzíveis";
+"Leitura rápida demais" = "Leitura rápida demais";
+"Possíveis erros de ortografia" = "Possíveis erros de ortografia";
+"Editar fala" = "Editar fala";
+"Alterar tempo" = "Alterar tempo";
+"Alterar personagem" = "Alterar personagem";
+"Identificar falantes" = "Identificar falantes";
+"Renomear personagem" = "Renomear personagem";
+"Alterar estilo" = "Alterar estilo";
+"Inserir fala" = "Inserir fala";
+"Excluir fala" = "Excluir fala";
+"Excluir falas" = "Excluir falas";
+"Deslocar tempos" = "Deslocar tempos";
+"Substituir tudo" = "Substituir tudo";
+"Novo estilo" = "Novo estilo";
+"Renomear estilo" = "Renomear estilo";
+"Apagar estilo" = "Apagar estilo";
+"Usar a posição do estilo" = "Usar a posição do estilo";
+"Mudar a posição" = "Mudar a posição";
+"Mover a fala" = "Mover a fala";
+"Editar estilo" = "Editar estilo";
+"Usar os tempos da legenda ao lado" = "Usar os tempos da legenda ao lado";
+"Traduzir episódio" = "Traduzir episódio";
+
+/* Sources/AnimeLocalizationStudio/Editor/EditorPane.swift */
+"Este vídeo não tem legenda de texto" = "Este vídeo não tem legenda de texto";
+"Comece uma em branco, importe um arquivo ou deixe o app criar a legenda ouvindo o áudio, no tempo de cada fala." = "Comece uma em branco, importe um arquivo ou deixe o app criar a legenda ouvindo o áudio, no tempo de cada fala.";
+"Nova legenda" = "Nova legenda";
+"Uma legenda em branco, com o nome e o idioma que você escolher, para escrever do zero." = "Uma legenda em branco, com o nome e o idioma que você escolher, para escrever do zero.";
+"Importar arquivo…" = "Importar arquivo…";
+"Importar arquivo" = "Importar arquivo";
+"Abre um arquivo ASS, SSA ou SRT do disco." = "Abre um arquivo ASS, SSA ou SRT do disco.";
+"Traduzir do áudio…" = "Traduzir do áudio…";
+"Traduzir do áudio" = "Traduzir do áudio";
+"Ouve o vídeo e escreve o que é dito no tempo certo, no idioma falado ou já traduzido. Tudo no Mac." = "Ouve o vídeo e escreve o que é dito no tempo certo, no idioma falado ou já traduzido. Tudo no Mac.";
+"Reconhecer texto (OCR)" = "Reconhecer texto (OCR)";
+"Lê as legendas em imagem de Blu-ray (PGS) e as transforma em texto editável, no próprio Mac. Escolha o idioma da legenda." = "Lê as legendas em imagem de Blu-ray (PGS) e as transforma em texto editável, no próprio Mac. Escolha o idioma da legenda.";
+"Substituir…" = "Substituir…";
+"Abre a busca e substituição: troque um texto em todas as falas de uma vez." = "Abre a busca e substituição: troque um texto em todas as falas de uma vez.";
+"Substituir “%@”" = "Substituir “%@”";
+"Substituir por" = "Substituir por";
+"Filtro" = "Filtro";
+"Mostra todas as falas, só as que ainda não foram traduzidas, as que não são traduzíveis (karaokê, desenhos, comentários), as rápidas demais para ler ou as com possíveis erros de ortografia." = "Mostra todas as falas, só as que ainda não foram traduzidas, as que não são traduzíveis (karaokê, desenhos, comentários), as rápidas demais para ler ou as com possíveis erros de ortografia.";
+"Filtro: %@" = "Filtro: %@";
+"Mostra todas as falas, só as sem tradução, as não traduzíveis, as rápidas demais ou as com possíveis erros de ortografia." = "Mostra todas as falas, só as sem tradução, as não traduzíveis, as rápidas demais ou as com possíveis erros de ortografia.";
+"Buscar nas falas" = "Buscar nas falas";
+"Buscar (⌘F)" = "Buscar (⌘F)";
+"Filtra a lista pelas falas que contêm este texto, no original, na tradução ou no nome do personagem." = "Filtra a lista pelas falas que contêm este texto, no original, na tradução ou no nome do personagem.";
+"Texto que entra no lugar do que foi buscado quando você clica em “Substituir tudo”." = "Texto que entra no lugar do que foi buscado quando você clica em “Substituir tudo”.";
+"Aa" = "Aa";
+"Maiúsculas e minúsculas" = "Maiúsculas e minúsculas";
+"Ligado: a busca diferencia “Kirito” de “kirito”. Desligado: encontra os dois." = "Ligado: a busca diferencia “Kirito” de “kirito”. Desligado: encontra os dois.";
+"Troca o texto buscado em todas as falas de uma vez. Só mexe no texto visível; tags de formatação {\\…} nunca são alteradas. ⌘Z desfaz." = "Troca o texto buscado em todas as falas de uma vez. Só mexe no texto visível; tags de formatação {\\…} nunca são alteradas. ⌘Z desfaz.";
+"%lld falas alteradas" = "%lld falas alteradas";
+"Acompanhar o vídeo" = "Acompanhar o vídeo";
+"Ligado: durante a reprodução, a lista seleciona sozinha a fala que está aparecendo na tela." = "Ligado: durante a reprodução, a lista seleciona sozinha a fala que está aparecendo na tela.";
+"Cria uma fala vazia logo depois da selecionada, no intervalo até a próxima. Para excluir falas, selecione e aperte ⌫." = "Cria uma fala vazia logo depois da selecionada, no intervalo até a próxima. Para excluir falas, selecione e aperte ⌫.";
+"Deslocar tempos…" = "Deslocar tempos…";
+"Adianta ou atrasa todas as falas (ou só as selecionadas) por alguns milissegundos, para sincronizar a legenda com o vídeo." = "Adianta ou atrasa todas as falas (ou só as selecionadas) por alguns milissegundos, para sincronizar a legenda com o vídeo.";
+"Definir personagem das falas selecionadas…" = "Definir personagem das falas selecionadas…";
+"Diga quem fala nas falas selecionadas (é o que a dublagem usa para escolher a voz). No ASS o nome vai no campo Name, que não aparece na tela; no SRT fica guardado no app, fora do arquivo." = "Diga quem fala nas falas selecionadas (é o que a dublagem usa para escolher a voz). No ASS o nome vai no campo Name, que não aparece na tela; no SRT fica guardado no app, fora do arquivo.";
+"Estilos e fontes…" = "Estilos e fontes…";
+"Estilos e fontes" = "Estilos e fontes";
+"Criar, duplicar, renomear, apagar e editar estilos; ver de onde vem cada fonte, adicionar fontes ao vídeo e extrair as que ele tem." = "Criar, duplicar, renomear, apagar e editar estilos; ver de onde vem cada fonte, adicionar fontes ao vídeo e extrair as que ele tem.";
+"#" = "#";
+"%lld" = "%lld";
+"Posição na tela" = "Posição na tela";
+", definida nesta fala." = ", definida nesta fala.";
+", do estilo." = ", do estilo.";
+"Ponto livre, %@." = "Ponto livre, %@.";
+"fora das áreas da grade" = "fora das áreas da grade";
+"Tempo" = "Tempo";
+"De %@ a %@" = "De %@ a %@";
+"estilo %@" = "estilo %@";
+"Ao lado · %@" = "Ao lado · %@";
+"Ao lado" = "Ao lado";
+"Texto" = "Texto";
+"Ir para a fala no vídeo" = "Ir para a fala no vídeo";
+"Inserir fala depois" = "Inserir fala depois";
+"Usar a do estilo" = "Usar a do estilo";
+"Excluir %lld falas" = "Excluir %lld falas";
+"Reproduzir só esta fala" = "Reproduzir só esta fala";
+"%lld caracteres por segundo. Fica difícil ler a tempo; encurte a frase ou aumente a duração da fala." = "%lld caracteres por segundo. Fica difícil ler a tempo; encurte a frase ou aumente a duração da fala.";
+"Baixar os modelos de identificação de falantes?" = "Baixar os modelos de identificação de falantes?";
+"Baixar (%@) e continuar" = "Baixar (%@) e continuar";
+"Para saber quem fala, o app usa modelos que rodam no próprio Mac (Neural Engine): %@. Licença CC-BY-4.0. O download vem do Hugging Face uma única vez e fica guardado no app; o áudio nunca sai do Mac." = "Para saber quem fala, o app usa modelos que rodam no próprio Mac (Neural Engine): %@. Licença CC-BY-4.0. O download vem do Hugging Face uma única vez e fica guardado no app; o áudio nunca sai do Mac.";
+"Largura do painel" = "Largura do painel";
+"Arraste para alargar ou estreitar o painel da fala." = "Arraste para alargar ou estreitar o painel da fala.";
+
+/* Sources/AnimeLocalizationStudio/Editor/FormatBar.swift */
+"Branco" = "Branco";
+"Amarelo" = "Amarelo";
+"Laranja" = "Laranja";
+"Vermelho" = "Vermelho";
+"Rosa" = "Rosa";
+"Roxo" = "Roxo";
+"Azul" = "Azul";
+"Verde" = "Verde";
+"Preto" = "Preto";
+"Bem menor" = "Bem menor";
+"Menor" = "Menor";
+"Maior" = "Maior";
+"Bem maior" = "Bem maior";
+"Itálico" = "Itálico";
+"Negrito" = "Negrito";
+"Sublinhado" = "Sublinhado";
+"Riscado" = "Riscado";
+"Cor" = "Cor";
+"Pinta o trecho selecionado (ou a fala inteira, sem seleção). Depois do trecho, a cor volta à do estilo." = "Pinta o trecho selecionado (ou a fala inteira, sem seleção). Depois do trecho, a cor volta à do estilo.";
+"%@ (%lld)" = "%@ (%lld)";
+"Tamanho" = "Tamanho";
+"Aumenta ou diminui a letra do trecho selecionado (ou da fala inteira), em relação ao estilo “%@” (%lld)." = "Aumenta ou diminui a letra do trecho selecionado (ou da fala inteira), em relação ao estilo “%@” (%lld).";
+"Karaokê por sílaba" = "Karaokê por sílaba";
+"Karaokê por palavra" = "Karaokê por palavra";
+"Karaokê" = "Karaokê";
+"Transforma a fala em karaokê: as sílabas (romaji: sa·ka·ra·u) ou as palavras acendem no tempo, com o tempo da fala repartido entre elas. Depois ajuste cada sílaba ou marque no tempo, logo abaixo do texto." = "Transforma a fala em karaokê: as sílabas (romaji: sa·ka·ra·u) ou as palavras acendem no tempo, com o tempo da fala repartido entre elas. Depois ajuste cada sílaba ou marque no tempo, logo abaixo do texto.";
+"Limpar formatação" = "Limpar formatação";
+"Tira itálico, negrito, cores, tamanho, fonte e karaokê do trecho selecionado (ou da fala inteira). Posição, tempo e animações ficam." = "Tira itálico, negrito, cores, tamanho, fonte e karaokê do trecho selecionado (ou da fala inteira). Posição, tempo e animações ficam.";
+"Deixa o trecho selecionado em %@ (ou a fala inteira, sem seleção). Clicar de novo tira." = "Deixa o trecho selecionado em %@ (ou a fala inteira, sem seleção). Clicar de novo tira.";
+
+/* Sources/AnimeLocalizationStudio/Editor/KaraokeSection.swift */
+"Sílabas %@ · fala %@" = "Sílabas %@ · fala %@";
+"Tempo das sílabas" = "Tempo das sílabas";
+"As sílabas não somam o tempo da fala. “Distribuir pela fala” ou “Marcar no tempo” acertam isso." = "As sílabas não somam o tempo da fala. “Distribuir pela fala” ou “Marcar no tempo” acertam isso.";
+"As sílabas somam o tempo da fala." = "As sílabas somam o tempo da fala.";
+"Preenchimento" = "Preenchimento";
+"Troca de cor" = "Troca de cor";
+"Preenche" = "Preenche";
+"Contorno" = "Contorno";
+"Como a sílaba acende" = "Como a sílaba acende";
+"Troca de cor: muda de uma vez (\\k). Preenche: a cor corre da esquerda para a direita durante a sílaba (\\kf). Contorno: o contorno aparece (\\ko)." = "Troca de cor: muda de uma vez (\\k). Preenche: a cor corre da esquerda para a direita durante a sílaba (\\kf). Contorno: o contorno aparece (\\ko).";
+"Distribuir pela fala" = "Distribuir pela fala";
+"Reparte o tempo da fala entre as sílabas, pelo número de letras de cada uma." = "Reparte o tempo da fala entre as sílabas, pelo número de letras de cada uma.";
+"Marcar no tempo…" = "Marcar no tempo…";
+"Marcar no tempo" = "Marcar no tempo";
+"A fala toca e você aperte Return quando cada sílaba começa a ser cantada." = "A fala toca e você aperte Return quando cada sílaba começa a ser cantada.";
+"Remover" = "Remover";
+"Remover karaokê" = "Remover karaokê";
+"Tira o tempo das sílabas; o texto fica como uma fala normal." = "Tira o tempo das sílabas; o texto fica como uma fala normal.";
+"Mais curta" = "Mais curta";
+"Tira 0,05 s desta sílaba." = "Tira 0,05 s desta sílaba.";
+"Mais longa" = "Mais longa";
+"Põe 0,05 s nesta sílaba." = "Põe 0,05 s nesta sílaba.";
+"Marcar o karaokê no tempo" = "Marcar o karaokê no tempo";
+"Clique em Começar: a fala toca. Aperte Return (ou Próxima sílaba) no instante em que cada sílaba começa a ser cantada. A primeira começa com a fala; a última vai até o fim dela." = "Clique em Começar: a fala toca. Aperte Return (ou Próxima sílaba) no instante em que cada sílaba começa a ser cantada. A primeira começa com a fala; a última vai até o fim dela.";
+"Começar" = "Começar";
+"Recomeçar" = "Recomeçar";
+"Toca a fala do início, para marcar as sílabas." = "Toca a fala do início, para marcar as sílabas.";
+"Próxima sílaba" = "Próxima sílaba";
+"Próxima sílaba (Return)" = "Próxima sílaba (Return)";
+"Marca que a próxima sílaba começa agora." = "Marca que a próxima sílaba começa agora.";
+"Aplicar" = "Aplicar";
+"Grava o tempo marcado de cada sílaba nesta fala (⌘Z desfaz)." = "Grava o tempo marcado de cada sílaba nesta fala (⌘Z desfaz).";
+
+/* Sources/AnimeLocalizationStudio/Editor/LineDetailView.swift */
+"Sem fala correspondente neste tempo." = "Sem fala correspondente neste tempo.";
+"A fala da outra legenda no mesmo tempo, só para consulta: só a legenda em Editando é editada. Selecione e copie se quiser." = "A fala da outra legenda no mesmo tempo, só para consulta: só a legenda em Editando é editada. Selecione e copie se quiser.";
+"%lld falas selecionadas" = "%lld falas selecionadas";
+"Selecione uma fala para editar" = "Selecione uma fala para editar";
+"Fala %lld" = "Fala %lld";
+"Comentário" = "Comentário";
+"Reproduzir fala" = "Reproduzir fala";
+"Reproduzir esta fala" = "Reproduzir esta fala";
+"Toca o vídeo do início ao fim desta fala e pausa, para conferir o tempo e o texto." = "Toca o vídeo do início ao fim desta fala e pausa, para conferir o tempo e o texto.";
+"Voltar para junto da lista" = "Voltar para junto da lista";
+"Fixar na lateral" = "Fixar na lateral";
+"O painel da fala volta para baixo, ao lado da lista de falas." = "O painel da fala volta para baixo, ao lado da lista de falas.";
+"O painel da fala cresce e ocupa toda a lateral direita, ao lado do vídeo e da lista. Clique de novo para voltar." = "O painel da fala cresce e ocupa toda a lateral direita, ao lado do vídeo e da lista. Clique de novo para voltar.";
+"Início" = "Início";
+"Fim" = "Fim";
+"Duração" = "Duração";
+"Estilo" = "Estilo";
+"Estilo ASS desta fala (fonte, cor, posição). Os estilos são editados em “Estilos e fontes…”." = "Estilo ASS desta fala (fonte, cor, posição). Os estilos são editados em “Estilos e fontes…”.";
+"Ponto livre · %@" = "Ponto livre · %@";
+"Tira a posição própria desta fala (\\an e \\pos); ela volta a seguir o estilo." = "Tira a posição própria desta fala (\\an e \\pos); ela volta a seguir o estilo.";
+"Ou arraste a fala no vídeo (com ela na tela e o vídeo pausado)." = "Ou arraste a fala no vídeo (com ela na tela e o vídeo pausado).";
+"A grade põe a fala numa área da tela (em cima, no meio, embaixo…). As setas, X e Y e arrastar no vídeo põem num ponto exato. ⌘Z desfaz." = "A grade põe a fala numa área da tela (em cima, no meio, embaixo…). As setas, X e Y e arrastar no vídeo põem num ponto exato. ⌘Z desfaz.";
+"Em SRT há só as posições da grade (\\an); arrastar e ponto exato são do ASS." = "Em SRT há só as posições da grade (\\an); arrastar e ponto exato são do ASS.";
+"Esta fala se move sozinha (\\move): a grade muda o lado de onde ela se ancora, e arrastar não se aplica." = "Esta fala se move sozinha (\\move): a grade muda o lado de onde ela se ancora, e arrastar não se aplica.";
+"Num ponto exato definido nesta fala (\\pos), fora das áreas da grade. Clique numa área para pô-la lá." = "Num ponto exato definido nesta fala (\\pos), fora das áreas da grade. Clique numa área para pô-la lá.";
+"As margens do estilo “%@” põem a fala fora da área %@." = "As margens do estilo “%@” põem a fala fora da área %@.";
+"Definida nesta fala." = "Definida nesta fala.";
+"Vem do estilo “%@”." = "Vem do estilo “%@”.";
+"padrão" = "padrão";
+"Mover para %@" = "Mover para %@";
+"Move a fala um pouco para %@ (1%% da tela; com ⌥, 1 ponto). Ela passa a ter um ponto exato (\\pos)." = "Move a fala um pouco para %@ (1%% da tela; com ⌥, 1 ponto). Ela passa a ter um ponto exato (\\pos).";
+"Posição %@" = "Posição %@";
+"%@ em pontos do script (%@). Digite e aperte Return." = "%@ em pontos do script (%@). Digite e aperte Return.";
+"Distância da esquerda" = "Distância da esquerda";
+"Distância do topo" = "Distância do topo";
+"Início no vídeo" = "Início no vídeo";
+"Faz a fala começar exatamente onde o vídeo está parado agora." = "Faz a fala começar exatamente onde o vídeo está parado agora.";
+"Fim no vídeo" = "Fim no vídeo";
+"Faz a fala terminar exatamente onde o vídeo está parado agora." = "Faz a fala terminar exatamente onde o vídeo está parado agora.";
+"Digite o tempo (ex.: 0:01:23.45) e aperte Return para aplicar." = "Digite o tempo (ex.: 0:01:23.45) e aperte Return para aplicar.";
+"Adianta a fala inteira (início e fim) em 0,1 segundo." = "Adianta a fala inteira (início e fim) em 0,1 segundo.";
+"Atrasa a fala inteira (início e fim) em 0,1 segundo." = "Atrasa a fala inteira (início e fim) em 0,1 segundo.";
+"Aplicar (⌘↩)" = "Aplicar (⌘↩)";
+"Grava o texto que você digitou nesta fala. Trocar de fala também aplica." = "Grava o texto que você digitou nesta fala. Trocar de fala também aplica.";
+"Como fica" = "Como fica";
+"A fala como aparece no vídeo: itálico, negrito, sublinhado, riscado e cores, sem os códigos." = "A fala como aparece no vídeo: itálico, negrito, sublinhado, riscado e cores, sem os códigos.";
+"Linha de karaokê: por padrão não é traduzida, para não perder a sincronia das sílabas." = "Linha de karaokê: por padrão não é traduzida, para não perder a sincronia das sílabas.";
+"Desenho vetorial (\\p): preservado como está; ative a pré-visualização fiel (libass) em Ajustes para vê-lo." = "Desenho vetorial (\\p): preservado como está; ative a pré-visualização fiel (libass) em Ajustes para vê-lo.";
+"Usa animação (\\t, \\move ou \\fad): preservada no arquivo; ative a pré-visualização fiel (libass) em Ajustes para vê-la." = "Usa animação (\\t, \\move ou \\fad): preservada no arquivo; ative a pré-visualização fiel (libass) em Ajustes para vê-la.";
+"Nenhum personagem escrito ainda" = "Nenhum personagem escrito ainda";
+"Sem personagem" = "Sem personagem";
+"Escolher personagem" = "Escolher personagem";
+"Os nomes que você já escreveu nesta legenda, para não digitar diferente." = "Os nomes que você já escreveu nesta legenda, para não digitar diferente.";
+"Quem diz esta fala. Escreva o nome ou escolha um já usado na seta. Usado no contexto da tradução e para dar a voz certa na dublagem." = "Quem diz esta fala. Escreva o nome ou escolha um já usado na seta. Usado no contexto da tradução e para dar a voz certa na dublagem.";
+
+/* Sources/AnimeLocalizationStudio/Editor/ShiftTimingSheet.swift */
+"Adianta ou atrasa as falas, por exemplo quando a legenda veio de outra versão do vídeo." = "Adianta ou atrasa as falas, por exemplo quando a legenda veio de outra versão do vídeo.";
+"Milissegundos" = "Milissegundos";
+"ms (negativo adianta)" = "ms (negativo adianta)";
+"Somente as falas selecionadas (%lld)" = "Somente as falas selecionadas (%lld)";
+"Deslocar" = "Deslocar";
+
+/* Sources/AnimeLocalizationStudio/Editor/StylesAndFontsSheet.swift */
+"Seção" = "Seção";
+"Estilos" = "Estilos";
+"Fontes" = "Fontes";
+"Esta legenda não tem estilos" = "Esta legenda não tem estilos";
+"Legendas SRT guardam só o texto. Para usar estilos (fonte, cor, posição), use uma legenda ASS." = "Legendas SRT guardam só o texto. Para usar estilos (fonte, cor, posição), use uma legenda ASS.";
+"%@ · %lld · %@" = "%@ · %lld · %@";
+"Cria um estilo a partir do selecionado. Depois mude o nome, a fonte e as cores." = "Cria um estilo a partir do selecionado. Depois mude o nome, a fonte e as cores.";
+"Duplicar" = "Duplicar";
+"Duplicar estilo" = "Duplicar estilo";
+"Cria uma cópia do estilo selecionado." = "Cria uma cópia do estilo selecionado.";
+"Pergunta para qual estilo vão as falas que usam este." = "Pergunta para qual estilo vão as falas que usam este.";
+"Nome" = "Nome";
+"Nome do estilo" = "Nome do estilo";
+"Aperte Return para renomear. Todas as falas com este estilo passam a usar o nome novo." = "Aperte Return para renomear. Todas as falas com este estilo passam a usar o nome novo.";
+"Fonte" = "Fonte";
+"Escolher" = "Escolher";
+"Escolher fonte" = "Escolher fonte";
+"As fontes do Mac, as anexadas ao vídeo e as que você adicionou." = "As fontes do Mac, as anexadas ao vídeo e as que você adicionou.";
+"Tamanho: %lld" = "Tamanho: %lld";
+"Cores" = "Cores";
+"Borda e posição" = "Borda e posição";
+"Contorno: %@" = "Contorno: %@";
+"Sombra: %@" = "Sombra: %@";
+"Alinhamento" = "Alinhamento";
+"Margem vertical: %lld" = "Margem vertical: %lld";
+"Desfazer mudanças" = "Desfazer mudanças";
+"Grava as mudanças no estilo; vale para todas as falas que o usam. ⌘Z desfaz." = "Grava as mudanças no estilo; vale para todas as falas que o usam. ⌘Z desfaz.";
+"Anexada ao vídeo" = "Anexada ao vídeo";
+"Adicionada; vai para o vídeo ao gravar" = "Adicionada; vai para o vídeo ao gravar";
+"Instalada neste Mac, mas não anexada ao vídeo: outros players podem trocar a fonte. Adicione-a em Fontes." = "Instalada neste Mac, mas não anexada ao vídeo: outros players podem trocar a fonte. Adicione-a em Fontes.";
+"Não encontrada: adicione o arquivo da fonte em Fontes." = "Não encontrada: adicione o arquivo da fonte em Fontes.";
+"Apagar o estilo “%@”?" = "Apagar o estilo “%@”?";
+"%@ este estilo. Passar para:" = "%@ este estilo. Passar para:";
+"fala usa" = "fala usa";
+"falas usam" = "falas usam";
+"Nenhuma fala usa este estilo." = "Nenhuma fala usa este estilo.";
+"Inferior" = "Inferior";
+"Meio" = "Meio";
+"Superior" = "Superior";
+"A legenda não pede nenhuma fonte específica." = "A legenda não pede nenhuma fonte específica.";
+"Fontes que a legenda usa" = "Fontes que a legenda usa";
+"Para a legenda aparecer igual em qualquer player, cada fonte precisa estar anexada ao vídeo. Fontes adicionadas aqui são anexadas em “Gravar no vídeo…”." = "Para a legenda aparecer igual em qualquer player, cada fonte precisa estar anexada ao vídeo. Fontes adicionadas aqui são anexadas em “Gravar no vídeo…”.";
+"Adicionadas" = "Adicionadas";
+"Tira a fonte da lista; ela não será anexada." = "Tira a fonte da lista; ela não será anexada.";
+"Adicionar fontes…" = "Adicionar fontes…";
+"Adicionar fontes" = "Adicionar fontes";
+"Escolha arquivos TTF, OTF ou TTC. Eles serão anexados ao vídeo junto com a legenda." = "Escolha arquivos TTF, OTF ou TTC. Eles serão anexados ao vídeo junto com a legenda.";
+"Extrair fontes do vídeo…" = "Extrair fontes do vídeo…";
+"Extrair fontes" = "Extrair fontes";
+"Salva numa pasta as fontes anexadas ao vídeo, sem alterá-lo." = "Salva numa pasta as fontes anexadas ao vídeo, sem alterá-lo.";
+"Vai para o vídeo ao gravar" = "Vai para o vídeo ao gravar";
+"Só neste Mac" = "Só neste Mac";
+"Faltando" = "Faltando";
+
+/* Sources/AnimeLocalizationStudio/Overview/DeleteTrackSheet.swift */
+"Excluir %@ “%@”?" = "Excluir %@ “%@”?";
+"o áudio" = "o áudio";
+"%@ · %@ · %@" = "%@ · %@ · %@";
+"Criar um novo arquivo sem ela" = "Criar um novo arquivo sem ela";
+"“%@ [editado].mkv”, ao lado do original. O original não muda." = "“%@ [editado].mkv”, ao lado do original. O original não muda.";
+"Excluir deste arquivo" = "Excluir deste arquivo";
+"O arquivo é regravado sem a faixa (o vídeo não é recodificado), conferido, e a versão anterior vai para a Lixeira." = "O arquivo é regravado sem a faixa (o vídeo não é recodificado), conferido, e a versão anterior vai para a Lixeira.";
+"Excluir" = "Excluir";
+"É a faixa padrão: os players vão abrir com outra." = "É a faixa padrão: os players vão abrir com outra.";
+"É o único áudio: o vídeo fica sem som." = "É o único áudio: o vídeo fica sem som.";
+"É a legenda aberta em Legendar: as alterações ainda não gravadas nela deixam de valer." = "É a legenda aberta em Legendar: as alterações ainda não gravadas nela deixam de valer.";
+"É o áudio de base da dublagem: a dublagem passa a usar outro." = "É o áudio de base da dublagem: a dublagem passa a usar outro.";
+"As fontes são do arquivo inteiro, não de uma legenda: duas legendas com a mesma fonte usam o mesmo anexo. Fontes que outra legenda usa nunca são excluídas." = "As fontes são do arquivo inteiro, não de uma legenda: duas legendas com a mesma fonte usam o mesmo anexo. Fontes que outra legenda usa nunca são excluídas.";
+"Nenhuma fonte é usada só por esta legenda: todas ficam no arquivo." = "Nenhuma fonte é usada só por esta legenda: todas ficam no arquivo.";
+"Também excluir %@ só por ela" = "Também excluir %@ só por ela";
+"fonte usada" = "fonte usada";
+"fontes usadas" = "fontes usadas";
+"Excluir as fontes só desta legenda" = "Excluir as fontes só desta legenda";
+"Tira do arquivo as fontes que apenas esta legenda usa. Desligado, elas ficam no arquivo sem uso." = "Tira do arquivo as fontes que apenas esta legenda usa. Desligado, elas ficam no arquivo sem uso.";
+"Conferindo quais fontes só esta legenda usa…" = "Conferindo quais fontes só esta legenda usa…";
+
+/* Sources/AnimeLocalizationStudio/Overview/OverviewView.swift */
+"Não foi possível ler as faixas." = "Não foi possível ler as faixas.";
+"Abre a pasta do arquivo com ele selecionado." = "Abre a pasta do arquivo com ele selecionado.";
+"Volta à tela inicial para abrir outro vídeo. O app trabalha com um vídeo por vez." = "Volta à tela inicial para abrir outro vídeo. O app trabalha com um vídeo por vez.";
+"Vídeo" = "Vídeo";
+"Padrão = o áudio que os players tocam ao abrir o arquivo." = "Padrão = o áudio que os players tocam ao abrir o arquivo.";
+"Sem faixas de áudio." = "Sem faixas de áudio.";
+"Legendas" = "Legendas";
+"Padrão = a legenda que abre ligada." = "Padrão = a legenda que abre ligada.";
+"Sem faixas de legenda." = "Sem faixas de legenda.";
+"Nenhuma legenda ligada ao abrir" = "Nenhuma legenda ligada ao abrir";
+"Faixas padrão alteradas, ainda não gravadas no arquivo." = "Faixas padrão alteradas, ainda não gravadas no arquivo.";
+"Descartar" = "Descartar";
+"Volta às faixas padrão que o arquivo já tem." = "Volta às faixas padrão que o arquivo já tem.";
+"Gravar faixas padrão…" = "Gravar faixas padrão…";
+"Gravar faixas padrão" = "Gravar faixas padrão";
+"Você escolhe entre alterar o próprio arquivo (instantâneo, só o cabeçalho do MKV muda) ou criar uma cópia." = "Você escolhe entre alterar o próprio arquivo (instantâneo, só o cabeçalho do MKV muda) ou criar uma cópia.";
+"Anexos" = "Anexos";
+"Extrair todas as fontes…" = "Extrair todas as fontes…";
+"Extrair todas as fontes" = "Extrair todas as fontes";
+"Salva de uma vez, numa pasta que você escolhe, todas as fontes anexadas ao vídeo. O vídeo não muda." = "Salva de uma vez, numa pasta que você escolhe, todas as fontes anexadas ao vídeo. O vídeo não muda.";
+"fonte" = "fonte";
+"fontes" = "fontes";
+"outro anexo" = "outro anexo";
+"outros anexos" = "outros anexos";
+". Mantidos em tudo o que o app grava." = ". Mantidos em tudo o que o app grava.";
+"Padrão" = "Padrão";
+"Faixa padrão" = "Faixa padrão";
+"Esta faixa abre ligada nos players." = "Esta faixa abre ligada nos players.";
+"Tornar padrão" = "Tornar padrão";
+"Marca esta faixa para abrir ligada. A mudança só vai para o arquivo quando você clicar em “Gravar faixas padrão”." = "Marca esta faixa para abrir ligada. A mudança só vai para o arquivo quando você clicar em “Gravar faixas padrão”.";
+"Excluir…" = "Excluir…";
+"Excluir faixa" = "Excluir faixa";
+"Tira esta faixa do vídeo. Antes, mostra o que depende dela e pergunta: novo arquivo ou este arquivo." = "Tira esta faixa do vídeo. Antes, mostra o que depende dela e pergunta: novo arquivo ou este arquivo.";
+"Extrair…" = "Extrair…";
+"Extrair faixa" = "Extrair faixa";
+"Salva esta faixa como um arquivo separado (.%@), sem converter. O arquivo original não muda." = "Salva esta faixa como um arquivo separado (.%@), sem converter. O arquivo original não muda.";
+"estéreo" = "estéreo";
+"imagem (OCR para editar)" = "imagem (OCR para editar)";
+"texto" = "texto";
+"forçada" = "forçada";
+"Faixa %lld · %@ · %@ · idioma %@" = "Faixa %lld · %@ · %@ · idioma %@";
+"Arquivo" = "Arquivo";
+"Contêiner" = "Contêiner";
+"Áudios" = "Áudios";
+"Capítulos" = "Capítulos";
+"Fontes anexadas" = "Fontes anexadas";
+
+/* Sources/AnimeLocalizationStudio/Player/PlayerModel.swift */
+"Preparando pré-visualização (sem recodificar o vídeo)…" = "Preparando pré-visualização (sem recodificar o vídeo)…";
+"O AVFoundation não consegue reproduzir este arquivo." = "O AVFoundation não consegue reproduzir este arquivo.";
+
+/* Sources/AnimeLocalizationStudio/Player/PlayerView.swift */
+"Clique para reproduzir ou pausar" = "Clique para reproduzir ou pausar";
+"Pré-visualização indisponível" = "Pré-visualização indisponível";
+"Fala anterior (↑)" = "Fala anterior (↑)";
+"Seleciona a fala anterior e leva o vídeo até ela." = "Seleciona a fala anterior e leva o vídeo até ela.";
+"Pausar" = "Pausar";
+"Reproduzir" = "Reproduzir";
+"Reproduzir ou pausar (Espaço)" = "Reproduzir ou pausar (Espaço)";
+"Toca ou pausa o vídeo. Clicar no vídeo também funciona." = "Toca ou pausa o vídeo. Clicar no vídeo também funciona.";
+"Próxima fala (↓)" = "Próxima fala (↓)";
+"Seleciona a próxima fala e leva o vídeo até ela." = "Seleciona a próxima fala e leva o vídeo até ela.";
+"Posição" = "Posição";
+"Posição no vídeo" = "Posição no vídeo";
+"Arraste para ir a outro ponto do episódio." = "Arraste para ir a outro ponto do episódio.";
+"%@ · %@" = "%@ · %@";
+"Áudio da pré-visualização" = "Áudio da pré-visualização";
+"Escolhe qual faixa de áudio do arquivo você ouve aqui. Não muda nada no arquivo." = "Escolhe qual faixa de áudio do arquivo você ouve aqui. Não muda nada no arquivo.";
+
+/* Sources/AnimeLocalizationStudio/Player/PositionHandle.swift */
+"%lld, %lld" = "%lld, %lld";
+"Arraste para pôr a fala em qualquer ponto do vídeo. Ela passa a ter um ponto exato (\\pos); ⌘Z desfaz e “Usar a do estilo” no painel da fala volta ao normal." = "Arraste para pôr a fala em qualquer ponto do vídeo. Ela passa a ter um ponto exato (\\pos); ⌘Z desfaz e “Usar a do estilo” no painel da fala volta ao normal.";
+
+/* Sources/AnimeLocalizationStudio/Settings/SettingsView.swift */
+"Dentro do app" = "Dentro do app";
+"Desenha as legendas ASS como no player (animações, karaokê, desenhos, fontes). ISC. Com FreeType (FTL), HarfBuzz (MIT), FriBidi e GLib (LGPL-2.1), libunibreak (Zlib), PCRE2 (BSD-3), Graphite2, libpng e Brotli." = "Desenha as legendas ASS como no player (animações, karaokê, desenhos, fontes). ISC. Com FreeType (FTL), HarfBuzz (MIT), FriBidi e GLib (LGPL-2.1), libunibreak (Zlib), PCRE2 (BSD-3), Graphite2, libpng e Brotli.";
+"Identifica quem fala (diarização) no Neural Engine. Apache-2.0, Fluid Inference." = "Identifica quem fala (diarização) no Neural Engine. Apache-2.0, Fluid Inference.";
+"Roda o Chatterbox no Mac (voz clonada da dublagem). Apache-2.0, soniqo." = "Roda o Chatterbox no Mac (voz clonada da dublagem). Apache-2.0, soniqo.";
+"Cálculo na GPU do Apple silicon para a voz. MIT, Apple." = "Cálculo na GPU do Apple silicon para a voz. MIT, Apple.";
+"Tokenizadores e download de modelos. Apache-2.0, Hugging Face." = "Tokenizadores e download de modelos. Apache-2.0, Hugging Face.";
+"Sparkle" = "Sparkle";
+"Atualizações dentro do app. MIT, Andy Matuschak e colaboradores." = "Atualizações dentro do app. MIT, Andy Matuschak e colaboradores.";
+"Modelos baixados quando você pede" = "Modelos baixados quando você pede";
+"Chatterbox Multilingual" = "Chatterbox Multilingual";
+"Voz clonada de cada personagem, em 23 idiomas. MIT, Resemble AI." = "Voz clonada de cada personagem, em 23 idiomas. MIT, Resemble AI.";
+"pyannote, WeSpeaker e BUT Speech@FIT" = "pyannote, WeSpeaker e BUT Speech@FIT";
+"Modelos de identificação de falantes, convertidos para Core ML pela Fluid Inference. CC-BY-4.0." = "Modelos de identificação de falantes, convertidos para Core ML pela Fluid Inference. CC-BY-4.0.";
+"Programas e serviços usados" = "Programas e serviços usados";
+"Lê e grava o MKV sem recodificar (mkvmerge, mkvextract, mkvpropedit). GPL-2.0, Moritz Bunkus. Instalado à parte." = "Lê e grava o MKV sem recodificar (mkvmerge, mkvextract, mkvpropedit). GPL-2.0, Moritz Bunkus. Instalado à parte.";
+"Pré-visualização, extração e mixagem de áudio. LGPL/GPL. Instalado à parte." = "Pré-visualização, extração e mixagem de áudio. LGPL/GPL. Instalado à parte.";
+"Dublagem online opcional, com a sua conta e a sua chave. Serviço externo; nenhum código incluído." = "Dublagem online opcional, com a sua conta e a sua chave. Serviço externo; nenhum código incluído.";
+"Apple" = "Apple";
+"Tradução, Apple Intelligence, reconhecimento de fala e de texto (OCR) do próprio macOS." = "Tradução, Apple Intelligence, reconhecimento de fala e de texto (OCR) do próprio macOS.";
+"Aegisub" = "Aegisub";
+"Referência para o formato ASS e para marcar karaokê no tempo. Nenhum código incluído." = "Referência para o formato ASS e para marcar karaokê no tempo. Nenhum código incluído.";
+"Geral" = "Geral";
+"Ferramentas" = "Ferramentas";
+"Armazenamento" = "Armazenamento";
+"Sobre" = "Sobre";
+"Idiomas" = "Idiomas";
+"Traduzir para" = "Traduzir para";
+"Idioma da legenda original" = "Idioma da legenda original";
+"Pré-visualização" = "Pré-visualização";
+"Renderizar ASS fielmente com libass (animações, karaokê, desenhos, fontes do MKV)" = "Renderizar ASS fielmente com libass (animações, karaokê, desenhos, fontes do MKV)";
+"Revisão" = "Revisão";
+"Leitura rápida demais acima de %lld caracteres por segundo" = "Leitura rápida demais acima de %lld caracteres por segundo";
+"Nova faixa no MKV" = "Nova faixa no MKV";
+"Nome da faixa" = "Nome da faixa";
+"Definir como faixa padrão" = "Definir como faixa padrão";
+"Colocar antes das outras faixas do mesmo tipo" = "Colocar antes das outras faixas do mesmo tipo";
+"Antes de gravar, o app sempre pergunta: um arquivo novo ao lado do original (“Nome [PT-BR].mkv”) ou o próprio arquivo." = "Antes de gravar, o app sempre pergunta: um arquivo novo ao lado do original (“Nome [PT-BR].mkv”) ou o próprio arquivo.";
+"Motor de tradução" = "Motor de tradução";
+"Falas anteriores como contexto: %lld" = "Falas anteriores como contexto: %lld";
+"Traduzir linhas de karaokê (perde a sincronia das sílabas)" = "Traduzir linhas de karaokê (perde a sincronia das sílabas)";
+"Predefinição" = "Predefinição";
+"Ollama (local)" = "Ollama (local)";
+"LM Studio (local)" = "LM Studio (local)";
+"Personalizado" = "Personalizado";
+"Endereço da API" = "Endereço da API";
+"Modelo" = "Modelo";
+"Falas por lote: %lld" = "Falas por lote: %lld";
+"Chave de API (opcional para servidores locais)" = "Chave de API (opcional para servidores locais)";
+"Salvar no Keychain" = "Salvar no Keychain";
+"Servidor compatível com OpenAI" = "Servidor compatível com OpenAI";
+"A chave fica só no Keychain do macOS e nunca é gravada em arquivos ou registros. Servidores online recebem o texto das legendas; os locais não enviam nada para fora do Mac." = "A chave fica só no Keychain do macOS e nunca é gravada em arquivos ou registros. Servidores online recebem o texto das legendas; os locais não enviam nada para fora do Mac.";
+"Chave removida." = "Chave removida.";
+"Chave salva no Keychain." = "Chave salva no Keychain.";
+"Caminhos (deixe vazio para detectar)" = "Caminhos (deixe vazio para detectar)";
+"Instalação recomendada: brew install mkvtoolnix ffmpeg" = "Instalação recomendada: brew install mkvtoolnix ffmpeg";
+"Dublagem online (ElevenLabs)" = "Dublagem online (ElevenLabs)";
+"A chave fica só no Keychain do macOS. Cada dublagem usa créditos da sua conta." = "A chave fica só no Keychain do macOS. Cada dublagem usa créditos da sua conta.";
+"Versão %@ (%@)" = "Versão %@ (%@)";
+"Corrija, traduza e duble legendas de animes, séries e filmes direto no MKV: estilos, tags, posições e karaokê preservados, tradução com motores no Mac ou o seu servidor, legenda criada a partir do áudio e dublagem com a voz de cada personagem. O vídeo nunca é recodificado e o arquivo original só muda se você pedir." = "Corrija, traduza e duble legendas de animes, séries e filmes direto no MKV: estilos, tags, posições e karaokê preservados, tradução com motores no Mac ou o seu servidor, legenda criada a partir do áudio e dublagem com a voz de cada personagem. O vídeo nunca é recodificado e o arquivo original só muda se você pedir.";
+"Anime Localization Studio é software livre sob a GNU GPL v3.0. Usa os projetos de código aberto listados nas licenças." = "Anime Localization Studio é software livre sob a GNU GPL v3.0. Usa os projetos de código aberto listados nas licenças.";
+"witchmymac.com" = "witchmymac.com";
+"Abre o site com os apps do witchmymac." = "Abre o site com os apps do witchmymac.";
+"Licenças e créditos" = "Licenças e créditos";
+"Os projetos de código aberto, modelos, programas e serviços que o app usa, com as licenças." = "Os projetos de código aberto, modelos, programas e serviços que o app usa, com as licenças.";
+"Código-fonte" = "Código-fonte";
+"Abre o repositório do app no GitHub." = "Abre o repositório do app no GitHub.";
+"Verificar atualizações" = "Verificar atualizações";
+"Procura agora uma versão nova. O app também verifica sozinho uma vez por dia e pergunta antes de instalar." = "Procura agora uma versão nova. O app também verifica sozinho uma vez por dia e pergunta antes de instalar.";
+"Os textos completos das licenças estão em Contents/Resources/Licenses, dentro do app, e em THIRD_PARTY_NOTICES.md no código-fonte." = "Os textos completos das licenças estão em Contents/Resources/Licenses, dentro do app, e em THIRD_PARTY_NOTICES.md no código-fonte.";
+"OK" = "OK";
+
+/* Sources/AnimeLocalizationStudio/Settings/StorageSettings.swift */
+"Apagar" = "Apagar";
+"Apagar %@" = "Apagar %@";
+"Guardado pelo app: %@" = "Guardado pelo app: %@";
+"Abre a pasta de dados do app." = "Abre a pasta de dados do app.";
+"Os vídeos que você abriu e os arquivos que o app criou ao lado deles nunca são apagados aqui. Episódios abertos ou em processamento são pulados." = "Os vídeos que você abriu e os arquivos que o app criou ao lado deles nunca são apagados aqui. Episódios abertos ou em processamento são pulados.";
+"Apagar os projetos?" = "Apagar os projetos?";
+"Apagar projetos" = "Apagar projetos";
+"As legendas extraídas, traduções e revisões de todos os episódios são apagadas. Traduções já incorporadas a um MKV continuam no arquivo de vídeo. O episódio aberto agora é mantido." = "As legendas extraídas, traduções e revisões de todos os episódios são apagadas. Traduções já incorporadas a um MKV continuam no arquivo de vídeo. O episódio aberto agora é mantido.";
+"Não foi possível apagar tudo: %@" = "Não foi possível apagar tudo: %@";
+
+/* Sources/AnimeLocalizationStudio/Translation/SeriesView.swift */
+"%lld termos" = "%lld termos";
+"Excluir série" = "Excluir série";
+"Crie uma série para guardar o glossário da temporada." = "Crie uma série para guardar o glossário da temporada.";
+"Séries e glossários" = "Séries e glossários";
+"Nova série" = "Nova série";
+"Manter honoríficos (-san, -kun, -chan, -senpai…)" = "Manter honoríficos (-san, -kun, -chan, -senpai…)";
+"Honoríficos" = "Honoríficos";
+"Ligado: a tradução mantém -san, -kun, -chan… como no original. Desligado: adapta para o idioma de saída." = "Ligado: a tradução mantém -san, -kun, -chan… como no original. Desligado: adapta para o idioma de saída.";
+"Série" = "Série";
+"Notas para o tradutor" = "Notas para o tradutor";
+"Sinopse, personagens, quem trata quem por “você” ou “senhor”, tom da obra. Enviadas aos motores que usam contexto." = "Sinopse, personagens, quem trata quem por “você” ou “senhor”, tom da obra. Enviadas aos motores que usam contexto.";
+"Tipo" = "Tipo";
+"Nota" = "Nota";
+"Adicionar termo" = "Adicionar termo";
+"Apaga do glossário os termos selecionados." = "Apaga do glossário os termos selecionados.";
+"Salvar (⌘S)" = "Salvar (⌘S)";
+"Grava o glossário e as notas. Eles passam a valer nas próximas traduções desta série." = "Grava o glossário e as notas. Eles passam a valer nas próximas traduções desta série.";
+"Glossário" = "Glossário";
+"Para manter um nome igual, repita-o em “Tradução”. O relatório da tradução avisa quando um termo não foi respeitado." = "Para manter um nome igual, repita-o em “Tradução”. O relatório da tradução avisa quando um termo não foi respeitado.";
+"Nenhuma série selecionada" = "Nenhuma série selecionada";
+"Escolha uma série à esquerda ou crie uma nova." = "Escolha uma série à esquerda ou crie uma nova.";
+
+/* Sources/AnimeLocalizationStudio/Updates/AppUpdater.swift */
+"Verificar atualizações…" = "Verificar atualizações…";
+
+/* Sources/AnimeLocalizationStudio/Workspace/NewSubtitleSheet.swift */
+"Começa em branco, para escrever do zero. Ela vira uma faixa nova quando você salvar no vídeo." = "Começa em branco, para escrever do zero. Ela vira uma faixa nova quando você salvar no vídeo.";
+"Nome da legenda" = "Nome da legenda";
+"O nome que os players mostram no menu de legendas." = "O nome que os players mostram no menu de legendas.";
+"Idioma" = "Idioma";
+"Idioma da legenda" = "Idioma da legenda";
+"O idioma gravado na faixa, para os players escolherem a legenda certa." = "O idioma gravado na faixa, para os players escolherem a legenda certa.";
+"Criar" = "Criar";
+
+/* Sources/AnimeLocalizationStudio/Workspace/TranslateSheet.swift */
+"Traduzir" = "Traduzir";
+"Traduzir de" = "Traduzir de";
+"Legenda do vídeo" = "Legenda do vídeo";
+"Legenda" = "Legenda";
+"A legenda aberta (nova ou importada)" = "A legenda aberta (nova ou importada)";
+"Legenda de origem" = "Legenda de origem";
+"A legenda que é traduzida, com estilos, tempos e tags preservados." = "A legenda que é traduzida, com estilos, tempos e tags preservados.";
+"Áudio do vídeo" = "Áudio do vídeo";
+"O idioma em que os personagens falam. O reconhecimento de fala do Mac precisa saber qual é." = "O idioma em que os personagens falam. O reconhecimento de fala do Mac precisa saber qual é.";
+"Faixa de áudio" = "Faixa de áudio";
+"A faixa que é ouvida. Use a do idioma original." = "A faixa que é ouvida. Use a do idioma original.";
+"Separar as vozes para a dublagem" = "Separar as vozes para a dublagem";
+"Separar as vozes" = "Separar as vozes";
+"Descobre pelo som quem fala cada fala (Voz 1, Voz 2…), para a dublagem dar uma voz a cada um. Fica guardado no app; a legenda sai sem nomes." = "Descobre pelo som quem fala cada fala (Voz 1, Voz 2…), para a dublagem dar uma voz a cada um. Fica guardado no app; a legenda sai sem nomes.";
+"O app ouve o vídeo e escreve o que é dito, no tempo de cada fala, tudo no Mac." = "O app ouve o vídeo e escreve o que é dito, no tempo de cada fala, tudo no Mac.";
+"Idioma de saída" = "Idioma de saída";
+"O idioma da legenda nova." = "O idioma da legenda nova.";
+"É o idioma falado: o app só escreve o que é dito, sem traduzir." = "É o idioma falado: o app só escreve o que é dito, sem traduzir.";
+"Nenhum" = "Nenhum";
+"Glossário da série" = "Glossário da série";
+"Nomes, golpes e lugares que devem sair sempre iguais. O elenco de vozes da série também é usado na dublagem." = "Nomes, golpes e lugares que devem sair sempre iguais. O elenco de vozes da série também é usado na dublagem.";
+"Editar…" = "Editar…";
+"Editar glossários" = "Editar glossários";
+"Termos que devem ser traduzidos sempre do mesmo jeito e notas de estilo da série." = "Termos que devem ser traduzidos sempre do mesmo jeito e notas de estilo da série.";
+"Traduzir tudo de novo (a tradução que já existe para este idioma é substituída; uma cópia fica no projeto)" = "Traduzir tudo de novo (a tradução que já existe para este idioma é substituída; uma cópia fica no projeto)";
+"Traduzir tudo de novo" = "Traduzir tudo de novo";
+"Desligado: abre a tradução que já existe e traduz só as falas que faltam. Ligado: refaz todas." = "Desligado: abre a tradução que já existe e traduz só as falas que faltam. Ligado: refaz todas.";
+"Criar legenda" = "Criar legenda";
+
+/* Sources/AnimeLocalizationStudio/Workspace/WorkspaceModel+Dubbing.swift */
+"A dublagem agora usa o áudio “%@”. As vozes e o fundo serão tirados dele." = "A dublagem agora usa o áudio “%@”. As vozes e o fundo serão tirados dele.";
+"Identificação de falantes" = "Identificação de falantes";
+"Preparando a identificação de falantes…" = "Preparando a identificação de falantes…";
+"%@ em %@. Guardado no app; a legenda não mudou." = "%@ em %@. Guardado no app; a legenda não mudou.";
+"falante encontrado" = "falante encontrado";
+"falantes encontrados" = "falantes encontrados";
+"Identificação de falantes cancelada." = "Identificação de falantes cancelada.";
+"Personagens identificados esquecidos." = "Personagens identificados esquecidos.";
+"Personagens identificados esquecidos e “Falante N” tirado de %@ da legenda." = "Personagens identificados esquecidos e “Falante N” tirado de %@ da legenda.";
+"Amostras das vozes originais" = "Amostras das vozes originais";
+"Separando as vozes originais…" = "Separando as vozes originais…";
+"Identificar quem fala" = "Identificar quem fala";
+"Preparar a voz de cada personagem" = "Preparar a voz de cada personagem";
+"Gerar as falas dubladas" = "Gerar as falas dubladas";
+"Mixar com a música e os efeitos" = "Mixar com a música e os efeitos";
+"Enviar o áudio para a ElevenLabs" = "Enviar o áudio para a ElevenLabs";
+"Separar vozes, traduzir e dublar (na ElevenLabs)" = "Separar vozes, traduzir e dublar (na ElevenLabs)";
+"Baixar o áudio dublado" = "Baixar o áudio dublado";
+"Gravar e verificar o MKV" = "Gravar e verificar o MKV";
+"Dublagem na ElevenLabs" = "Dublagem na ElevenLabs";
+"Preparando o áudio…" = "Preparando o áudio…";
+"Automático" = "Automático";
+"Você parou de esperar. Se o áudio já tinha sido enviado, a ElevenLabs continua dublando: na próxima vez o app retoma o mesmo trabalho, sem enviar nem cobrar de novo. Nenhum arquivo foi criado ou alterado." = "Você parou de esperar. Se o áudio já tinha sido enviado, a ElevenLabs continua dublando: na próxima vez o app retoma o mesmo trabalho, sem enviar nem cobrar de novo. Nenhum arquivo foi criado ou alterado.";
+"Dublagem automática" = "Dublagem automática";
+"Preparando a dublagem…" = "Preparando a dublagem…";
+"Baixando o modelo de voz (%@)…" = "Baixando o modelo de voz (%@)…";
+"Carregando o modelo de voz…" = "Carregando o modelo de voz…";
+"Baixando o modelo de voz… %lld%%" = "Baixando o modelo de voz… %lld%%";
+"Dublagem cancelada. As falas já geradas ficam guardadas e serão reaproveitadas na próxima vez. Nenhum arquivo foi criado ou alterado." = "Dublagem cancelada. As falas já geradas ficam guardadas e serão reaproveitadas na próxima vez. Nenhum arquivo foi criado ou alterado.";
+"Dublagem apagada; o arquivo foi para a Lixeira." = "Dublagem apagada; o arquivo foi para a Lixeira.";
+"Dublagem tirada do histórico; o arquivo continua no disco." = "Dublagem tirada do histórico; o arquivo continua no disco.";
+"Vozes e arquivos guardados limpos: a próxima dublagem começa do zero." = "Vozes e arquivos guardados limpos: a próxima dublagem começa do zero.";
+"Não foi possível apagar: %@" = "Não foi possível apagar: %@";
+" Nenhum arquivo foi criado ou alterado." = " Nenhum arquivo foi criado ou alterado.";
+"O motor de voz parou de responder no meio da dublagem. Nenhum arquivo foi criado ou alterado; as falas já geradas serão reaproveitadas." = "O motor de voz parou de responder no meio da dublagem. Nenhum arquivo foi criado ou alterado; as falas já geradas serão reaproveitadas.";
+
+/* Sources/AnimeLocalizationStudio/Workspace/WorkspaceModel+Fonts.swift */
+"Escolha as fontes. Elas serão anexadas ao vídeo quando você gravar a legenda." = "Escolha as fontes. Elas serão anexadas ao vídeo quando você gravar a legenda.";
+"%@. Ela vai junto com a legenda em “Gravar no vídeo…”." = "%@. Ela vai junto com a legenda em “Gravar no vídeo…”.";
+"fonte adicionada" = "fonte adicionada";
+"fontes adicionadas" = "fontes adicionadas";
+"A fonte não foi adicionada" = "A fonte não foi adicionada";
+"Extrair aqui" = "Extrair aqui";
+"Pasta onde salvar as %@ do vídeo" = "Pasta onde salvar as %@ do vídeo";
+"Extração de fontes" = "Extração de fontes";
+"Extraindo as fontes…" = "Extraindo as fontes…";
+"fonte extraída" = "fonte extraída";
+"fontes extraídas" = "fontes extraídas";
+
+/* Sources/AnimeLocalizationStudio/Workspace/WorkspaceModel+Removal.swift */
+"Preparando…" = "Preparando…";
+"%@ excluída deste arquivo, que foi conferido. A versão anterior está na Lixeira." = "%@ excluída deste arquivo, que foi conferido. A versão anterior está na Lixeira.";
+"Novo arquivo sem %@: %@. O original não mudou." = "Novo arquivo sem %@: %@. O original não mudou.";
+"Cancelado. Nenhum arquivo foi criado ou alterado." = "Cancelado. Nenhum arquivo foi criado ou alterado.";
+
+/* Sources/AnimeLocalizationStudio/Workspace/WorkspaceModel+Session.swift */
+"Legenda salva em %@." = "Legenda salva em %@.";
+"A legenda não foi salva" = "A legenda não foi salva";
+
+/* Sources/AnimeLocalizationStudio/Workspace/WorkspaceModel+Tracks.swift */
+"Legenda em branco criada. Use + para inserir falas e Salvar › Gravar no vídeo… para gravá-la como faixa nova." = "Legenda em branco criada. Use + para inserir falas e Salvar › Gravar no vídeo… para gravá-la como faixa nova.";
+"A legenda em branco não foi criada" = "A legenda em branco não foi criada";
+"Legenda aberta" = "Legenda aberta";
+"A referência não pôde ser carregada: %@" = "A referência não pôde ser carregada: %@";
+"%@ com os tempos da legenda ao lado, em branco para você escrever." = "%@ com os tempos da legenda ao lado, em branco para você escrever.";
+"fala criada" = "fala criada";
+"falas criadas" = "falas criadas";
+"Onde salvar a faixa “%@”? O arquivo original não é alterado." = "Onde salvar a faixa “%@”? O arquivo original não é alterado.";
+"Extração de faixa" = "Extração de faixa";
+"Extraindo a faixa…" = "Extraindo a faixa…";
+"Faixa salva em %@." = "Faixa salva em %@.";
+"Extração cancelada." = "Extração cancelada.";
+"Salvar a legenda editada" = "Salvar a legenda editada";
+"Legenda corrigida gravada no próprio arquivo, no lugar da antiga. A versão anterior do arquivo está na Lixeira." = "Legenda corrigida gravada no próprio arquivo, no lugar da antiga. A versão anterior do arquivo está na Lixeira.";
+"Novo arquivo com a legenda corrigida: %@. O original não foi alterado." = "Novo arquivo com a legenda corrigida: %@. O original não foi alterado.";
+
+/* Sources/AnimeLocalizationStudio/Workspace/WorkspaceModel.swift */
+"Analisando faixas…" = "Analisando faixas…";
+"Esta legenda tem alterações que ainda não estão no vídeo (guardadas pelo app). Salve ou descarte quando terminar." = "Esta legenda tem alterações que ainda não estão no vídeo (guardadas pelo app). Salve ou descarte quando terminar.";
+"Este arquivo não tem legenda de texto embutida. Abra uma legenda externa (ASS, SSA ou SRT)." = "Este arquivo não tem legenda de texto embutida. Abra uma legenda externa (ASS, SSA ou SRT).";
+"Escolha o arquivo de legenda (ASS, SSA ou SRT)" = "Escolha o arquivo de legenda (ASS, SSA ou SRT)";
+"Importar" = "Importar";
+"Legenda não aberta" = "Legenda não aberta";
+"Faixas padrão" = "Faixas padrão";
+"Alterando as faixas padrão…" = "Alterando as faixas padrão…";
+"Criando a cópia com as novas faixas padrão…" = "Criando a cópia com as novas faixas padrão…";
+"Faixas padrão alteradas no próprio arquivo, sem regravar o vídeo." = "Faixas padrão alteradas no próprio arquivo, sem regravar o vídeo.";
+"Cópia criada com as novas faixas padrão: %@. O original não mudou." = "Cópia criada com as novas faixas padrão: %@. O original não mudou.";
+"Abrir a cópia" = "Abrir a cópia";
+"Este episódio já está sendo processado (%@). Aguarde terminar." = "Este episódio já está sendo processado (%@). Aguarde terminar.";
+"outra tarefa" = "outra tarefa";
+"Preparando tradução…" = "Preparando tradução…";
+"Episódio traduzido com %@. %lld falas já traduzidas foram mantidas." = "Episódio traduzido com %@. %lld falas já traduzidas foram mantidas.";
+"Episódio traduzido: %lld falas com %@." = "Episódio traduzido: %lld falas com %@.";
+"%lld falas ficaram sem tradução. Revise-as com o filtro “Sem tradução”." = "%lld falas ficaram sem tradução. Revise-as com o filtro “Sem tradução”.";
+"Tradução cancelada. O progresso foi salvo e será retomado na próxima vez." = "Tradução cancelada. O progresso foi salvo e será retomado na próxima vez.";
+"Gravar a legenda no vídeo" = "Gravar a legenda no vídeo";
+"Preparando a gravação…" = "Preparando a gravação…";
+"Legenda gravada neste arquivo e verificada. A versão anterior do arquivo está na Lixeira." = "Legenda gravada neste arquivo e verificada. A versão anterior do arquivo está na Lixeira.";
+"Novo arquivo criado e verificado: %@. O original não foi alterado." = "Novo arquivo criado e verificado: %@. O original não foi alterado.";
+"Abrir o novo arquivo" = "Abrir o novo arquivo";
+"Gravação cancelada. Nenhum arquivo foi criado ou alterado." = "Gravação cancelada. Nenhum arquivo foi criado ou alterado.";
+"Transcrição" = "Transcrição";
+"Preparando transcrição…" = "Preparando transcrição…";
+"Transcrição pronta: %lld falas. As vozes foram separadas e ficam guardadas para a dublagem; dê o nome de cada personagem em Dublar › Personagens." = "Transcrição pronta: %lld falas. As vozes foram separadas e ficam guardadas para a dublagem; dê o nome de cada personagem em Dublar › Personagens.";
+"Transcrição pronta: %lld falas. Revise e traduza." = "Transcrição pronta: %lld falas. Revise e traduza.";
+"Transcrição cancelada." = "Transcrição cancelada.";
+"Reconhecimento de texto (OCR)" = "Reconhecimento de texto (OCR)";
+"Preparando OCR…" = "Preparando OCR…";
+"Texto reconhecido em %lld legendas%@. Revise a ortografia antes de traduzir." = "Texto reconhecido em %lld legendas%@. Revise a ortografia antes de traduzir.";
+"; %lld imagens sem texto legível foram ignoradas" = "; %lld imagens sem texto legível foram ignoradas";
+"OCR cancelado." = "OCR cancelado.";
+"Alterações não salvas" = "Alterações não salvas";
+
+/* Sources/AnimeLocalizationStudio/Workspace/WorkspaceView.swift */
+"Não foi possível abrir o arquivo" = "Não foi possível abrir o arquivo";
+"Há alterações não salvas" = "Há alterações não salvas";
+"Gravar no vídeo…" = "Gravar no vídeo…";
+"Exportar arquivo…" = "Exportar arquivo…";
+"Descartar alterações" = "Descartar alterações";
+"Continuar editando" = "Continuar editando";
+"Esta legenda tem alterações que ainda não estão no vídeo nem num arquivo.\nGravar no vídeo ou Exportar: salva antes de continuar.\nDescartar: a legenda volta a ser a que está no vídeo." = "Esta legenda tem alterações que ainda não estão no vídeo nem num arquivo.\nGravar no vídeo ou Exportar: salva antes de continuar.\nDescartar: a legenda volta a ser a que está no vídeo.";
+"Baixar o modelo de fala?" = "Baixar o modelo de fala?";
+"Baixar e transcrever" = "Baixar e transcrever";
+"O macOS precisa baixar o modelo de reconhecimento de fala para este idioma. O download é feito e gerenciado pelo sistema (modelo da Apple, uso no dispositivo) e fica disponível para outros apps." = "O macOS precisa baixar o modelo de reconhecimento de fala para este idioma. O download é feito e gerenciado pelo sistema (modelo da Apple, uso no dispositivo) e fica disponível para outros apps.";
+"Usar os tempos de “%@” nesta legenda?" = "Usar os tempos de “%@” nesta legenda?";
+"Sim, usar os tempos" = "Sim, usar os tempos";
+"Não" = "Não";
+"A legenda que você edita está vazia e a do lado tem outros tempos.\nSim: ela ganha as mesmas falas, nos mesmos tempos, estilos e posições, em branco para você escrever ao lado.\nNão: “Ao lado” volta para Nenhuma." = "A legenda que você edita está vazia e a do lado tem outros tempos.\nSim: ela ganha as mesmas falas, nos mesmos tempos, estilos e posições, em branco para você escrever ao lado.\nNão: “Ao lado” volta para Nenhuma.";
+"Onde gravar as faixas padrão?" = "Onde gravar as faixas padrão?";
+"Alterar este arquivo" = "Alterar este arquivo";
+"Criar uma cópia" = "Criar uma cópia";
+"Neste arquivo a mudança é instantânea: só o cabeçalho do MKV muda, o vídeo e o áudio não são tocados. A cópia duplica o arquivo inteiro." = "Neste arquivo a mudança é instantânea: só o cabeçalho do MKV muda, o vídeo e o áudio não são tocados. A cópia duplica o arquivo inteiro.";
+"Fechar aviso" = "Fechar aviso";
+"Esconde esta mensagem." = "Esconde esta mensagem.";
+"Traduzir (⇧⌘T)" = "Traduzir (⇧⌘T)";
+"Cria uma legenda em outro idioma, a partir de uma legenda do vídeo ou do áudio. Ela passa a ser a editada, com a de origem ao lado." = "Cria uma legenda em outro idioma, a partir de uma legenda do vídeo ou do áudio. Ela passa a ser a editada, com a de origem ao lado.";
+"Legenda nova" = "Legenda nova";
+"Editando" = "Editando";
+"Tradução · %@" = "Tradução · %@";
+"%@ · nova" = "%@ · nova";
+"Legenda que você edita" = "Legenda que você edita";
+"Uma legenda por vez. Sem alterações, troca na hora; com alterações não salvas, o app pergunta antes (salvar, descartar ou continuar)." = "Uma legenda por vez. Sem alterações, troca na hora; com alterações não salvas, o app pergunta antes (salvar, descartar ou continuar).";
+"Inverter" = "Inverter";
+"Inverter (⇄)" = "Inverter (⇄)";
+"A legenda ao lado passa a ser a editada, e a editada vai para o lado." = "A legenda ao lado passa a ser a editada, e a editada vai para o lado.";
+"Nenhuma" = "Nenhuma";
+"Legenda ao lado" = "Legenda ao lado";
+"O vídeo não tem outra legenda de texto para mostrar ao lado." = "O vídeo não tem outra legenda de texto para mostrar ao lado.";
+"Outra legenda do vídeo exibida ao lado de cada fala, só para consulta. As falas são casadas pelo tempo." = "Outra legenda do vídeo exibida ao lado de cada fala, só para consulta. As falas são casadas pelo tempo.";
+"A legenda de onde a tradução veio, ao lado de cada fala para consulta." = "A legenda de onde a tradução veio, ao lado de cada fala para consulta.";
+"Legenda…" = "Legenda…";
+"Novo" = "Novo";
+"Legenda… começa uma em branco, com o nome e o idioma que você escolher. Importar arquivo… abre um ASS, SSA ou SRT do disco. Com alterações não salvas, o app pergunta antes." = "Legenda… começa uma em branco, com o nome e o idioma que você escolher. Importar arquivo… abre um ASS, SSA ou SRT do disco. Com alterações não salvas, o app pergunta antes.";
+"Gravar no vídeo (⌘S): a legenda entra no MKV, e o app pergunta antes se é um novo arquivo ou este. Exportar arquivo (⇧⌘E): salva como ASS/SRT separado, sem mexer no vídeo." = "Gravar no vídeo (⌘S): a legenda entra no MKV, e o app pergunta antes se é um novo arquivo ou este. Exportar arquivo (⇧⌘E): salva como ASS/SRT separado, sem mexer no vídeo.";
+
+/* Sources/AnimeLocalizationStudio/Workspace/WriteToVideoSheet.swift */
+"editado" = "editado";
+"Gravar no vídeo" = "Gravar no vídeo";
+"Ligada ao abrir o vídeo" = "Ligada ao abrir o vídeo";
+"Legenda padrão" = "Legenda padrão";
+"Os players abrem o vídeo com esta legenda ligada." = "Os players abrem o vídeo com esta legenda ligada.";
+"Primeira da lista" = "Primeira da lista";
+"A faixa nova aparece no topo do menu de legendas do player." = "A faixa nova aparece no topo do menu de legendas do player.";
+"Idioma da faixa" = "Idioma da faixa";
+"A legenda corrigida entra no lugar de “%@”, com o mesmo idioma, nome e flags. As outras faixas não mudam e o vídeo não é recodificado." = "A legenda corrigida entra no lugar de “%@”, com o mesmo idioma, nome e flags. As outras faixas não mudam e o vídeo não é recodificado.";
+"faixa original" = "faixa original";
+"“%@ [%@].mkv”, na mesma pasta. O original não muda." = "“%@ [%@].mkv”, na mesma pasta. O original não muda.";
+"O MKV é regravado (sem recodificar o vídeo), conferido, e só então substitui o original, que vai para a Lixeira." = "O MKV é regravado (sem recodificar o vídeo), conferido, e só então substitui o original, que vai para a Lixeira.";
+"Gravar" = "Gravar";
+
+/* Sources/DubbingKit/AudioMixer.swift */
+"a voz não gerou fala audível" = "a voz não gerou fala audível";
+"Duração desconhecida de %@." = "Duração desconhecida de %@.";
+"Faixa de áudio não encontrada." = "Faixa de áudio não encontrada.";
+
+/* Sources/DubbingKit/ClonedVoiceSynthesizer.swift */
+"cerca de 2 GB" = "cerca de 2 GB";
+"Chatterbox Multilingual da Resemble AI (MIT), pelo speech-swift (Apache-2.0)" = "Chatterbox Multilingual da Resemble AI (MIT), pelo speech-swift (Apache-2.0)";
+"a voz não gerou áudio" = "a voz não gerou áudio";
+"A voz do Mac ainda não fala %@. Para esse idioma, use a ElevenLabs." = "A voz do Mac ainda não fala %@. Para esse idioma, use a ElevenLabs.";
+"não foi possível preparar o áudio" = "não foi possível preparar o áudio";
+"O modelo de voz não carregou." = "O modelo de voz não carregou.";
+"a referência de voz não pôde ser lida" = "a referência de voz não pôde ser lida";
+
+/* Sources/DubbingKit/DubbingPipeline.swift */
+"falas substituídas" = "falas substituídas";
+"Gerando voz %lld de %lld…" = "Gerando voz %lld de %lld…";
+"%@ não tem voz no elenco" = "%@ não tem voz no elenco";
+"nenhuma fala pôde ser gerada" = "nenhuma fala pôde ser gerada";
+"Montando a trilha de voz…" = "Montando a trilha de voz…";
+"Mixando com o áudio original…" = "Mixando com o áudio original…";
+"Mixando as novas falas com a trilha…" = "Mixando as novas falas com a trilha…";
+"Extraindo o áudio original…" = "Extraindo o áudio original…";
+"Separando as falas da música e dos efeitos…" = "Separando as falas da música e dos efeitos…";
+
+/* Sources/DubbingKit/ElevenLabsDubbing.swift */
+"Falta a chave da ElevenLabs. Cole a sua em Dublar ou em Ajustes › Dublagem." = "Falta a chave da ElevenLabs. Cole a sua em Dublar ou em Ajustes › Dublagem.";
+"A ElevenLabs recusou a chave. Confira se ela foi copiada inteira e se tem permissão de dublagem." = "A ElevenLabs recusou a chave. Confira se ela foi copiada inteira e se tem permissão de dublagem.";
+"A conta da ElevenLabs não tem créditos suficientes para esta dublagem. %@" = "A conta da ElevenLabs não tem créditos suficientes para esta dublagem. %@";
+"A ElevenLabs recusou o pedido: %@" = "A ElevenLabs recusou o pedido: %@";
+"A dublagem falhou na ElevenLabs: %@" = "A dublagem falhou na ElevenLabs: %@";
+"Não foi possível falar com a ElevenLabs. Confira a conexão com a internet." = "Não foi possível falar com a ElevenLabs. Confira a conexão com a internet.";
+"resposta inesperada" = "resposta inesperada";
+
+/* Sources/DubbingKit/OriginalVoices.swift */
+"Separando a voz de %@…" = "Separando a voz de %@…";
+"Separando a voz de cada fala (%lld de %lld)…" = "Separando a voz de cada fala (%lld de %lld)…";
+"Isolando as vozes da música e dos efeitos…" = "Isolando as vozes da música e dos efeitos…";
+
+/* Sources/DubbingKit/SpeakerDiarization.swift */
+"Os modelos de identificação de falantes ainda não foram baixados." = "Os modelos de identificação de falantes ainda não foram baixados.";
+"Nenhuma voz foi encontrada no áudio." = "Nenhuma voz foi encontrada no áudio.";
+"cerca de 22 MB" = "cerca de 22 MB";
+"pyannote Community-1, WeSpeaker e BUT Speech@FIT (CC-BY-4.0), conversão Core ML da Fluid Inference" = "pyannote Community-1, WeSpeaker e BUT Speech@FIT (CC-BY-4.0), conversão Core ML da Fluid Inference";
+"Voz %lld" = "Voz %lld";
+
+/* Sources/DubbingKit/SpeechSynthesizer.swift */
+"A síntese da fala falhou: %@" = "A síntese da fala falhou: %@";
+"a voz “%@” não gerou áudio" = "a voz “%@” não gerou áudio";
+
+/* Sources/DubbingKit/SpeechTranscription.swift */
+"A transcrição da Apple não reconhece o idioma %@." = "A transcrição da Apple não reconhece o idioma %@.";
+"O macOS precisa baixar o modelo de reconhecimento de fala para %@." = "O macOS precisa baixar o modelo de reconhecimento de fala para %@.";
+"Nenhuma fala foi reconhecida no áudio." = "Nenhuma fala foi reconhecida no áudio.";
+
+/* Sources/DubbingKit/VoiceSeparator.swift */
+"O isolamento de voz da Apple (AUSoundIsolation) não está disponível neste Mac." = "O isolamento de voz da Apple (AUSoundIsolation) não está disponível neste Mac.";
+"A separação de voz falhou: %@" = "A separação de voz falhou: %@";
+
+/* Sources/MediaKit/IntegrityVerifier.swift */
+"Arquivo legível" = "Arquivo legível";
+"Número de faixas" = "Número de faixas";
+"%lld de %lld esperadas" = "%lld de %lld esperadas";
+"Faixas originais preservadas" = "Faixas originais preservadas";
+"Todas presentes" = "Todas presentes";
+"Ausentes: " = "Ausentes: ";
+"Nova faixa “%@”" = "Nova faixa “%@”";
+"Não encontrada" = "Não encontrada";
+"Idioma %@, %@" = "Idioma %@, %@";
+"não padrão" = "não padrão";
+"Flags padrão/forçada diferentes do pedido" = "Flags padrão/forçada diferentes do pedido";
+"Uma faixa padrão de %@" = "Uma faixa padrão de %@";
+"%lld marcadas como padrão" = "%lld marcadas como padrão";
+"Anexos (fontes) preservados" = "Anexos (fontes) preservados";
+"Fonte “%@” anexada" = "Fonte “%@” anexada";
+"Presente" = "Presente";
+"Capítulos preservados" = "Capítulos preservados";
+"Vídeo sem recodificação" = "Vídeo sem recodificação";
+"Comparação de pacotes indisponível sem FFmpeg; codec e resolução conferem." = "Comparação de pacotes indisponível sem FFmpeg; codec e resolução conferem.";
+"Não foi possível ler os pacotes de vídeo do original." = "Não foi possível ler os pacotes de vídeo do original.";
+"%lld pacotes idênticos ao original" = "%lld pacotes idênticos ao original";
+"Os pacotes de vídeo diferem do original" = "Os pacotes de vídeo diferem do original";
+
+/* Sources/MediaKit/MKVMuxer.swift */
+"Espaço insuficiente no disco de destino: são necessários %@ e há %@." = "Espaço insuficiente no disco de destino: são necessários %@ e há %@.";
+"O arquivo de saída não pode ser o próprio original." = "O arquivo de saída não pode ser o próprio original.";
+"O arquivo “%@” que seria gravado no vídeo não existe." = "O arquivo “%@” que seria gravado no vídeo não existe.";
+"O arquivo gerado não passou na verificação: " = "O arquivo gerado não passou na verificação: ";
+
+/* Sources/MediaKit/MediaInfo.swift */
+"Outro" = "Outro";
+
+/* Sources/MediaKit/MediaInspector.swift */
+"O arquivo não pôde ser analisado. Pode estar corrompido ou em um formato não suportado. %@" = "O arquivo não pôde ser analisado. Pode estar corrompido ou em um formato não suportado. %@";
+"O arquivo não existe mais nesse local." = "O arquivo não existe mais nesse local.";
+"O mkvmerge não reconheceu o arquivo e o ffprobe não está instalado." = "O mkvmerge não reconheceu o arquivo e o ffprobe não está instalado.";
+
+/* Sources/MediaKit/ProcessRunner.swift */
+"Não foi possível iniciar %@: %@" = "Não foi possível iniciar %@: %@";
+"%@ terminou com erro (código %d)." = "%@ terminou com erro (código %d).";
+"%@ terminou com erro (código %d): %@" = "%@ terminou com erro (código %d): %@";
+"Operação cancelada." = "Operação cancelada.";
+
+/* Sources/MediaKit/ToolLocator.swift */
+"Ler o MKV e gravar faixas nele sem recodificar" = "Ler o MKV e gravar faixas nele sem recodificar";
+"Extrair legendas e áudio do MKV sem perdas" = "Extrair legendas e áudio do MKV sem perdas";
+"Trocar faixa padrão e nomes no próprio MKV, sem regravar" = "Trocar faixa padrão e nomes no próprio MKV, sem regravar";
+"Pré-visualização, extração de áudio e verificação de quadros" = "Pré-visualização, extração de áudio e verificação de quadros";
+"Inspecionar arquivos que não são Matroska" = "Inspecionar arquivos que não são Matroska";
+"%@ (%@) não foi encontrado. Instale com “%@” ou indique o caminho em Ajustes › Ferramentas." = "%@ (%@) não foi encontrado. Instale com “%@” ou indique o caminho em Ajustes › Ferramentas.";
+"Não respondeu a %@" = "Não respondeu a %@";
+
+/* Sources/MediaKit/TrackExtractor.swift */
+"Faixa %lld não encontrada." = "Faixa %lld não encontrada.";
+"A extração não produziu um arquivo." = "A extração não produziu um arquivo.";
+"Faixa de áudio %lld não encontrada." = "Faixa de áudio %lld não encontrada.";
+
+/* Sources/MediaKit/TrackFlagEditor.swift */
+"Só arquivos MKV podem ter as faixas padrão alteradas sem regravar." = "Só arquivos MKV podem ter as faixas padrão alteradas sem regravar.";
+
+/* Sources/StudioCore/ElevenLabsWorkflow.swift */
+"Retomando a dublagem que já estava na ElevenLabs…" = "Retomando a dublagem que já estava na ElevenLabs…";
+"Preparando o áudio para enviar…" = "Preparando o áudio para enviar…";
+"Enviando o áudio para a ElevenLabs…" = "Enviando o áudio para a ElevenLabs…";
+"A ElevenLabs está separando as vozes, traduzindo e dublando…" = "A ElevenLabs está separando as vozes, traduzindo e dublando…";
+"Baixando o áudio dublado…" = "Baixando o áudio dublado…";
+"%@ · dublagem ElevenLabs" = "%@ · dublagem ElevenLabs";
+"Gravando o MKV…" = "Gravando o MKV…";
+"Verificando integridade…" = "Verificando integridade…";
+
+/* Sources/StudioCore/EpisodeWorkflow.swift */
+"O arquivo não tem legenda de texto (ASS, SSA ou SRT) para traduzir. Abra uma legenda externa no editor." = "O arquivo não tem legenda de texto (ASS, SSA ou SRT) para traduzir. Abra uma legenda externa no editor.";
+"As legendas deste arquivo são imagens. Use “Reconhecer texto (OCR)” para legendas PGS; VobSub ainda não é suportado." = "As legendas deste arquivo são imagens. Use “Reconhecer texto (OCR)” para legendas PGS; VobSub ainda não é suportado.";
+"Traduza o episódio antes de dublar: a dublagem usa as falas da tradução e os tempos da legenda." = "Traduza o episódio antes de dublar: a dublagem usa as falas da tradução e os tempos da legenda.";
+"O arquivo não tem faixa de áudio para servir de base à dublagem." = "O arquivo não tem faixa de áudio para servir de base à dublagem.";
+"O arquivo não tem legenda PGS. Legendas VobSub (DVD) ainda não são reconhecidas." = "O arquivo não tem legenda PGS. Legendas VobSub (DVD) ainda não são reconhecidas.";
+"Tradução concluída" = "Tradução concluída";
+"Gravando novo MKV…" = "Gravando novo MKV…";
+"Extraindo o áudio…" = "Extraindo o áudio…";
+"Transcrevendo a fala…" = "Transcrevendo a fala…";
+"Identificando quem fala…" = "Identificando quem fala…";
+"Extraindo a legenda em imagem…" = "Extraindo a legenda em imagem…";
+"Reconhecendo o texto das legendas…" = "Reconhecendo o texto das legendas…";
+"%@ · dublagem IA (%@)" = "%@ · dublagem IA (%@)";
+
+/* Sources/StudioCore/Settings.swift */
+"Tradução da Apple (no dispositivo)" = "Tradução da Apple (no dispositivo)";
+"Apple Intelligence (modelo local)" = "Apple Intelligence (modelo local)";
+"Rápida e privada. Traduz fala por fala, sem contexto nem glossário." = "Rápida e privada. Traduz fala por fala, sem contexto nem glossário.";
+"Privada, usa contexto, glossário e notas da obra. Modelo pequeno." = "Privada, usa contexto, glossário e notas da obra. Modelo pequeno.";
+"Ollama, LM Studio ou um serviço online. Melhor qualidade com modelos grandes." = "Ollama, LM Studio ou um serviço online. Melhor qualidade com modelos grandes.";
+"Não foi possível salvar a chave no Keychain." = "Não foi possível salvar a chave no Keychain.";
+
+/* Sources/StudioCore/StorageInventory.swift */
+"Pré-visualizações" = "Pré-visualizações";
+"Fontes extraídas" = "Fontes extraídas";
+"Arquivos temporários" = "Arquivos temporários";
+"Arquivos de dublagem" = "Arquivos de dublagem";
+"Projetos (legendas e traduções)" = "Projetos (legendas e traduções)";
+"Modelos de voz (Chatterbox)" = "Modelos de voz (Chatterbox)";
+"Modelos de identificação de falantes" = "Modelos de identificação de falantes";
+"Cópias leves dos vídeos para tocar no app. São recriadas ao abrir o episódio." = "Cópias leves dos vídeos para tocar no app. São recriadas ao abrir o episódio.";
+"Fontes dos MKVs para a pré-visualização fiel. São extraídas de novo quando preciso." = "Fontes dos MKVs para a pré-visualização fiel. São extraídas de novo quando preciso.";
+"Sobras de operações interrompidas." = "Sobras de operações interrompidas.";
+"Falas geradas, vozes separadas e música de fundo de cada episódio. Apagar faz a próxima dublagem gerar tudo do zero." = "Falas geradas, vozes separadas e música de fundo de cada episódio. Apagar faz a próxima dublagem gerar tudo do zero.";
+"Legendas extraídas, traduções e revisões de cada episódio. Apagar perde as traduções e correções ainda não gravadas no vídeo." = "Legendas extraídas, traduções e revisões de cada episódio. Apagar perde as traduções e correções ainda não gravadas no vídeo.";
+"Baixados na primeira dublagem com a voz original. São baixados de novo quando preciso." = "Baixados na primeira dublagem com a voz original. São baixados de novo quando preciso.";
+"Baixados na primeira identificação de falantes. São baixados de novo quando preciso." = "Baixados na primeira identificação de falantes. São baixados de novo quando preciso.";
+
+/* Sources/SubtitleKit/PGSDecoder.swift */
+"O arquivo não é uma legenda PGS válida." = "O arquivo não é uma legenda PGS válida.";
+
+/* Sources/SubtitleKit/StructureCheck.swift */
+"Número de falas mudou: %lld → %lld." = "Número de falas mudou: %lld → %lld.";
+"O início do arquivo SRT mudou." = "O início do arquivo SRT mudou.";
+"Fala %lld: tempo alterado." = "Fala %lld: tempo alterado.";
+"O formato da legenda mudou." = "O formato da legenda mudou.";
+"Número de linhas do documento mudou: %lld → %lld." = "Número de linhas do documento mudou: %lld → %lld.";
+"Linha %lld: tipo de evento alterado." = "Linha %lld: tipo de evento alterado.";
+"Linha %lld: campo %@ alterado." = "Linha %lld: campo %@ alterado.";
+"Linha %lld fora dos eventos foi alterada." = "Linha %lld fora dos eventos foi alterada.";
+
+/* Sources/SubtitleKit/SubtitleDocument.swift */
+"Desenho vetorial" = "Desenho vetorial";
+"Sem texto" = "Sem texto";
+"Evento não textual" = "Evento não textual";
+
+/* Sources/SubtitleKit/TextDecoding.swift */
+"O arquivo de legenda não está em UTF-8, UTF-16 nem Windows-1252 e não pôde ser lido." = "O arquivo de legenda não está em UTF-8, UTF-16 nem Windows-1252 e não pôde ser lido.";
+
+/* Sources/SubtitleKit/TranslatableText.swift */
+"A tradução não devolveu as marcações de formatação da fala." = "A tradução não devolveu as marcações de formatação da fala.";
+"A tradução por partes devolveu um número de partes diferente do original." = "A tradução por partes devolveu um número de partes diferente do original.";
+
+/* Sources/TranslationKit/AppleTranslationEngine.swift */
+"Escolha o idioma de origem para usar a tradução da Apple." = "Escolha o idioma de origem para usar a tradução da Apple.";
+"Os idiomas %@ → %@ precisam ser baixados (Ajustes do Sistema › Geral › Idioma e Região › Idiomas de Tradução)." = "Os idiomas %@ → %@ precisam ser baixados (Ajustes do Sistema › Geral › Idioma e Região › Idiomas de Tradução).";
+"A tradução da Apple não oferece %@ → %@." = "A tradução da Apple não oferece %@ → %@.";
+"Estado de idioma desconhecido." = "Estado de idioma desconhecido.";
+"A tradução da Apple precisa do idioma de origem." = "A tradução da Apple precisa do idioma de origem.";
+"Os idiomas %@ → %@ não estão baixados neste Mac." = "Os idiomas %@ → %@ não estão baixados neste Mac.";
+
+/* Sources/TranslationKit/FoundationModelsEngine.swift */
+"O modelo local não escreve em %@." = "O modelo local não escreve em %@.";
+"Ative a Apple Intelligence em Ajustes do Sistema para usar o modelo local." = "Ative a Apple Intelligence em Ajustes do Sistema para usar o modelo local.";
+"O modelo da Apple Intelligence ainda está sendo baixado." = "O modelo da Apple Intelligence ainda está sendo baixado.";
+"Este Mac não é compatível com a Apple Intelligence." = "Este Mac não é compatível com a Apple Intelligence.";
+"O modelo local não está disponível." = "O modelo local não está disponível.";
+"lote grande demais para o modelo local" = "lote grande demais para o modelo local";
+"o modelo local recusou o trecho" = "o modelo local recusou o trecho";
+"modelo local ocupado" = "modelo local ocupado";
+"O modelo local não suporta este idioma." = "O modelo local não suporta este idioma.";
+
+/* Sources/TranslationKit/Glossary.swift */
+"Técnica" = "Técnica";
+"Lugar" = "Lugar";
+"Organização" = "Organização";
+"Tratamento" = "Tratamento";
+"Termo" = "Termo";
+
+/* Sources/TranslationKit/OpenAICompatibleEngine.swift */
+"Informe o modelo a usar em Ajustes › Tradução." = "Informe o modelo a usar em Ajustes › Tradução.";
+"A chave de API foi recusada pelo servidor." = "A chave de API foi recusada pelo servidor.";
+"O servidor respondeu com o código %lld." = "O servidor respondeu com o código %lld.";
+"Não há servidor em %@. Abra o Ollama ou o LM Studio." = "Não há servidor em %@. Abra o Ollama ou o LM Studio.";
+"Sem conexão com %@." = "Sem conexão com %@.";
+"o servidor" = "o servidor";
+"A chave de API foi recusada (%lld)." = "A chave de API foi recusada (%lld).";
+"Modelo ou endereço não encontrado (%lld). Confira o modelo “%@”." = "Modelo ou endereço não encontrado (%lld). Confira o modelo “%@”.";
+"o servidor respondeu %lld" = "o servidor respondeu %lld";
+"resposta sem conteúdo" = "resposta sem conteúdo";
+
+/* Sources/TranslationKit/TranslationEngine.swift */
+"Falha temporária do motor de tradução: %@" = "Falha temporária do motor de tradução: %@";
+"Resposta inválida do motor de tradução: %@" = "Resposta inválida do motor de tradução: %@";
+
+/* Sources/TranslationKit/TranslationPipeline.swift */
+"%@ O progresso (%lld falas) foi salvo e pode ser retomado." = "%@ O progresso (%lld falas) foi salvo e pode ser retomado.";
+"Traduzindo…" = "Traduzindo…";
+"Traduzindo… %lld de %lld" = "Traduzindo… %lld de %lld";
+"A legenda traduzida não pôde ser lida de volta." = "A legenda traduzida não pôde ser lida de volta.";
+"sem resposta para a fala" = "sem resposta para a fala";
+"o motor não devolveu todas as partes da fala" = "o motor não devolveu todas as partes da fala";

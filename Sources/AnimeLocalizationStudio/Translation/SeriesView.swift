@@ -33,7 +33,7 @@ struct SeriesView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Nova série", systemImage: "plus") {
-                    let series = Series(name: "Nova série")
+                    let series = Series(name: String(localized: "Nova série"))
                     app.saveSeries(series)
                     selectedID = series.id
                 }
@@ -50,7 +50,7 @@ struct SeriesView: View {
                 Section {
                     TextField("Nome", text: binding.name)
                     Toggle("Manter honoríficos (-san, -kun, -chan, -senpai…)", isOn: binding.glossary.keepHonorifics)
-                        .hint("Honoríficos", "Ligado: a tradução mantém -san, -kun, -chan… como no original. Desligado: adapta para o português.")
+                        .hint("Honoríficos", "Ligado: a tradução mantém -san, -kun, -chan… como no original. Desligado: adapta para o idioma de saída.")
                 } header: { Text("Série") }
                 Section {
                     TextEditor(text: binding.glossary.notes)

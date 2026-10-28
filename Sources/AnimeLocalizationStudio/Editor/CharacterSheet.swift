@@ -9,7 +9,7 @@ struct CharacterSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
-            Text("Quem fala \(editor.selection.count == 1 ? "nesta fala" : "nestas \(editor.selection.count) falas")?").font(.title3.weight(.semibold))
+            Text("Quem fala \(editor.selection.count == 1 ? String(localized: "nesta fala") : String(localized: "nestas \(editor.selection.count) falas"))?").font(.title3.weight(.semibold))
             TextField("Nome do personagem", text: $name)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit(apply)

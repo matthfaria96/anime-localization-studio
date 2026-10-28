@@ -12,8 +12,8 @@ enum ScreenPosition {
     }
 
     static func name(_ alignment: Int) -> String {
-        let vertical = alignment >= 7 ? "Em cima" : alignment >= 4 ? "No meio" : "Embaixo"
-        let horizontal = ["à esquerda", "no centro", "à direita"][(alignment - 1) % 3]
+        let vertical = alignment >= 7 ? String(localized: "Em cima") : alignment >= 4 ? String(localized: "No meio") : String(localized: "Embaixo")
+        let horizontal = [String(localized: "à esquerda"), String(localized: "no centro"), String(localized: "à direita")][(alignment - 1) % 3]
         return "\(vertical), \(horizontal)"
     }
 }
@@ -41,7 +41,7 @@ struct PositionPad: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel(ScreenPosition.name(value))
                         .accessibilityAddTraits(value == alignment ? .isSelected : [])
-                        .hintVerbatim(ScreenPosition.name(value), "Coloca esta fala \(ScreenPosition.name(value).lowercased()) da tela.")
+                        .hintVerbatim(ScreenPosition.name(value), String(localized: "Coloca esta fala \(ScreenPosition.name(value).lowercased()) da tela."))
                     }
                 }
             }
@@ -72,7 +72,7 @@ struct PositionGlyph: View {
             }
         }
         .overlay { PointDot(point: alignment == nil ? point : nil, size: 3.5) }
-        .accessibilityLabel(alignment.map(ScreenPosition.name) ?? "Ponto livre")
+        .accessibilityLabel(alignment.map(ScreenPosition.name) ?? String(localized: "Ponto livre"))
     }
 
     private var isUsual: Bool { alignment == 2 && !fromLine }

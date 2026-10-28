@@ -80,10 +80,10 @@ public enum MuxError: Error, LocalizedError, Equatable {
         switch self {
         case .insufficientSpace(let needed, let available):
             let f = ByteCountFormatter()
-            return "Espaço insuficiente no disco de destino: são necessários \(f.string(fromByteCount: needed)) e há \(f.string(fromByteCount: available))."
-        case .outputIsSource: return "O arquivo de saída não pode ser o próprio original."
-        case .missingInput(let name): return "O arquivo “\(name)” que seria gravado no vídeo não existe."
-        case .verificationFailed(let problems): return "O arquivo gerado não passou na verificação: " + problems.joined(separator: " ")
+            return String(localized: "Espaço insuficiente no disco de destino: são necessários \(f.string(fromByteCount: needed)) e há \(f.string(fromByteCount: available)).")
+        case .outputIsSource: return String(localized: "O arquivo de saída não pode ser o próprio original.")
+        case .missingInput(let name): return String(localized: "O arquivo “\(name)” que seria gravado no vídeo não existe.")
+        case .verificationFailed(let problems): return String(localized: "O arquivo gerado não passou na verificação: ") + problems.joined(separator: " ")
         }
     }
 }

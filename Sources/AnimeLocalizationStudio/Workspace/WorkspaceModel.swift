@@ -68,7 +68,7 @@ final class WorkspaceModel {
     // MARK: Loading
 
     func load() async {
-        operation = RunningOperation(kind: .loading, fraction: nil, message: "Analisando faixas…")
+        operation = RunningOperation(kind: .loading, fraction: nil, message: String(localized: "Analisando faixas…"))
         do {
             let info = try await MediaInspector(tools: app.tools).inspect(url)
             self.info = info
@@ -77,7 +77,7 @@ final class WorkspaceModel {
             await loadSubtitles()
             operation = nil
             if project.draftPending == true && editor.hasDocument {
-                notice = (.info, "Esta legenda tem alterações que ainda não estão no vídeo (guardadas pelo app). Salve ou descarte quando terminar.")
+                notice = (.info, String(localized: "Esta legenda tem alterações que ainda não estão no vídeo (guardadas pelo app). Salve ou descarte quando terminar."))
             }
             Task { await loadEmbeddedFonts(info); await loadAddedFonts() }
             applyTestHooks()
@@ -106,7 +106,7 @@ final class WorkspaceModel {
             await loadDubText()
         } catch WorkflowError.noTextSubtitle {
             editor.load(source: nil, translation: nil)
-            notice = (.info, "Este arquivo não tem legenda de texto embutida. Abra uma legenda externa (ASS, SSA ou SRT).")
+            notice = (.info, String(localized: "Este arquivo não tem legenda de texto embutida. Abra uma legenda externa (ASS, SSA ou SRT)."))
         } catch {
             editor.load(source: nil, translation: nil)
             notice = (.error, error.localizedDescription)
@@ -167,8 +167,8 @@ final class WorkspaceModel {
     func openExternalSubtitle() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = AppModel.subtitleTypes
-        panel.message = "Escolha o arquivo de legenda (ASS, SSA ou SRT)"
-        panel.prompt = "Importar"
+        panel.message = String(localized: "Escolha o arquivo de legenda (ASS, SSA ou SRT)")
+        panel.prompt = String(localized: "Importar")
         guard panel.runModal() == .OK, let file = panel.url, let format = SubtitleFormat(fileExtension: file.pathExtension) else { return }
         editor.flush()
         do {
@@ -186,7 +186,7 @@ final class WorkspaceModel {
             notice = nil
             Task { await reload() }
         } catch {
-            app.report(error, context: "Legenda não aberta")
+            app.report(error, context: String(localized: "Legenda não aberta"))
         }
     }
 
@@ -226,9 +226,9 @@ final class WorkspaceModel {
     var hasPendingDefaults: Bool { pendingDefaults != nil && pendingDefaults != currentDefaults }
 
     func applyDefaults(inPlace: Bool) {
-        guard let defaults = pendingDefaults, !isBusy, claim("Faixas padrão") else { return }
+        guard let defaults = pendingDefaults, !isBusy, claim(String(localized: "Faixas padrão")) else { return }
         editor.flush()
-        operation = RunningOperation(kind: .muxing, fraction: nil, message: inPlace ? "Alterando as faixas padrão…" : "Criando a cópia com as novas faixas padrão…")
+        operation = RunningOperation(kind: .muxing, fraction: nil, message: inPlace ? String(localized: "Alterando as faixas padrão…") : String(localized: "Criando a cópia com as novas faixas padrão…"))
         let workflow = workflow()
         let project = project
         task = Task {
@@ -240,10 +240,10 @@ final class WorkspaceModel {
                 operation = nil
                 if inPlace {
                     await reload()
-                    notice = (.success, "Faixas padrão alteradas no próprio arquivo, sem regravar o vídeo.")
+                    notice = (.success, String(localized: "Faixas padrão alteradas no próprio arquivo, sem regravar o vídeo."))
                 } else {
-                    notice = (.success, "Cópia criada com as novas faixas padrão: \(url.lastPathComponent). O original não mudou.")
-                    noticeAction = ("Abrir a cópia", { [app] in app.open(url) })
+                    notice = (.success, String(localized: "Cópia criada com as novas faixas padrão: \(url.lastPathComponent). O original não mudou."))
+                    noticeAction = (String(localized: "Abrir a cópia"), { [app] in app.open(url) })
                 }
                 return
             } catch {
@@ -281,17 +281,17 @@ final class WorkspaceModel {
     /// Claims the project for a long operation, or explains why it cannot start.
     func claim(_ description: String) -> Bool {
         if app.activity.begin(project.id, description) { return true }
-        notice = (.warning, "Este episódio já está sendo processado (\(app.activity.activity(for: project.id) ?? "outra tarefa")). Aguarde terminar.")
+        notice = (.warning, String(localized: "Este episódio já está sendo processado (\(app.activity.activity(for: project.id) ?? String(localized: "outra tarefa"))). Aguarde terminar."))
         return false
     }
 
     func release() { app.activity.end(project.id) }
 
     func translateEpisode(undoManager: UndoManager?, retranslateAll: Bool = false) {
-        guard !isBusy, claim("Tradução") else { return }
+        guard !isBusy, claim(String(localized: "Tradução")) else { return }
         editor.flush()
         notice = nil
-        operation = RunningOperation(kind: .translating, fraction: 0, message: "Preparando tradução…")
+        operation = RunningOperation(kind: .translating, fraction: 0, message: String(localized: "Preparando tradução…"))
         let workflow = workflow()
         let project = project
         task = Task {
@@ -307,11 +307,11 @@ final class WorkspaceModel {
                 overlayMode = .translation
                 notice = report.isComplete
                     ? (.success, report.preservedLines > 0
-                        ? "Episódio traduzido com \(report.engineName). \(report.preservedLines) falas já traduzidas foram mantidas."
-                        : "Episódio traduzido: \(report.translatedLines) falas com \(report.engineName).")
-                    : (.warning, "\(report.failedLines.count) falas ficaram sem tradução. Revise-as com o filtro “Sem tradução”.")
+                        ? String(localized: "Episódio traduzido com \(report.engineName). \(report.preservedLines) falas já traduzidas foram mantidas.")
+                        : String(localized: "Episódio traduzido: \(report.translatedLines) falas com \(report.engineName)."))
+                    : (.warning, String(localized: "\(report.failedLines.count) falas ficaram sem tradução. Revise-as com o filtro “Sem tradução”."))
             } catch is CancellationError {
-                notice = (.info, "Tradução cancelada. O progresso foi salvo e será retomado na próxima vez.")
+                notice = (.info, String(localized: "Tradução cancelada. O progresso foi salvo e será retomado na próxima vez."))
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }
@@ -325,10 +325,10 @@ final class WorkspaceModel {
     // MARK: Mux
 
     func embedTranslation(replaceOriginal: Bool = false) {
-        guard !isBusy, editor.translation != nil, claim("Gravar a legenda no vídeo") else { return }
+        guard !isBusy, editor.translation != nil, claim(String(localized: "Gravar a legenda no vídeo")) else { return }
         editor.flush()
         notice = nil
-        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando a gravação…")
+        operation = RunningOperation(kind: .muxing, fraction: 0, message: String(localized: "Preparando a gravação…"))
         let workflow = workflow()
         let project = project
         task = Task {
@@ -343,13 +343,13 @@ final class WorkspaceModel {
                     release()
                     operation = nil
                     await reload()
-                    notice = (.success, "Legenda gravada neste arquivo e verificada. A versão anterior do arquivo está na Lixeira.")
+                    notice = (.success, String(localized: "Legenda gravada neste arquivo e verificada. A versão anterior do arquivo está na Lixeira."))
                     return
                 }
-                notice = (.success, "Novo arquivo criado e verificado: \(output.lastPathComponent). O original não foi alterado.")
-                noticeAction = ("Abrir o novo arquivo", { [app] in app.open(output) })
+                notice = (.success, String(localized: "Novo arquivo criado e verificado: \(output.lastPathComponent). O original não foi alterado."))
+                noticeAction = (String(localized: "Abrir o novo arquivo"), { [app] in app.open(output) })
             } catch is CancellationError {
-                notice = (.info, "Gravação cancelada. Nenhum arquivo foi criado ou alterado.")
+                notice = (.info, String(localized: "Gravação cancelada. Nenhum arquivo foi criado ou alterado."))
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }
@@ -369,10 +369,10 @@ final class WorkspaceModel {
 
     func transcribeAudio(language: String, allowModelDownload: Bool = false, identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false,
                          audioTrackID: Int? = nil, then: (@MainActor () -> Void)? = nil) {
-        guard !isBusy, claim("Transcrição") else { return }
+        guard !isBusy, claim(String(localized: "Transcrição")) else { return }
         editor.flush()
         notice = nil
-        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando transcrição…")
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: String(localized: "Preparando transcrição…"))
         let workflow = workflow()
         let project = project
         task = Task {
@@ -391,8 +391,8 @@ final class WorkspaceModel {
                 release()
                 await loadSubtitles()
                 notice = (.success, identifySpeakers
-                          ? "Transcrição pronta: \(editor.rows.count) falas. As vozes foram separadas e ficam guardadas para a dublagem; dê o nome de cada personagem em Dublar › Personagens."
-                          : "Transcrição pronta: \(editor.rows.count) falas. Revise e traduza.")
+                          ? String(localized: "Transcrição pronta: \(editor.rows.count) falas. As vozes foram separadas e ficam guardadas para a dublagem; dê o nome de cada personagem em Dublar › Personagens.")
+                          : String(localized: "Transcrição pronta: \(editor.rows.count) falas. Revise e traduza."))
                 then?()
                 return
             } catch SpeechTranscription.TranscriptionError.modelDownloadRequired(let language) {
@@ -408,7 +408,7 @@ final class WorkspaceModel {
                                          audioTrackID: audioTrackID, then: then)
                 }
             } catch is CancellationError {
-                notice = (.info, "Transcrição cancelada.")
+                notice = (.info, String(localized: "Transcrição cancelada."))
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }
@@ -420,10 +420,10 @@ final class WorkspaceModel {
     var bitmapSubtitleTracks: [MediaTrack] { subtitleTracks.filter(\.isBitmapSubtitle) }
 
     func recognizeBitmapSubtitle(language: String) {
-        guard !isBusy, claim("Reconhecimento de texto (OCR)") else { return }
+        guard !isBusy, claim(String(localized: "Reconhecimento de texto (OCR)")) else { return }
         editor.flush()
         notice = nil
-        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando OCR…")
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: String(localized: "Preparando OCR…"))
         let workflow = workflow()
         let project = project
         task = Task {
@@ -437,10 +437,10 @@ final class WorkspaceModel {
                 release()
                 await loadSubtitles()
                 notice = (skipped == 0 ? .success : .warning,
-                          "Texto reconhecido em \(editor.rows.count) legendas\(skipped > 0 ? "; \(skipped) imagens sem texto legível foram ignoradas" : ""). Revise a ortografia antes de traduzir.")
+                          String(localized: "Texto reconhecido em \(editor.rows.count) legendas\(skipped > 0 ? String(localized: "; \(skipped) imagens sem texto legível foram ignoradas") : ""). Revise a ortografia antes de traduzir."))
                 return
             } catch is CancellationError {
-                notice = (.info, "OCR cancelado.")
+                notice = (.info, String(localized: "OCR cancelado."))
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }
@@ -519,7 +519,7 @@ final class WorkspaceModel {
             }
             try store.save(project)
         } catch {
-            app.report(error, context: "Alterações não salvas")
+            app.report(error, context: String(localized: "Alterações não salvas"))
         }
     }
 

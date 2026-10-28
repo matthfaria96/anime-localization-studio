@@ -15,20 +15,20 @@ struct FormatBar: View {
     let apply: (@escaping (String, Range<String.Index>?) -> String) -> Void
 
     private static let colors: [(name: String, color: ASSColor)] = [
-        ("Branco", ASSColor(red: 1, green: 1, blue: 1)), ("Amarelo", ASSColor(red: 1, green: 0.88, blue: 0.2)),
-        ("Laranja", ASSColor(red: 1, green: 0.55, blue: 0.1)), ("Vermelho", ASSColor(red: 0.93, green: 0.2, blue: 0.2)),
-        ("Rosa", ASSColor(red: 1, green: 0.4, blue: 0.7)), ("Roxo", ASSColor(red: 0.62, green: 0.4, blue: 1)),
-        ("Azul", ASSColor(red: 0.3, green: 0.6, blue: 1)), ("Verde", ASSColor(red: 0.3, green: 0.85, blue: 0.4)),
-        ("Preto", ASSColor(red: 0, green: 0, blue: 0)),
+        (String(localized: "Branco"), ASSColor(red: 1, green: 1, blue: 1)), (String(localized: "Amarelo"), ASSColor(red: 1, green: 0.88, blue: 0.2)),
+        (String(localized: "Laranja"), ASSColor(red: 1, green: 0.55, blue: 0.1)), (String(localized: "Vermelho"), ASSColor(red: 0.93, green: 0.2, blue: 0.2)),
+        (String(localized: "Rosa"), ASSColor(red: 1, green: 0.4, blue: 0.7)), (String(localized: "Roxo"), ASSColor(red: 0.62, green: 0.4, blue: 1)),
+        (String(localized: "Azul"), ASSColor(red: 0.3, green: 0.6, blue: 1)), (String(localized: "Verde"), ASSColor(red: 0.3, green: 0.85, blue: 0.4)),
+        (String(localized: "Preto"), ASSColor(red: 0, green: 0, blue: 0)),
     ]
-    private static let sizes: [(name: String, factor: Double)] = [("Bem menor", 0.6), ("Menor", 0.8), ("Maior", 1.25), ("Bem maior", 1.6)]
+    private static let sizes: [(name: String, factor: Double)] = [(String(localized: "Bem menor"), 0.6), (String(localized: "Menor"), 0.8), (String(localized: "Maior"), 1.25), (String(localized: "Bem maior"), 1.6)]
 
     var body: some View {
         HStack(spacing: 2) {
-            toggle(.italic, "Itálico", "italic", key: "i")
-            toggle(.bold, "Negrito", "bold", key: "b")
-            toggle(.underline, "Sublinhado", "underline", key: "u")
-            toggle(.strikeout, "Riscado", "strikethrough", key: nil)
+            toggle(.italic, String(localized: "Itálico"), "italic", key: "i")
+            toggle(.bold, String(localized: "Negrito"), "bold", key: "b")
+            toggle(.underline, String(localized: "Sublinhado"), "underline", key: "u")
+            toggle(.strikeout, String(localized: "Riscado"), "strikethrough", key: nil)
             Divider().frame(height: 14).padding(.horizontal, 3)
             Menu {
                 ForEach(Self.colors, id: \.name) { item in
@@ -84,7 +84,7 @@ struct FormatBar: View {
             .frame(width: 22)
             .modifier(OptionalShortcut(key: key))
             .hintVerbatim(key.map { "\(name) (⌘\($0.uppercased()))" } ?? name,
-                          "Deixa o trecho selecionado em \(name.lowercased()) (ou a fala inteira, sem seleção). Clicar de novo tira.")
+                          String(localized: "Deixa o trecho selecionado em \(name.lowercased()) (ou a fala inteira, sem seleção). Clicar de novo tira."))
     }
 
     /// The line as it looks on the video, without the codes.

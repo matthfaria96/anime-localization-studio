@@ -2,10 +2,10 @@
 # Opens the built app on a media file with a throwaway home folder (the real app data is not
 # touched), waits, and captures only the app window.
 #
-#   Scripts/ui-capture.sh <media file> <output.png> [seconds to wait]
+#   Scripts/ui-capture.sh <media file, or - for the start screen> <output.png> [seconds to wait]
 #
-# Hooks (optional env): ALS_SELECT=<line> ALS_SEEK=<ms> ALS_TRANSLATE=1 ALS_MODE=subtitles|dubbing ALS_TASK=edit|translate ALS_SIZE=WxH
-# APPEARANCE=light|dark (default: the system's). HOME_DIR=<dir> reuses a test home.
+# Hooks (optional env): ALS_SETTINGS=<tab> ALS_SELECT=<line> ALS_SEEK=<ms> ALS_TRANSLATE=1 ALS_MODE=subtitles|dubbing ALS_TASK=edit|translate ALS_SIZE=WxH
+# APPEARANCE=light|dark (default: the system's). LANGUAGE=en|pt-BR (default: the system's). HOME_DIR=<dir> reuses a test home.
 set -euo pipefail
 cd "${0:A:h}/.."
 MEDIA="${1:?media file}"
@@ -15,7 +15,10 @@ BIN="dist/Anime Localization Studio.app/Contents/MacOS/AnimeLocalizationStudio"
 [[ -x "$BIN" ]] || { print -u2 "build first: Scripts/build-app.sh"; exit 1; }
 HOME_DIR="${HOME_DIR:-$(mktemp -d)}"
 
-CFFIXED_USER_HOME="$HOME_DIR" ALS_OPEN="$MEDIA" ALS_APPEARANCE="${APPEARANCE:-}" "$BIN" >/dev/null 2>&1 &
+ARGS=()
+[[ -n "${LANGUAGE:-}" ]] && ARGS=(-AppleLanguages "($LANGUAGE)" -AppleLocale "${LANGUAGE/-/_}")
+[[ "$MEDIA" == "-" ]] || export ALS_OPEN="$MEDIA"
+CFFIXED_USER_HOME="$HOME_DIR" ALS_APPEARANCE="${APPEARANCE:-}" "$BIN" "${ARGS[@]}" >/dev/null 2>&1 &
 PID=$!
 list_windows() {
   swift -e '

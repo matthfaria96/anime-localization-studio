@@ -44,26 +44,26 @@ struct DubSessionSheet: View {
         return VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             Text("Dublar “\(workspace.title)”").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-                summary("waveform", "Áudio de base", workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "—")
-                summary("globe", "Dublar para", Languages.name(for: language))
+                summary("waveform", String(localized: "Áudio de base"), workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "—")
+                summary("globe", String(localized: "Dublar para"), Languages.name(for: language))
                 if online {
-                    summary("cloud", "Motor", "ElevenLabs: separa os personagens, traduz e dubla com a voz de cada um")
-                    summary("person.wave.2", "Idioma falado", app.settings.dubbingSourceLanguage.map { code in
-                        TranscriptionLanguage.all.first { $0.code == code }?.name ?? code } ?? "detectar automaticamente")
+                    summary("cloud", String(localized: "Motor"), String(localized: "ElevenLabs: separa os personagens, traduz e dubla com a voz de cada um"))
+                    summary("person.wave.2", String(localized: "Idioma falado"), app.settings.dubbingSourceLanguage.map { code in
+                        TranscriptionLanguage.all.first { $0.code == code }?.name ?? code } ?? String(localized: "detectar automaticamente"))
                 } else {
-                    summary("text.bubble", "Texto falado", "\(workspace.dubText?.isVideoTrack == true ? "legenda do vídeo" : "tradução feita no app"), \(Plural.count(segmentCount, "fala", "falas"))")
-                    summary("waveform.badge.mic", "Vozes", app.settings.dubbingPerLineVoice ? "voz original, com a emoção de cada fala" : "voz original, uma amostra por personagem")
-                    summary("slider.horizontal.3", "Modo", app.settings.dubbingMode.label)
-                    summary("person.2", "Personagens", speakers > 0 ? Plural.count(speakers, "personagem", "personagens") : "identificados pelo áudio")
+                    summary("text.bubble", String(localized: "Texto falado"), "\(workspace.dubText?.isVideoTrack == true ? String(localized: "legenda do vídeo") : String(localized: "tradução feita no app")), \(Plural.count(segmentCount, "fala", "falas"))")
+                    summary("waveform.badge.mic", String(localized: "Vozes"), app.settings.dubbingPerLineVoice ? String(localized: "voz original, com a emoção de cada fala") : String(localized: "voz original, uma amostra por personagem"))
+                    summary("slider.horizontal.3", String(localized: "Modo"), app.settings.dubbingMode.label)
+                    summary("person.2", String(localized: "Personagens"), speakers > 0 ? Plural.count(speakers, "personagem", "personagens") : String(localized: "identificados pelo áudio"))
                 }
             }
             if online {
                 InlineMessage(kind: .info, text: workspace.project.remoteDub != nil
-                              ? "Esta dublagem já foi enviada antes: o app retoma o trabalho na ElevenLabs, sem enviar nem cobrar de novo."
-                              : "O áudio deste vídeo (sem a imagem) será enviado para a ElevenLabs e a dublagem usa créditos da sua conta. Leva alguns minutos; você pode continuar usando o app.")
+                              ? String(localized: "Esta dublagem já foi enviada antes: o app retoma o trabalho na ElevenLabs, sem enviar nem cobrar de novo.")
+                              : String(localized: "O áudio deste vídeo (sem a imagem) será enviado para a ElevenLabs e a dublagem usa créditos da sua conta. Leva alguns minutos; você pode continuar usando o app."))
             }
             if !online && !workspace.voiceModelsInstalled {
-                InlineMessage(kind: .info, text: "Ao começar, o app baixa os modelos de voz uma única vez (\(ClonedVoiceSynthesizer.downloadSize); \(ClonedVoiceSynthesizer.modelCredits)). Tudo roda no Mac; o áudio não sai do computador.")
+                InlineMessage(kind: .info, text: String(localized: "Ao começar, o app baixa os modelos de voz uma única vez (\(ClonedVoiceSynthesizer.downloadSize); \(ClonedVoiceSynthesizer.modelCredits)). Tudo roda no Mac; o áudio não sai do computador."))
             }
             if !online && (workspace.cachedDubLines > 0 || workspace.dubStorageBytes > 0) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -82,8 +82,10 @@ struct DubSessionSheet: View {
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 Text("Onde gravar").font(.headline)
-                destination(false, "Criar um novo arquivo", "“\(outputName)”, na mesma pasta do original. O original não muda.")
-                destination(true, "Gravar neste arquivo", "O áudio dublado\(addsSubtitle ? " e a legenda traduzida" : "") \(addsSubtitle ? "entram" : "entra") no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.")
+                destination(false, String(localized: "Criar um novo arquivo"), String(localized: "“\(outputName)”, na mesma pasta do original. O original não muda."))
+                destination(true, String(localized: "Gravar neste arquivo"), addsSubtitle
+                    ? String(localized: "O áudio dublado e a legenda traduzida entram no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.")
+                    : String(localized: "O áudio dublado entra no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira."))
             }
             HStack {
                 Spacer()
@@ -91,9 +93,9 @@ struct DubSessionSheet: View {
                 Button(online ? "Enviar e dublar" : "Começar a dublagem") { workspace.startDub(cast: cast, undoManager: undoManager) }
                     .buttonStyle(.glassProminent)
                     .keyboardShortcut(.defaultAction)
-                    .hintVerbatim("Começar a dublagem", online
-                        ? "Envia o áudio, espera a ElevenLabs dublar, baixa o resultado e grava onde você escolheu."
-                        : "Identifica quem fala, prepara as vozes, gera todas as falas, mixa e grava onde você escolheu. Pode levar alguns minutos.")
+                    .hintVerbatim(String(localized: "Começar a dublagem"), online
+                        ? String(localized: "Envia o áudio, espera a ElevenLabs dublar, baixa o resultado e grava onde você escolheu.")
+                        : String(localized: "Identifica quem fala, prepara as vozes, gera todas as falas, mixa e grava onde você escolheu. Pode levar alguns minutos."))
             }
         }
     }
@@ -159,8 +161,8 @@ struct DubSessionSheet: View {
                 Text("Pasta: \(url.deletingLastPathComponent().path)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 if replaced { Text("A versão anterior está na Lixeira.").font(.caption).foregroundStyle(.secondary) }
             }
-            Text(report.map { "\(Plural.count($0.synthesized + $0.reusedClips, "fala dublada", "falas dubladas")) · \($0.spedUp.count) aceleradas para caber · \($0.failed.count) sem voz. " } ?? ""
-                 + "O áudio dublado é a faixa padrão; o original continua no arquivo.")
+            Text(report.map { String(localized: "\(Plural.count($0.synthesized + $0.reusedClips, "fala dublada", "falas dubladas")) · \($0.spedUp.count) aceleradas para caber · \($0.failed.count) sem voz. ") } ?? ""
+                 + String(localized: "O áudio dublado é a faixa padrão; o original continua no arquivo."))
                 .font(.callout)
             if !verification.passed { InlineMessage(kind: .warning, text: verification.failures.joined(separator: " ")) }
             HStack {

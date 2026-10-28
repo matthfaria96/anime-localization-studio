@@ -12,7 +12,7 @@ enum PromptBuilder {
         var text = """
         Você é um tradutor profissional de legendas de anime, séries e filmes para \(languageName(context.targetLanguage)).
         Traduza cada fala de \(languageName(context.sourceLanguage)) de forma natural, fiel ao tom e à personalidade de quem fala, \
-        com frases curtas que caibam na tela. Use português brasileiro coloquial quando o original for coloquial.
+        com frases curtas que caibam na tela. Quando o original for coloquial, use a linguagem coloquial natural de \(languageName(context.targetLanguage)).
         Regras obrigatórias:
         - Responda somente com a tradução de cada id recebido, sem comentários.
         - Mantenha cada marcador ⟦n⟧ exatamente como está, uma vez cada, junto à palavra correspondente.
@@ -21,7 +21,7 @@ enum PromptBuilder {
         """
         text += context.keepHonorifics
             ? "\n- Mantenha honoríficos japoneses (-san, -kun, -chan, -sama, -senpai, -sensei) como no original."
-            : "\n- Adapte honoríficos japoneses para formas naturais em português ou omita-os."
+            : "\n- Adapte honoríficos japoneses para formas naturais em \(languageName(context.targetLanguage)) ou omita-os."
         if !context.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             text += "\n\nNotas da obra:\n\(context.notes)"
         }

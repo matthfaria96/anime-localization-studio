@@ -31,7 +31,7 @@ public struct AudioMixer: Sendable {
                                                     "-af", "\(silence),areverse,\(silence),areverse",
                                                     "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", trimmed.path])
         // Silence-only output (nothing pronounceable) leaves an empty file with no duration.
-        guard let length = try? await duration(of: trimmed), length > 0 else { throw SynthesisError.failed("a voz não gerou fala audível") }
+        guard let length = try? await duration(of: trimmed), length > 0 else { throw SynthesisError.failed(String(localized: "a voz não gerou fala audível")) }
         let needed = slot > 0 ? Double(length) / Double(slot) : 1
         let tempo = max(speed, min(maxSpeedup, needed))
         if abs(tempo - 1) > 0.001 {
@@ -49,7 +49,7 @@ public struct AudioMixer: Sendable {
         let result = try await ProcessRunner.runChecked(ffprobe, ["-v", "error", "-show_entries", "format=duration",
                                                                   "-of", "default=nw=1:nk=1", url.path])
         guard let seconds = Double(result.stdoutText.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            throw MediaInspectionError.unreadable("Duração desconhecida de \(url.lastPathComponent).")
+            throw MediaInspectionError.unreadable(String(localized: "Duração desconhecida de \(url.lastPathComponent)."))
         }
         return Int(seconds * 1_000)
     }
@@ -100,7 +100,7 @@ public struct AudioMixer: Sendable {
     /// both are summed and the result is loudness-normalized (EBU R128, −16 LUFS) to AAC.
     public func mixVoiceOver(media: MediaInfo, audioTrack: MediaTrack, voice: URL, to output: URL,
                              progress: (@Sendable (Double) -> Void)? = nil) async throws {
-        guard let ordinal = media.ordinal(of: audioTrack) else { throw MediaInspectionError.unreadable("Faixa de áudio não encontrada.") }
+        guard let ordinal = media.ordinal(of: audioTrack) else { throw MediaInspectionError.unreadable(String(localized: "Faixa de áudio não encontrada.")) }
         try await mix(inputs: ["-i", media.url.path, "-i", voice.path], base: "[0:a:\(ordinal)]", ratio: 9, threshold: 0.02,
                       duration: media.durationMilliseconds, to: output, progress: progress)
     }

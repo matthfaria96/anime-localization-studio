@@ -37,7 +37,7 @@ extension WorkspaceModel {
         try? store.save(project)
         // Voices and background came from the other track: they no longer apply.
         clearDubFiles()
-        notice = (.info, "A dublagem agora usa o áudio “\(dubAudioTrack.map(Self.describe) ?? "")”. As vozes e o fundo serão tirados dele.")
+        notice = (.info, String(localized: "A dublagem agora usa o áudio “\(dubAudioTrack.map(Self.describe) ?? "")”. As vozes e o fundo serão tirados dele."))
     }
 
     /// Deletes the synthesized lines, voices and separated audio of this episode, and forgets
@@ -129,10 +129,10 @@ extension WorkspaceModel {
 
     /// Finds who speaks each line of the dub text from the audio, kept in the project only.
     func identifyDubSpeakers(allowModelDownload: Bool = false) {
-        guard !isBusy, let text = dubText, claim("Identificação de falantes") else { return }
+        guard !isBusy, let text = dubText, claim(String(localized: "Identificação de falantes")) else { return }
         let audioTrackID = dubAudioTrack?.id
         notice = nil
-        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando a identificação de falantes…")
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: String(localized: "Preparando a identificação de falantes…"))
         let workflow = workflow()
         let project = project
         task = Task {
@@ -144,13 +144,13 @@ extension WorkspaceModel {
                 self.project.autoSpeakers = (self.project.autoSpeakers ?? [:]).merging([text.key: speakers]) { _, new in new }
                 try? store.save(self.project)
                 var cast = self.cast
-                cast.addMissing(from: DubbingPlan.speakers(in: dubSegments).filter { $0 != "Desconhecido" })
+                cast.addMissing(from: DubbingPlan.speakers(in: dubSegments).filter { $0 != String(localized: "Desconhecido") })
                 updateCast(cast)
-                notice = (.success, "\(Plural.count(Set(speakers.values).count, "falante encontrado", "falantes encontrados")) em \(Plural.count(speakers.count, "fala", "falas")). Guardado no app; a legenda não mudou.")
+                notice = (.success, String(localized: "\(Plural.count(Set(speakers.values).count, "falante encontrado", "falantes encontrados")) em \(Plural.count(speakers.count, "fala", "falas")). Guardado no app; a legenda não mudou."))
             } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
                 pendingDiarizationDownload = { self.identifyDubSpeakers(allowModelDownload: true) }
             } catch is CancellationError {
-                notice = (.info, "Identificação de falantes cancelada.")
+                notice = (.info, String(localized: "Identificação de falantes cancelada."))
             } catch {
                 notice = (.error, LogRedactor.redact(error.localizedDescription))
             }
@@ -170,7 +170,7 @@ extension WorkspaceModel {
         }
         cast.members.removeAll { $0.name.range(of: #"^(Falante|Voz) \d+$"#, options: .regularExpression) != nil }
         try? store.save(project)
-        notice = (.success, written.isEmpty ? "Personagens identificados esquecidos." : "Personagens identificados esquecidos e “Falante N” tirado de \(Plural.count(written.count, "fala", "falas")) da legenda.")
+        notice = (.success, written.isEmpty ? String(localized: "Personagens identificados esquecidos.") : String(localized: "Personagens identificados esquecidos e “Falante N” tirado de \(Plural.count(written.count, "fala", "falas")) da legenda."))
         Task { await loadDubText() }
     }
 
@@ -191,8 +191,8 @@ extension WorkspaceModel {
     }
 
     func prepareVoiceSamples() async {
-        guard voiceSamples.isEmpty, claim("Amostras das vozes originais") else { return }
-        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Separando as vozes originais…")
+        guard voiceSamples.isEmpty, claim(String(localized: "Amostras das vozes originais")) else { return }
+        operation = RunningOperation(kind: .extracting, fraction: 0, message: String(localized: "Separando as vozes originais…"))
         defer { release(); operation = nil }
         do {
             let samples = try await workflow().voiceSamples(project, audioTrackID: dubAudioTrack?.id, textTrackID: dubTextTrackID) { step in
@@ -224,14 +224,14 @@ extension WorkspaceModel {
 
         var title: String {
             switch self {
-            case .speakers: "Identificar quem fala"
-            case .voices: "Preparar a voz de cada personagem"
-            case .speech: "Gerar as falas dubladas"
-            case .mix: "Mixar com a música e os efeitos"
-            case .upload: "Enviar o áudio para a ElevenLabs"
-            case .remote: "Separar vozes, traduzir e dublar (na ElevenLabs)"
-            case .download: "Baixar o áudio dublado"
-            case .file: "Gravar e verificar o MKV"
+            case .speakers: String(localized: "Identificar quem fala")
+            case .voices: String(localized: "Preparar a voz de cada personagem")
+            case .speech: String(localized: "Gerar as falas dubladas")
+            case .mix: String(localized: "Mixar com a música e os efeitos")
+            case .upload: String(localized: "Enviar o áudio para a ElevenLabs")
+            case .remote: String(localized: "Separar vozes, traduzir e dublar (na ElevenLabs)")
+            case .download: String(localized: "Baixar o áudio dublado")
+            case .file: String(localized: "Gravar e verificar o MKV")
             }
         }
 
@@ -273,14 +273,14 @@ extension WorkspaceModel {
 
     /// Sends the audio to ElevenLabs, waits for the dub and writes it into the MKV.
     func onlineDub() {
-        guard !isBusy, let key = app.elevenLabsKey, claim("Dublagem na ElevenLabs") else { return }
+        guard !isBusy, let key = app.elevenLabsKey, claim(String(localized: "Dublagem na ElevenLabs")) else { return }
         let replaceOriginal = dubSession?.replaceOriginal ?? false
         let audioTrackID = dubAudioTrack?.id
         let baseAudio = dubAudioTrack.map(Self.describe) ?? "—"
         let language = app.settings.targetLanguage
         dubSession?.phase = .running
         notice = nil
-        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando o áudio…")
+        operation = RunningOperation(kind: .muxing, fraction: 0, message: String(localized: "Preparando o áudio…"))
         let workflow = workflow()
         let client = ElevenLabsDubbing(apiKey: key)
         LogRedactor.register(secret: key)
@@ -293,7 +293,7 @@ extension WorkspaceModel {
                 self.project = result.project
                 lastDub = nil
                 dubSession?.phase = .done(url: result.output, report: nil, verification: result.verification, replaced: replaceOriginal)
-                recordDub(DubRecord(outputPath: result.output.path, replacedOriginal: replaceOriginal, engine: "ElevenLabs", mode: "Automático",
+                recordDub(DubRecord(outputPath: result.output.path, replacedOriginal: replaceOriginal, engine: "ElevenLabs", mode: String(localized: "Automático"),
                                     baseAudio: baseAudio, language: language, lines: 0, failedLines: 0, verified: result.verification.passed))
                 AppLog.shared.info("Dublagem ElevenLabs concluída: \(result.output.path)")
                 release()
@@ -301,7 +301,7 @@ extension WorkspaceModel {
                 if replaceOriginal { await reload() }
                 return
             } catch is CancellationError {
-                dubSession?.phase = .failed("Você parou de esperar. Se o áudio já tinha sido enviado, a ElevenLabs continua dublando: na próxima vez o app retoma o mesmo trabalho, sem enviar nem cobrar de novo. Nenhum arquivo foi criado ou alterado.")
+                dubSession?.phase = .failed(String(localized: "Você parou de esperar. Se o áudio já tinha sido enviado, a ElevenLabs continua dublando: na próxima vez o app retoma o mesmo trabalho, sem enviar nem cobrar de novo. Nenhum arquivo foi criado ou alterado."))
             } catch {
                 let message = Self.explainDubError(error)
                 AppLog.shared.error("Dublagem ElevenLabs falhou: \(message)")
@@ -321,7 +321,7 @@ extension WorkspaceModel {
     /// Identifies who speaks (when the subtitle does not say), gives each character a clone of
     /// their original voice, dubs every line and writes the MKV.
     func autoDub(cast: VoiceCast, allowDiarizationDownload: Bool = false, undoManager: UndoManager?) {
-        guard !isBusy, let text = dubText, claim("Dublagem automática") else { return }
+        guard !isBusy, let text = dubText, claim(String(localized: "Dublagem automática")) else { return }
         let textTrackID = dubTextTrackID
         let language = text.language
         let replaceOriginal = dubSession?.replaceOriginal ?? false
@@ -335,7 +335,7 @@ extension WorkspaceModel {
         dubSession?.phase = .running
         editor.flush()
         notice = nil
-        operation = RunningOperation(kind: .muxing, fraction: 0, message: "Preparando a dublagem…")
+        operation = RunningOperation(kind: .muxing, fraction: 0, message: String(localized: "Preparando a dublagem…"))
         let workflow = workflow()
         let engine = app.settings.dubbingEngine.label, mode = app.settings.dubbingMode.label
         AppLog.shared.info("Dublagem iniciada: \(project.title) · \(engine) · \(mode) · \(replaceOriginal ? "no próprio arquivo" : "novo arquivo")")
@@ -344,7 +344,7 @@ extension WorkspaceModel {
                 var project = project
                 // Who speaks, found from the audio when the subtitle does not say: kept in the
                 // project, never written into the subtitle.
-                if workflow.spokenSegments(text, project: project).allSatisfy({ $0.speaker == "Desconhecido" }) {
+                if workflow.spokenSegments(text, project: project).allSatisfy({ $0.speaker == String(localized: "Desconhecido") }) {
                     let speakers = try await workflow.identifySpeakers(in: text.document, of: project, audioTrackID: audioTrackID,
                                                                        allowModelDownload: allowDiarizationDownload) { step in
                         Task { @MainActor in self.operation?.fraction = step.fraction * 0.2; self.operation?.message = step.message }
@@ -358,11 +358,11 @@ extension WorkspaceModel {
                 }
                 updateCast(filled)
                 let downloading = !voiceModelsInstalled
-                operation?.message = downloading ? "Baixando o modelo de voz (\(ClonedVoiceSynthesizer.downloadSize))…" : "Carregando o modelo de voz…"
+                operation?.message = downloading ? String(localized: "Baixando o modelo de voz (\(ClonedVoiceSynthesizer.downloadSize))…") : String(localized: "Carregando o modelo de voz…")
                 let synthesizer = ClonedVoiceSynthesizer(modelsDirectory: app.paths.voiceModels, language: language)
                 try await synthesizer.prepare { value in
                     Task { @MainActor in
-                        self.operation?.message = downloading ? "Baixando o modelo de voz… \(Int(value * 100))%" : "Carregando o modelo de voz…"
+                        self.operation?.message = downloading ? String(localized: "Baixando o modelo de voz… \(Int(value * 100))%") : String(localized: "Carregando o modelo de voz…")
                     }
                 }
                 let (updated, output, report, verification) = try await workflow.dub(project, synthesizer: synthesizer, cast: filled,
@@ -387,7 +387,7 @@ extension WorkspaceModel {
                 dubSession?.phase = .confirm
                 pendingDiarizationDownload = { self.autoDub(cast: cast, allowDiarizationDownload: true, undoManager: undoManager) }
             } catch is CancellationError {
-                dubSession?.phase = .failed("Dublagem cancelada. As falas já geradas ficam guardadas e serão reaproveitadas na próxima vez. Nenhum arquivo foi criado ou alterado.")
+                dubSession?.phase = .failed(String(localized: "Dublagem cancelada. As falas já geradas ficam guardadas e serão reaproveitadas na próxima vez. Nenhum arquivo foi criado ou alterado."))
             } catch {
                 let message = Self.explainDubError(error)
                 AppLog.shared.error("Dublagem falhou: \(message)")
@@ -422,23 +422,23 @@ extension WorkspaceModel {
             try store.save(project)
             if lastDub?.url.path == record.outputPath { lastDub = nil }
             if resetVoices { clearDubFiles() }
-            notice = (.success, [trashFile ? "Dublagem apagada; o arquivo foi para a Lixeira." : "Dublagem tirada do histórico; o arquivo continua no disco.",
-                                 resetVoices ? "Vozes e arquivos guardados limpos: a próxima dublagem começa do zero." : nil]
+            notice = (.success, [trashFile ? String(localized: "Dublagem apagada; o arquivo foi para a Lixeira.") : String(localized: "Dublagem tirada do histórico; o arquivo continua no disco."),
+                                 resetVoices ? String(localized: "Vozes e arquivos guardados limpos: a próxima dublagem começa do zero.") : nil]
                 .compactMap { $0 }.joined(separator: " "))
         } catch {
-            notice = (.error, "Não foi possível apagar: \(LogRedactor.redact(error.localizedDescription))")
+            notice = (.error, String(localized: "Não foi possível apagar: \(LogRedactor.redact(error.localizedDescription))"))
         }
     }
 
     /// Turns technical failures into what happened and what to do.
     static func explainDubError(_ error: Error) -> String {
         if let service = error as? ElevenLabsDubbing.ServiceError {
-            return (service.errorDescription ?? "") + " Nenhum arquivo foi criado ou alterado."
+            return (service.errorDescription ?? "") + String(localized: " Nenhum arquivo foi criado ou alterado.")
         }
         if case SynthesisError.engineUnavailable = error {
-            return "O motor de voz parou de responder no meio da dublagem. Nenhum arquivo foi criado ou alterado; as falas já geradas serão reaproveitadas."
+            return String(localized: "O motor de voz parou de responder no meio da dublagem. Nenhum arquivo foi criado ou alterado; as falas já geradas serão reaproveitadas.")
         }
-        return LogRedactor.redact(error.localizedDescription) + " Nenhum arquivo foi criado ou alterado."
+        return LogRedactor.redact(error.localizedDescription) + String(localized: " Nenhum arquivo foi criado ou alterado.")
     }
 
     // MARK: Cast

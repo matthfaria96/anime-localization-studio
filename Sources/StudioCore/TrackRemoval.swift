@@ -10,13 +10,13 @@ extension EpisodeWorkflow {
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         let removable = info.tracks.filter { trackIDs.contains($0.id) && ($0.kind == .audio || $0.kind == .subtitles) }
         guard !removable.isEmpty else { throw MuxError.missingInput("faixa") }
-        var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "editado"), newTracks: [],
+        var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: String(localized: "editado")), newTracks: [],
                            clearOtherDefaults: false)
         plan.excludedTrackIDs = Set(removable.map(\.id))
         plan.excludedAttachmentIDs = attachmentIDs
         plan.replaceSource = replaceOriginal
         let (url, report) = try await MKVMuxer(tools: tools).mux(plan) { value in
-            progress(WorkflowStep(fraction: value, message: value < 0.9 ? "Gravando o MKV…" : "Verificando integridade…"))
+            progress(WorkflowStep(fraction: value, message: value < 0.9 ? String(localized: "Gravando o MKV…") : String(localized: "Verificando integridade…")))
         }
         if replaceOriginal, let output = report.outputInfo {
             Self.remapTrackIDs(&project, from: info, removed: plan.excludedTrackIDs, to: output)

@@ -134,11 +134,11 @@ extension WorkspaceModel {
             try document.write(to: destination)
             project.draftPending = false
             try? store.save(project)
-            notice = (.success, "Legenda salva em \(destination.path).")
-            noticeAction = ("Mostrar no Finder", { NSWorkspace.shared.activateFileViewerSelecting([destination]) })
+            notice = (.success, String(localized: "Legenda salva em \(destination.path)."))
+            noticeAction = (String(localized: "Mostrar no Finder"), { NSWorkspace.shared.activateFileViewerSelecting([destination]) })
             return true
         } catch {
-            app.report(error, context: "A legenda não foi salva")
+            app.report(error, context: String(localized: "A legenda não foi salva"))
             return false
         }
     }

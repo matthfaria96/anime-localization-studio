@@ -6,12 +6,12 @@ public struct GlossaryEntry: Sendable, Hashable, Codable, Identifiable {
 
         public var label: String {
             switch self {
-            case .character: "Personagem"
-            case .technique: "Técnica"
-            case .place: "Lugar"
-            case .organization: "Organização"
-            case .honorific: "Tratamento"
-            case .term: "Termo"
+            case .character: String(localized: "Personagem")
+            case .technique: String(localized: "Técnica")
+            case .place: String(localized: "Lugar")
+            case .organization: String(localized: "Organização")
+            case .honorific: String(localized: "Tratamento")
+            case .term: String(localized: "Termo")
             }
         }
     }

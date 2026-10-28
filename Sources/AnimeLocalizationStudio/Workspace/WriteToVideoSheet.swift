@@ -15,7 +15,7 @@ struct WriteToVideoSheet: View {
         guard workspace.isEditingOriginal, !isNewSubtitle else { return nil }
         return workspace.subtitleTracks.first { $0.id == workspace.project.sourceTrackID }
     }
-    private var suffix: String { isTranslation ? app.settings.targetLanguage.uppercased() : "editado" }
+    private var suffix: String { isTranslation ? app.settings.targetLanguage.uppercased() : String(localized: "editado") }
 
     var body: some View {
         @Bindable var app = app
@@ -47,15 +47,15 @@ struct WriteToVideoSheet: View {
                 }
                 .formStyle(.grouped)
             } else {
-                Text("A legenda corrigida entra no lugar de “\(replacedTrack?.name ?? replacedTrack?.codec ?? "faixa original")”, com o mesmo idioma, nome e flags. As outras faixas não mudam e o vídeo não é recodificado.")
+                Text("A legenda corrigida entra no lugar de “\(replacedTrack?.name ?? replacedTrack?.codec ?? String(localized: "faixa original"))”, com o mesmo idioma, nome e flags. As outras faixas não mudam e o vídeo não é recodificado.")
                     .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.m) {
                 Text("Onde gravar").font(.headline)
-                ChoiceRow(title: "Criar um novo arquivo", selected: !replace, action: { replace = false }) {
+                ChoiceRow(title: String(localized: "Criar um novo arquivo"), selected: !replace, action: { replace = false }) {
                     Text("“\(workspace.title) [\(suffix)].mkv”, na mesma pasta. O original não muda.").font(.caption).foregroundStyle(.secondary)
                 }
-                ChoiceRow(title: "Gravar neste arquivo", selected: replace, action: { replace = true }) {
+                ChoiceRow(title: String(localized: "Gravar neste arquivo"), selected: replace, action: { replace = true }) {
                     Text("O MKV é regravado (sem recodificar o vídeo), conferido, e só então substitui o original, que vai para a Lixeira.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }

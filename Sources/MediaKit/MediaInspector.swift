@@ -6,8 +6,8 @@ public enum MediaInspectionError: Error, LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .unreadable(let detail): "O arquivo não pôde ser analisado. Pode estar corrompido ou em um formato não suportado. \(detail)"
-        case .notFound: "O arquivo não existe mais nesse local."
+        case .unreadable(let detail): String(localized: "O arquivo não pôde ser analisado. Pode estar corrompido ou em um formato não suportado. \(detail)")
+        case .notFound: String(localized: "O arquivo não existe mais nesse local.")
         }
     }
 }
@@ -31,7 +31,7 @@ public struct MediaInspector: Sendable {
         }
         guard let ffprobe = tools.locate(.ffprobe) else {
             if tools.locate(.mkvmerge) == nil { throw ToolError.missing(.mkvmerge) }
-            throw MediaInspectionError.unreadable("O mkvmerge não reconheceu o arquivo e o ffprobe não está instalado.")
+            throw MediaInspectionError.unreadable(String(localized: "O mkvmerge não reconheceu o arquivo e o ffprobe não está instalado."))
         }
         let result = try await ProcessRunner.run(ffprobe, ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", "-show_chapters", url.path])
         guard result.exitCode == 0 else {
@@ -71,7 +71,7 @@ public struct MediaInspector: Sendable {
         let properties = json.container?.properties
         return MediaInfo(
             url: url,
-            container: json.container?.type ?? "Desconhecido",
+            container: json.container?.type ?? String(localized: "Desconhecido"),
             title: properties?.title,
             durationMilliseconds: properties?.duration.map { Int($0 / 1_000_000) },
             fileSize: size,
@@ -147,7 +147,7 @@ public struct MediaInspector: Sendable {
                 width: s.width, height: s.height, channels: s.channels, sampleRate: s.sample_rate.flatMap { Int($0) }))
         }
         let duration = json.format?.duration.flatMap(Double.init).map { Int($0 * 1_000) }
-        return MediaInfo(url: url, container: json.format?.format_long_name ?? json.format?.format_name ?? "Desconhecido",
+        return MediaInfo(url: url, container: json.format?.format_long_name ?? json.format?.format_name ?? String(localized: "Desconhecido"),
                          title: json.format?.tags?.title, durationMilliseconds: duration, fileSize: size,
                          tracks: tracks, attachments: attachments, chapterCount: json.chapters?.count ?? 0)
     }

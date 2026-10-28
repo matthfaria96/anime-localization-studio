@@ -15,7 +15,7 @@ public enum PGSDecoder {
 
     public enum PGSError: Error, LocalizedError {
         case notPGS
-        public var errorDescription: String? { "O arquivo não é uma legenda PGS válida." }
+        public var errorDescription: String? { String(localized: "O arquivo não é uma legenda PGS válida.") }
     }
 
     private struct Object { var width = 0, height = 0, data = Data() }

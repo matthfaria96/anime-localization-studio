@@ -8,7 +8,7 @@ import Translation
 /// Languages, or the app's “Preparar idiomas” button).
 public struct AppleTranslationEngine: TranslationEngine {
     public let id = "apple-translation"
-    public let displayName = "Tradução da Apple (no dispositivo)"
+    public let displayName = String(localized: "Tradução da Apple (no dispositivo)")
     public let keepsPlaceholders = false
     public let usesContext = false
     public let preferredBatchSize = 40
@@ -16,23 +16,23 @@ public struct AppleTranslationEngine: TranslationEngine {
     public init() {}
 
     public func availability(source: String?, target: String) async -> EngineAvailability {
-        guard let source else { return .needsSetup("Escolha o idioma de origem para usar a tradução da Apple.") }
+        guard let source else { return .needsSetup(String(localized: "Escolha o idioma de origem para usar a tradução da Apple.")) }
         let status = await LanguageAvailability().status(from: Locale.Language(identifier: source), to: Locale.Language(identifier: target))
         switch status {
         case .installed: return .available
-        case .supported: return .needsSetup("Os idiomas \(source) → \(target) precisam ser baixados (Ajustes do Sistema › Geral › Idioma e Região › Idiomas de Tradução).")
-        case .unsupported: return .unavailable("A tradução da Apple não oferece \(source) → \(target).")
-        @unknown default: return .unavailable("Estado de idioma desconhecido.")
+        case .supported: return .needsSetup(String(localized: "Os idiomas \(source) → \(target) precisam ser baixados (Ajustes do Sistema › Geral › Idioma e Região › Idiomas de Tradução)."))
+        case .unsupported: return .unavailable(String(localized: "A tradução da Apple não oferece \(source) → \(target)."))
+        @unknown default: return .unavailable(String(localized: "Estado de idioma desconhecido."))
         }
     }
 
     public func translate(_ lines: [TranslationLine], context: TranslationContext) async throws -> [Int: String] {
         guard let source = context.sourceLanguage else {
-            throw TranslationEngineError.permanent("A tradução da Apple precisa do idioma de origem.")
+            throw TranslationEngineError.permanent(String(localized: "A tradução da Apple precisa do idioma de origem."))
         }
         let status = await LanguageAvailability().status(from: Locale.Language(identifier: source), to: Locale.Language(identifier: context.targetLanguage))
         guard status == .installed else {
-            throw TranslationEngineError.permanent("Os idiomas \(source) → \(context.targetLanguage) não estão baixados neste Mac.")
+            throw TranslationEngineError.permanent(String(localized: "Os idiomas \(source) → \(context.targetLanguage) não estão baixados neste Mac."))
         }
         let session = TranslationSession(installedSource: Locale.Language(identifier: source),
                                          target: Locale.Language(identifier: context.targetLanguage))

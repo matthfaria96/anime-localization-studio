@@ -31,12 +31,12 @@ public struct ElevenLabsDubbing: Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .missingKey: "Falta a chave da ElevenLabs. Cole a sua em Dublar ou em Ajustes › Dublagem."
-            case .invalidKey: "A ElevenLabs recusou a chave. Confira se ela foi copiada inteira e se tem permissão de dublagem."
-            case .noCredits(let detail): "A conta da ElevenLabs não tem créditos suficientes para esta dublagem. \(detail)"
-            case .rejected(let detail): "A ElevenLabs recusou o pedido: \(detail)"
-            case .failed(let detail): "A dublagem falhou na ElevenLabs: \(detail)"
-            case .offline: "Não foi possível falar com a ElevenLabs. Confira a conexão com a internet."
+            case .missingKey: String(localized: "Falta a chave da ElevenLabs. Cole a sua em Dublar ou em Ajustes › Dublagem.")
+            case .invalidKey: String(localized: "A ElevenLabs recusou a chave. Confira se ela foi copiada inteira e se tem permissão de dublagem.")
+            case .noCredits(let detail): String(localized: "A conta da ElevenLabs não tem créditos suficientes para esta dublagem. \(detail)")
+            case .rejected(let detail): String(localized: "A ElevenLabs recusou o pedido: \(detail)")
+            case .failed(let detail): String(localized: "A dublagem falhou na ElevenLabs: \(detail)")
+            case .offline: String(localized: "Não foi possível falar com a ElevenLabs. Confira a conexão com a internet.")
             }
         }
     }
@@ -76,7 +76,7 @@ public struct ElevenLabsDubbing: Sendable {
 
     public func account() async throws -> Account {
         let data = try await send(request("GET", "/v1/user/subscription", timeout: 15))
-        guard let account = try? JSONDecoder().decode(Account.self, from: data) else { throw ServiceError.failed("resposta inesperada") }
+        guard let account = try? JSONDecoder().decode(Account.self, from: data) else { throw ServiceError.failed(String(localized: "resposta inesperada")) }
         return account
     }
 
@@ -100,13 +100,13 @@ public struct ElevenLabsDubbing: Sendable {
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
         let data = try await send(request)
-        guard let job = try? JSONDecoder().decode(Job.self, from: data) else { throw ServiceError.failed("resposta inesperada") }
+        guard let job = try? JSONDecoder().decode(Job.self, from: data) else { throw ServiceError.failed(String(localized: "resposta inesperada")) }
         return job
     }
 
     public func status(_ id: String) async throws -> Status {
         let data = try await send(request("GET", "/v1/dubbing/\(id)", timeout: 30))
-        guard let status = try? JSONDecoder().decode(Status.self, from: data) else { throw ServiceError.failed("resposta inesperada") }
+        guard let status = try? JSONDecoder().decode(Status.self, from: data) else { throw ServiceError.failed(String(localized: "resposta inesperada")) }
         return status
     }
 

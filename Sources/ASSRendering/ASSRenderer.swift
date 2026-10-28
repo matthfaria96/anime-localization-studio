@@ -41,8 +41,8 @@ public actor ASSRenderer {
 
         public var errorDescription: String? {
             switch self {
-            case .unavailable: "O renderizador libass não pôde ser iniciado."
-            case .unreadableScript: "O libass não conseguiu ler a legenda."
+            case .unavailable: String(localized: "O renderizador libass não pôde ser iniciado.")
+            case .unreadableScript: String(localized: "O libass não conseguiu ler a legenda.")
             }
         }
     }

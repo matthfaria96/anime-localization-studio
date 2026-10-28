@@ -19,8 +19,8 @@ public struct ClonedVoiceSynthesizer: SpeechSynthesizer {
     /// How closely the speech follows the reference's way of speaking (Chatterbox `cfg_weight`).
     var guidance: Float = 0.5
 
-    public static let downloadSize = "cerca de 2 GB"
-    public static let modelCredits = "Chatterbox Multilingual da Resemble AI (MIT), pelo speech-swift (Apache-2.0)"
+    public static let downloadSize = String(localized: "cerca de 2 GB")
+    public static let modelCredits = String(localized: "Chatterbox Multilingual da Resemble AI (MIT), pelo speech-swift (Apache-2.0)")
 
     public init(modelsDirectory: URL, language: String = "pt-BR") {
         self.modelsDirectory = modelsDirectory
@@ -48,7 +48,7 @@ public struct ClonedVoiceSynthesizer: SpeechSynthesizer {
         do {
             let samples = try await ChatterboxEngine.shared.speak(text, reference: URL(fileURLWithPath: voice), language: languageCode,
                                                                    expressiveness: expressiveness, guidance: guidance, modelsDirectory: modelsDirectory)
-            guard !samples.isEmpty else { throw SynthesisError.failed("a voz não gerou áudio") }
+            guard !samples.isEmpty else { throw SynthesisError.failed(String(localized: "a voz não gerou áudio")) }
             try Self.writeWAV(samples, sampleRate: 24_000, to: url)
         } catch let error as SynthesisError {
             throw error
@@ -66,13 +66,13 @@ public struct ClonedVoiceSynthesizer: SpeechSynthesizer {
     }
 
     private var unsupported: SynthesisError {
-        .engineUnavailable("A voz do Mac ainda não fala \(languageName). Para esse idioma, use a ElevenLabs.")
+        .engineUnavailable(String(localized: "A voz do Mac ainda não fala \(languageName). Para esse idioma, use a ElevenLabs."))
     }
 
     static func writeWAV(_ samples: [Float], sampleRate: Double, to url: URL) throws {
         guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1),
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)) else {
-            throw SynthesisError.failed("não foi possível preparar o áudio")
+            throw SynthesisError.failed(String(localized: "não foi possível preparar o áudio"))
         }
         buffer.frameLength = AVAudioFrameCount(samples.count)
         samples.withUnsafeBufferPointer { buffer.floatChannelData![0].update(from: $0.baseAddress!, count: samples.count) }
@@ -107,7 +107,7 @@ actor ChatterboxEngine {
     func speak(_ text: String, reference: URL, language: String, expressiveness: Float, guidance: Float,
                modelsDirectory: URL) async throws -> [Float] {
         try await load(modelsDirectory: modelsDirectory)
-        guard let model else { throw SynthesisError.engineUnavailable("O modelo de voz não carregou.") }
+        guard let model else { throw SynthesisError.engineUnavailable(String(localized: "O modelo de voz não carregou.")) }
         let ref = try referenceSamples(reference)
         try Task.checkCancellation()
         return try model.clone(referenceSamples: ref.samples, sampleRate: ref.rate, text: text, languageId: language,
@@ -118,7 +118,7 @@ actor ChatterboxEngine {
         if let cached = references[url] { touch(url); return cached }
         let file = try AVAudioFile(forReading: url)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
-            throw SynthesisError.failed("a referência de voz não pôde ser lida")
+            throw SynthesisError.failed(String(localized: "a referência de voz não pôde ser lida"))
         }
         try file.read(into: buffer)
         let samples = Array(UnsafeBufferPointer(start: buffer.floatChannelData![0], count: Int(buffer.frameLength)))

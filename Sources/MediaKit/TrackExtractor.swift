@@ -22,13 +22,13 @@ public struct TrackExtractor: Sendable {
             }
         } else {
             let ffmpeg = try tools.require(.ffmpeg)
-            guard let ordinal = info.ordinal(of: track) else { throw MediaInspectionError.unreadable("Faixa \(track.id) não encontrada.") }
+            guard let ordinal = info.ordinal(of: track) else { throw MediaInspectionError.unreadable(String(localized: "Faixa \(track.id) não encontrada.")) }
             let format = track.textSubtitleExtension == "srt" ? "srt" : "ass"
             try await ProcessRunner.runChecked(ffmpeg, ["-nostdin", "-v", "error", "-y", "-i", info.url.path,
                                                         "-map", "0:s:\(ordinal)", "-c", "copy", "-f", format, partial.path])
         }
         guard FileManager.default.fileExists(atPath: partial.path) else {
-            throw MediaInspectionError.unreadable("A extração não produziu um arquivo.")
+            throw MediaInspectionError.unreadable(String(localized: "A extração não produziu um arquivo."))
         }
         try FileOps.replaceItem(at: destination, with: partial)
         progress?(1)
@@ -47,7 +47,7 @@ public struct TrackExtractor: Sendable {
             if let value = MKVMuxer.parseGUIProgress(line) { progress?(value) }
         }
         guard FileManager.default.fileExists(atPath: partial.path) else {
-            throw MediaInspectionError.unreadable("A extração não produziu um arquivo.")
+            throw MediaInspectionError.unreadable(String(localized: "A extração não produziu um arquivo."))
         }
         try FileOps.replaceItem(at: destination, with: partial)
         progress?(1)
@@ -59,7 +59,7 @@ public struct TrackExtractor: Sendable {
                                 sampleRate: Int = 48_000, mono: Bool = false,
                                 progress: (@Sendable (Double) -> Void)? = nil) async throws -> URL {
         let ffmpeg = try tools.require(.ffmpeg)
-        guard let ordinal = info.ordinal(of: track) else { throw MediaInspectionError.unreadable("Faixa de áudio \(track.id) não encontrada.") }
+        guard let ordinal = info.ordinal(of: track) else { throw MediaInspectionError.unreadable(String(localized: "Faixa de áudio \(track.id) não encontrada.")) }
         var arguments = ["-nostdin", "-v", "error", "-y", "-progress", "pipe:1", "-nostats", "-i", info.url.path,
                          "-map", "0:a:\(ordinal)", "-vn", "-sn", "-c:a", "pcm_s16le", "-ar", "\(sampleRate)"]
         if mono { arguments += ["-ac", "1"] }

@@ -35,7 +35,7 @@ public struct OriginalVoices: Sendable {
         let speakers = Array(Set(lines.map(\.speaker))).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
         var samples: [Sample] = []
         for (n, speaker) in speakers.enumerated() {
-            progress?(0.6 + 0.4 * Double(n) / Double(max(1, speakers.count)), "Separando a voz de \(speaker)…")
+            progress?(0.6 + 0.4 * Double(n) / Double(max(1, speakers.count)), String(localized: "Separando a voz de \(speaker)…"))
             var chosen: [Line] = []
             var total = 0
             for line in lines.filter({ $0.speaker == speaker }).sorted(by: { ($0.end - $0.start) > ($1.end - $1.start) }) {
@@ -68,7 +68,7 @@ public struct OriginalVoices: Sendable {
         var clips: [Int: URL] = [:]
         for (n, line) in usable.enumerated() {
             try Task.checkCancellation()
-            progress?(0.6 + 0.4 * Double(n) / Double(max(1, usable.count)), "Separando a voz de cada fala (\(n + 1) de \(usable.count))…")
+            progress?(0.6 + 0.4 * Double(n) / Double(max(1, usable.count)), String(localized: "Separando a voz de cada fala (\(n + 1) de \(usable.count))…"))
             let clip = folder.appendingPathComponent("\(line.start)-\(line.end).wav")
             if !FileManager.default.fileExists(atPath: clip.path) {
                 try await ProcessRunner.runChecked(ffmpeg, ["-nostdin", "-v", "error", "-y", "-i", dialogue.path,
@@ -87,12 +87,12 @@ public struct OriginalVoices: Sendable {
         if FileManager.default.fileExists(atPath: dialogue.path) { return dialogue }
         let original = workDirectory.appendingPathComponent("original-\(audioTrack.id).wav")
         defer { try? FileManager.default.removeItem(at: original) }
-        progress?(0.05, "Extraindo o áudio original…")
+        progress?(0.05, String(localized: "Extraindo o áudio original…"))
         _ = try await TrackExtractor(tools: tools).extractAudioWAV(audioTrack, from: media, to: original)
         let background = workDirectory.appendingPathComponent("background-\(audioTrack.id).wav")
         let partial = workDirectory.appendingPathComponent(".dialogue-\(UUID().uuidString.prefix(6)).wav")
         try await VoiceSeparator(tools: tools).separate(original, voice: partial, background: background) { value in
-            progress?(0.1 + value * 0.5, "Isolando as vozes da música e dos efeitos…")
+            progress?(0.1 + value * 0.5, String(localized: "Isolando as vozes da música e dos efeitos…"))
         }
         try FileOps.replaceItem(at: dialogue, with: partial)
         return dialogue

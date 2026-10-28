@@ -66,8 +66,8 @@ public enum TranslationEngineError: Error, LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .transient(let m): "Falha temporária do motor de tradução: \(m)"
-        case .invalidResponse(let m): "Resposta inválida do motor de tradução: \(m)"
+        case .transient(let m): String(localized: "Falha temporária do motor de tradução: \(m)")
+        case .invalidResponse(let m): String(localized: "Resposta inválida do motor de tradução: \(m)")
         case .permanent(let m): m
         }
     }

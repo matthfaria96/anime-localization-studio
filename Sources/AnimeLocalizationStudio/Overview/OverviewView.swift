@@ -114,7 +114,7 @@ struct OverviewView: View {
             }
             if workspace.hasPendingDefaults {
                 HStack {
-                    InlineMessage(kind: .info, text: "Faixas padrão alteradas, ainda não gravadas no arquivo.")
+                    InlineMessage(kind: .info, text: String(localized: "Faixas padrão alteradas, ainda não gravadas no arquivo."))
                     Spacer()
                     Button("Descartar") { workspace.pendingDefaults = nil }
                         .hint("Descartar", "Volta às faixas padrão que o arquivo já tem.")
@@ -147,7 +147,7 @@ struct OverviewView: View {
         let fonts = info.attachments.filter(\.isFont).count
         let others = info.attachments.count - fonts
         let parts = [fonts > 0 ? Plural.count(fonts, "fonte", "fontes") : nil, others > 0 ? Plural.count(others, "outro anexo", "outros anexos") : nil]
-        return parts.compactMap { $0 }.joined(separator: " e ") + ". Mantidos em tudo o que o app grava."
+        return parts.compactMap { $0 }.joined(separator: " e ") + String(localized: ". Mantidos em tudo o que o app grava.")
     }
 
     private func setDefaultSubtitle(_ id: Int) {
@@ -196,7 +196,7 @@ struct OverviewView: View {
         let channels: String? = track.channels.map {
             switch $0 {
             case 1: "mono"
-            case 2: "estéreo"
+            case 2: String(localized: "estéreo")
             case 6: "5.1"
             case 8: "7.1"
             default: "\($0) canais"
@@ -207,8 +207,8 @@ struct OverviewView: View {
     }
 
     private func subtitleDetail(_ track: MediaTrack) -> String {
-        var parts = [track.codec, track.isBitmapSubtitle ? "imagem (OCR para editar)" : "texto"]
-        if track.isForced { parts.append("forçada") }
+        var parts = [track.codec, track.isBitmapSubtitle ? String(localized: "imagem (OCR para editar)") : String(localized: "texto")]
+        if track.isForced { parts.append(String(localized: "forçada")) }
         return parts.joined(separator: " · ")
     }
 }
@@ -233,7 +233,7 @@ private struct TrackLine<Trailing: View>: View {
             trailing
         }
         .padding(.vertical, Theme.Spacing.xxs)
-        .hintVerbatim(track.name ?? track.kind.label, "Faixa \(track.id) · \(track.kind.label) · \(track.codec) · idioma \(track.displayLanguage)")
+        .hintVerbatim(track.name ?? track.kind.label, String(localized: "Faixa \(track.id) · \(track.kind.label) · \(track.codec) · idioma \(track.displayLanguage)"))
     }
 }
 
@@ -245,16 +245,16 @@ private struct FileFacts: View {
         Panel {
             SectionLabel("Arquivo", systemImage: "doc")
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .topLeading)], alignment: .leading, spacing: Theme.Spacing.m) {
-                fact("Tamanho", ByteCountFormatter.string(fromByteCount: info.fileSize, countStyle: .file))
-                fact("Duração", info.durationMilliseconds.map { Duration.milliseconds($0).formatted(.time(pattern: .hourMinuteSecond)) } ?? "—")
-                fact("Contêiner", info.container)
+                fact(String(localized: "Tamanho"), ByteCountFormatter.string(fromByteCount: info.fileSize, countStyle: .file))
+                fact(String(localized: "Duração"), info.durationMilliseconds.map { Duration.milliseconds($0).formatted(.time(pattern: .hourMinuteSecond)) } ?? "—")
+                fact(String(localized: "Contêiner"), info.container)
                 if let video = info.tracks(.video).first {
-                    fact("Vídeo", [video.codec, video.width.map { "\($0)×\(video.height ?? 0)" }].compactMap { $0 }.joined(separator: " · "))
+                    fact(String(localized: "Vídeo"), [video.codec, video.width.map { "\($0)×\(video.height ?? 0)" }].compactMap { $0 }.joined(separator: " · "))
                 }
-                fact("Áudios", "\(info.tracks(.audio).count)")
-                fact("Legendas", "\(info.tracks(.subtitles).count)")
-                fact("Capítulos", "\(info.chapterCount)")
-                fact("Fontes anexadas", "\(info.attachments.filter(\.isFont).count)")
+                fact(String(localized: "Áudios"), "\(info.tracks(.audio).count)")
+                fact(String(localized: "Legendas"), "\(info.tracks(.subtitles).count)")
+                fact(String(localized: "Capítulos"), "\(info.chapterCount)")
+                fact(String(localized: "Fontes anexadas"), "\(info.attachments.filter(\.isFont).count)")
             }
         }
     }
