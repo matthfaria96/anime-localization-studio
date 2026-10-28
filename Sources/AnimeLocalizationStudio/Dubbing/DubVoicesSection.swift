@@ -29,13 +29,13 @@ struct DubVoicesSection: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Voz e emoção de cada fala")
                     Text(app.settings.dubbingPerLineVoice
-                         ? "Cada fala é recriada a partir do próprio trecho original: mesma voz e mesma emoção (grito, sussurro…). Falas com menos de 1,5 s usam a amostra do personagem."
+                         ? "Cada fala é recriada a partir do próprio trecho original (a emoção: grito, sussurro…) seguido da amostra do personagem (a voz). Falas com menos de 1,5 s usam só a amostra."
                          : "Uma amostra de ~12 s por personagem: voz estável, mas sem a emoção de cada fala.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
             .toggleStyle(.switch)
-            .hint("Voz e emoção de cada fala", "Ligado (recomendado): o trecho japonês de cada fala, sem a música, serve de referência para a mesma fala dublada. Desligado: uma amostra fixa por personagem.")
+            .hint("Voz e emoção de cada fala", "Ligado (recomendado): o trecho original de cada fala, sem a música, mais a amostra de ~12 s do personagem servem de referência para a mesma fala dublada. Desligado: só a amostra do personagem.")
             SectionLabel("Modo", systemImage: "slider.horizontal.3")
             HStack(spacing: Theme.Spacing.m) {
                 OptionCard(title: "Substituir falas", systemImage: "person.2.slash",

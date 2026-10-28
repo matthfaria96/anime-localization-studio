@@ -1,8 +1,9 @@
 import SubtitleKit
 import SwiftUI
 
-/// Editor for the selected line: timing, style, character, original and translation text.
-/// Text is edited raw (tags visible) so nothing is lost; the plain preview sits under it.
+/// Editor for the selected line: its text first (what is edited most), then timing, style,
+/// character and position on screen. Text is edited raw (tags visible) so nothing is lost;
+/// the plain preview sits under it.
 struct LineDetailView: View {
     @Bindable var workspace: WorkspaceModel
     @Environment(\.undoManager) private var undoManager
@@ -18,7 +19,6 @@ struct LineDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                         header(cue)
-                        timing(cue, index: index)
                         if editor.editsOriginal {
                             if let title = editor.referenceTitle {
                                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -38,6 +38,7 @@ struct LineDetailView: View {
                             textEditor("Original", text: Bindable(editor).originalDraft, side: .original, index: index, prominent: false)
                         }
                         warnings(cue)
+                        timing(cue, index: index)
                     }
                     .padding(Theme.Spacing.l)
                 }

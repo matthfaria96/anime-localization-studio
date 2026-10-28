@@ -130,13 +130,15 @@ extension WorkspaceModel {
     /// Finds who speaks each line of the dub text from the audio, kept in the project only.
     func identifyDubSpeakers(allowModelDownload: Bool = false) {
         guard !isBusy, let text = dubText, claim("Identificação de falantes") else { return }
+        let audioTrackID = dubAudioTrack?.id
         notice = nil
         operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando a identificação de falantes…")
         let workflow = workflow()
         let project = project
         task = Task {
             do {
-                let speakers = try await workflow.identifySpeakers(in: text.document, of: project, allowModelDownload: allowModelDownload) { step in
+                let speakers = try await workflow.identifySpeakers(in: text.document, of: project, audioTrackID: audioTrackID,
+                                                                   allowModelDownload: allowModelDownload) { step in
                     Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
                 }
                 self.project.autoSpeakers = (self.project.autoSpeakers ?? [:]).merging([text.key: speakers]) { _, new in new }
@@ -344,7 +346,8 @@ extension WorkspaceModel {
                 // Who speaks, found from the audio when the subtitle does not say: kept in the
                 // project, never written into the subtitle.
                 if workflow.spokenSegments(text, project: project).allSatisfy({ $0.speaker == "Desconhecido" }) {
-                    let speakers = try await workflow.identifySpeakers(in: text.document, of: project, allowModelDownload: allowDiarizationDownload) { step in
+                    let speakers = try await workflow.identifySpeakers(in: text.document, of: project, audioTrackID: audioTrackID,
+                                                                       allowModelDownload: allowDiarizationDownload) { step in
                         Task { @MainActor in self.operation?.fraction = step.fraction * 0.2; self.operation?.message = step.message }
                     }
                     project.autoSpeakers = (project.autoSpeakers ?? [:]).merging([text.key: speakers]) { _, new in new }

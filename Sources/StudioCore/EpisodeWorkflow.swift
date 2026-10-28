@@ -271,14 +271,15 @@ public struct EpisodeWorkflow: Sendable {
         return project
     }
 
-    /// Speaker of each spoken line of an existing subtitle, from the episode's default audio
-    /// track. Comments, signs, drawings and karaoke are left alone.
-    public func identifySpeakers(in document: SubtitleDocument, of project: StudioProject, allowModelDownload: Bool,
+    /// Speaker of each spoken line of an existing subtitle, from `audioTrackID` (the dub's base
+    /// audio; the default track when nil). Comments, signs, drawings and karaoke are left alone.
+    public func identifySpeakers(in document: SubtitleDocument, of project: StudioProject, audioTrackID: Int? = nil, allowModelDownload: Bool,
                                  progress: @escaping @Sendable (WorkflowStep) -> Void) async throws -> [Int: String] {
         let diarizer = SpeakerDiarization(modelsDirectory: paths.diarizationModels)
         guard diarizer.modelsInstalled || allowModelDownload else { throw SpeakerDiarization.DiarizationError.modelsNotInstalled }
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
-        guard let audio = info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first else { throw WorkflowError.noAudio }
+        guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault)
+                ?? info.tracks(.audio).first else { throw WorkflowError.noAudio }
         let directory = store.directory(for: project.id)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let wav = directory.appendingPathComponent(".diarization-\(UUID().uuidString.prefix(6)).wav")
@@ -356,12 +357,12 @@ public struct EpisodeWorkflow: Sendable {
             return member.voiceID == nil || member.engine != engine
         }
         guard !needing.isEmpty else { return cast }
-        let assigned = Dictionary(needing.map { ($0.speaker, $0.url.path) }, uniquingKeysWith: { a, _ in a })
-        for i in cast.members.indices {
-            if let voice = assigned[cast.members[i].name] {
-                cast.members[i].voiceID = voice
-                cast.members[i].engine = engine
-            }
+        // By `member(for:)`, so a character renamed in Dublar (old name kept as an alias) is found.
+        for sample in needing {
+            guard let i = cast.members.firstIndex(where: { $0.id == cast.member(for: sample.speaker)?.id }),
+                  cast.members[i].voiceID == nil || cast.members[i].engine != engine else { continue }
+            cast.members[i].voiceID = sample.url.path
+            cast.members[i].engine = engine
         }
         return cast
     }

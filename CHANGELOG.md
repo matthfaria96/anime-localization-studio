@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.22.0 — 27/10/2026
+
+### Corrigido
+- **Voz dublada pouco parecida com o personagem.** Com "Voz e emoção de cada fala" (ligado por padrão), cada fala era clonada só do trecho original daquela fala, muitas vezes 2 s, e o Chatterbox tira o timbre de até 10 s de referência. Medido com um modelo de reconhecimento de voz independente (WeSpeaker) sobre gravações reais de 4 pessoas (CMU ARCTIC, inglês → português): a semelhança com a voz real era 0,41 com o trecho curto contra 0,74 com a amostra de ~12 s do personagem. Agora a referência é o trecho da fala (emoção) seguido da amostra do personagem (voz): 0,72. Para comparar, duas gravações reais diferentes da mesma pessoa dão 0,91: o clone se parece com a pessoa, mas não é idêntico a ela. Teste de medição: `ALS_VOICE_EVAL=<pasta> swift test --filter VoiceCloneEvaluation`.
+- "Identificar falantes no áudio" e a identificação automática da dublagem ouviam sempre o áudio padrão do arquivo, mesmo com outro áudio de base escolhido em Dublar (por exemplo quando o padrão é uma dublagem anterior).
+- Um personagem renomeado em Dublar a partir de uma legenda do vídeo ficava sem voz na dublagem seguinte: a escolha automática das vozes procurava só pelo nome, não pelo nome antigo guardado.
+
+### Mudou
+- Painel da fala em Legendar: o **texto** vem primeiro (era preciso rolar para chegar nele); tempo, estilo, personagem e posição na tela vêm depois.
+- Dublar abre na **Voz original no Mac** enquanto não houver chave da ElevenLabs salva e você não tiver escolhido um motor, em vez de uma tela que não consegue dublar.
+- Visão geral: o "Tornar padrão" de "Nenhuma legenda ligada ao abrir" alinhado com os de cima.
+
+### Testes
+- De ponta a ponta com as ferramentas reais: legenda criada **só a partir do áudio** (transcrição → faixa nova no idioma falado, conferida) e legenda **traduzida a partir de outra** (tags de posição e itálico e personagens mantidos → faixa nova pt-BR ao lado da original → exportada como arquivo).
+
 ## 0.21.0 — 27/10/2026
 
 Revisão do app inteiro: fluxo, textos e código sem uso.

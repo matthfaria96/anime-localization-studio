@@ -100,12 +100,14 @@ struct OverviewView: View {
                     }
                 }
                 if !info.tracks(.subtitles).isEmpty {
-                    HStack {
+                    HStack(spacing: Theme.Spacing.s) {
                         Image(systemName: "captions.bubble").foregroundStyle(.tertiary).frame(width: 20)
                         Text("Nenhuma legenda ligada ao abrir").foregroundStyle(.secondary)
                         Spacer()
                         defaultButton(isDefault: workspace.effectiveDefaults.subtitleTrackID == -1) { setDefaultSubtitle(-1) }
+                        // Room of the Extrair… and trash buttons of the rows above, so the column lines up.
                         Color.clear.frame(width: 96, height: 1)
+                        Image(systemName: "trash").hidden()
                     }
                     .padding(.vertical, Theme.Spacing.xxs)
                 }

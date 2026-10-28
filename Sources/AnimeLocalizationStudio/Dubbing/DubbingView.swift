@@ -12,6 +12,9 @@ struct DubbingView: View {
     @State private var recordToDelete: DubRecord?
     @State private var confirmRestart = false
     @AppStorage("dubVoicesExpanded") private var voicesExpanded = false
+    /// Set once the person picks an engine; until then, without an ElevenLabs key, the page opens
+    /// on the Mac's voice instead of a page that cannot dub.
+    @AppStorage("dubEngineChosen") private var engineChosen = false
 
     private var segments: [DubSegment] { workspace.dubSegments }
     private var online: Bool { app.settings.dubbingEngine == .elevenLabs }
@@ -50,6 +53,7 @@ struct DubbingView: View {
         }
         .paneBackground()
         .task {
+            if !engineChosen && online && app.elevenLabsKey == nil { app.settings.dubbingEngine = .original }
             workspace.refreshDubStorage()
             await workspace.loadDubText()
             rebuildCast()
@@ -87,11 +91,11 @@ struct DubbingView: View {
         return HStack(alignment: .top, spacing: Theme.Spacing.m) {
             OptionCard(title: "ElevenLabs", systemImage: "cloud",
                        detail: "Recomendado. Ouve o áudio, separa cada personagem, traduz e dubla com a voz de cada um, mantendo a emoção. Online, pago por minuto.",
-                       selected: online) { app.settings.dubbingEngine = .elevenLabs }
+                       selected: online) { app.settings.dubbingEngine = .elevenLabs; engineChosen = true }
                 .hint("ElevenLabs", "Serviço online de dublagem automática: só o áudio do vídeo é enviado (nunca o vídeo). Não precisa de legenda. Usa a sua conta e os seus créditos da ElevenLabs.")
             OptionCard(title: "Voz original no Mac", systemImage: "desktopcomputer",
                        detail: "Gratuita e offline. Lê uma legenda (do vídeo ou traduzida no app) com um clone da voz de cada personagem.",
-                       selected: !online) { app.settings.dubbingEngine = .original }
+                       selected: !online) { app.settings.dubbingEngine = .original; engineChosen = true }
                 .hint("Voz original no Mac", "Tudo no próprio Mac (Chatterbox Multilingual da Resemble AI, MIT), pela GPU do Apple silicon. Fala 23 idiomas, inclusive português e japonês. Precisa de uma legenda traduzida.")
         }
     }

@@ -103,7 +103,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 
 ## Testes atuais
 
-`swift test`: cerca de 105 testes em 6 alvos, todos passando em 27/10/2026 (os de diarização rodam quando os modelos estão em cache ou com `ALS_DIARIZATION=1`).
+`swift test`: cerca de 117 testes em 6 alvos, todos passando em 27/10/2026 (a medição de semelhança da voz clonada roda só com `ALS_VOICE_EVAL`) (os de diarização rodam quando os modelos estão em cache ou com `ALS_DIARIZATION=1`).
 
 | Alvo | O que cobre |
 |---|---|

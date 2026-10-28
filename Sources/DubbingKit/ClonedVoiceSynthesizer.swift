@@ -16,6 +16,8 @@ public struct ClonedVoiceSynthesizer: SpeechSynthesizer {
     public let languageName: String
     /// How expressive the delivery is (0.25 calm … 1 very emphatic); 0.5 is the model's default.
     public var expressiveness: Float = 0.6
+    /// How closely the speech follows the reference's way of speaking (Chatterbox `cfg_weight`).
+    var guidance: Float = 0.5
 
     public static let downloadSize = "cerca de 2 GB"
     public static let modelCredits = "Chatterbox Multilingual da Resemble AI (MIT), pelo speech-swift (Apache-2.0)"
@@ -45,7 +47,7 @@ public struct ClonedVoiceSynthesizer: SpeechSynthesizer {
         guard let languageCode else { throw unsupported }
         do {
             let samples = try await ChatterboxEngine.shared.speak(text, reference: URL(fileURLWithPath: voice), language: languageCode,
-                                                                   expressiveness: expressiveness, modelsDirectory: modelsDirectory)
+                                                                   expressiveness: expressiveness, guidance: guidance, modelsDirectory: modelsDirectory)
             guard !samples.isEmpty else { throw SynthesisError.failed("a voz não gerou áudio") }
             try Self.writeWAV(samples, sampleRate: 24_000, to: url)
         } catch let error as SynthesisError {
@@ -102,13 +104,14 @@ actor ChatterboxEngine {
         recent = []
     }
 
-    func speak(_ text: String, reference: URL, language: String, expressiveness: Float, modelsDirectory: URL) async throws -> [Float] {
+    func speak(_ text: String, reference: URL, language: String, expressiveness: Float, guidance: Float,
+               modelsDirectory: URL) async throws -> [Float] {
         try await load(modelsDirectory: modelsDirectory)
         guard let model else { throw SynthesisError.engineUnavailable("O modelo de voz não carregou.") }
         let ref = try referenceSamples(reference)
         try Task.checkCancellation()
         return try model.clone(referenceSamples: ref.samples, sampleRate: ref.rate, text: text, languageId: language,
-                               exaggeration: expressiveness)
+                               exaggeration: expressiveness, cfgWeight: guidance)
     }
 
     private func referenceSamples(_ url: URL) throws -> (samples: [Float], rate: Int) {

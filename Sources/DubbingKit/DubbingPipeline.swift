@@ -24,8 +24,9 @@ public struct DubbingOptions: Sendable, Hashable, Codable {
     /// Voice used for speakers without a cast member (and for unknown speakers).
     public var defaultVoice: String?
     public var mode: DubbingMode
-    /// A voice for single lines (by segment id), used before the character's voice: the
-    /// original audio of that line, so the clone keeps its emotion.
+    /// A voice for single lines (by segment id): the original audio of that line, so the clone
+    /// keeps its emotion. With a character voice too, the reference is this clip followed by
+    /// the character's sample (see `reference(line:character:in:)`).
     public var lineVoices: [Int: String] = [:]
 
     public init(maxSpeedup: Double = 1.3, defaultVoice: String? = nil, mode: DubbingMode = .voiceOver, lineVoices: [Int: String] = [:]) {
@@ -87,7 +88,8 @@ public struct DubbingPipeline: Sendable {
             try Task.checkCancellation()
             progress?(Double(n) / Double(max(1, segments.count)) * 0.8, "Gerando voz \(n + 1) de \(segments.count)…")
             let member = cast.member(for: segment.speaker)
-            guard let voice = options.lineVoices[segment.id] ?? member?.voiceID ?? options.defaultVoice else {
+            guard let voice = try await reference(line: options.lineVoices[segment.id], character: member?.voiceID ?? options.defaultVoice,
+                                                  in: workDirectory) else {
                 report.failed[segment.id] = "\(segment.speaker) não tem voz no elenco"
                 continue
             }
@@ -154,6 +156,26 @@ public struct DubbingPipeline: Sendable {
         }
         try FileOps.replaceItem(at: background, with: partial)
         return background
+    }
+
+    /// What a line is cloned from. A single line's clip is short (often 2 s), and the clone
+    /// gets the timbre from up to 10 s of reference: measured with a speaker-recognition model
+    /// (VoiceCloneEvaluation), the line alone sounded about half as much like the person as
+    /// their 12 s sample (0.41 against 0.74). So the line's clip comes first, for its emotion,
+    /// and the character's sample after it, for the voice (0.72). Joined once per pair.
+    func reference(line: String?, character: String?, in directory: URL) async throws -> String? {
+        guard let line, let character, line != character, FileManager.default.fileExists(atPath: character) else { return line ?? character }
+        let folder = directory.appendingPathComponent("refs", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let name = SHA256.hash(data: Data("\(line)\u{1F}\(character)".utf8)).prefix(10).map { String(format: "%02x", $0) }.joined()
+        let joined = folder.appendingPathComponent("\(name).wav")
+        if FileManager.default.fileExists(atPath: joined.path) { return joined.path }
+        let partial = folder.appendingPathComponent(".\(name).\(UUID().uuidString.prefix(6)).wav")
+        try await ProcessRunner.runChecked(try tools.require(.ffmpeg), ["-nostdin", "-v", "error", "-y", "-i", line, "-i", character,
+                                                                        "-filter_complex", "[0:a]aresample=24000[a];[1:a]aresample=24000[b];[a][b]concat=n=2:v=0:a=1[out]",
+                                                                        "-map", "[out]", "-ac", "1", "-c:a", "pcm_s16le", partial.path])
+        try FileOps.replaceItem(at: joined, with: partial)
+        return joined.path
     }
 
     /// The empty style and the speed of 1 keep the keys of clips made by earlier versions.
