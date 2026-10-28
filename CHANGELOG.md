@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.25.0 — 28/10/2026
+
+Legendar reorganizado (pedido do usuário): uma legenda editada por vez e uma barra só.
+
+### Mudou
+- Barra de Legendar: **Editando ▾** e **Ao lado ▾** à esquerda (Ao lado aparece sempre e fica desativado quando o vídeo não tem outra legenda), **Traduzir** no meio, **Novo ▾** e **Salvar ▾** à direita. Saíram o selo "Rascunho", o ícone de exportar, o menu Traduzir antigo e o painel lateral da tradução.
+- **Traduzir** abre uma janela: *Traduzir de* Legenda do vídeo (qual) ou Áudio do vídeo (idioma falado, faixa, separar as vozes para a dublagem), cada um desativado quando o vídeo não tem aquilo; *Idioma de saída*; motor e glossário. Do áudio no mesmo idioma falado, só escreve o que é dito. "Criar a partir do áudio" virou essa opção.
+- A tradução passa a ser a legenda editada (Editando: "Tradução · Português"), com a original em Ao lado, só para consulta; não se editam duas legendas ao mesmo tempo.
+- **Novo ▾**: *Legenda…* (janela com nome e idioma, sempre em branco) e *Importar arquivo…*.
+- **Salvar ▾**: *Gravar no vídeo…* (janela com nome e flags da faixa nova, ou o aviso de que a corrigida substitui a antiga, e onde gravar) e *Exportar arquivo…*.
+- Sem rascunho na tela: as edições continuam guardadas em silêncio contra travamento, mas trocar de tela ou de legenda, abrir outro vídeo ou sair do app (⌘Q) com alterações não salvas pergunta **Gravar no vídeo / Exportar / Descartar / Continuar editando**. Descartar volta tudo ao que está no vídeo. Ao reabrir um vídeo com alterações guardadas, um aviso diz isso.
+- O painel da fala pode ser alargado arrastando a borda (a largura mínima continua a mesma); as colunas **Texto** e **Ao lado** têm sempre a mesma largura e encolhem por igual.
+- Player: saíram os botões −15/+15 s e as teclas ← →; **Espaço** toca ou pausa também com o foco num texto que não está sendo editado.
+
+### Removido
+- "Trazer uma tradução pronta" (alinhar uma tradução existente pelo tempo) e o modo de mostrar original e tradução juntos no vídeo.
+
 ## 0.24.0 — 28/10/2026
 
 ### Corrigido

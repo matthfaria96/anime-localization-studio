@@ -5,7 +5,7 @@ import StudioCore
 import SubtitleKit
 import UniformTypeIdentifiers
 
-/// The overview's track actions and the “edit an existing subtitle” task.
+/// What Legendar edits and how it is saved, and the overview's track actions.
 extension WorkspaceModel {
     // MARK: What the person is doing in Legendar
 
@@ -16,15 +16,17 @@ extension WorkspaceModel {
         overlayMode = task == .edit ? .original : .translation
         editor.editsOriginal = task == .edit
         notice = nil
+        Task { await loadReference() }
     }
 
     var isEditingOriginal: Bool { project.subtitleTask == .edit }
 
     // MARK: Starting Legendar
 
-    /// Applies the start form: what is edited, beside what, in which language, then loads it
-    /// all again (and translates when asked).
-    func startSubtitleWork(task: SubtitleTask, trackID: Int?, referenceID: Int?, language: String, autoTranslate: Bool) {
+    /// What is edited (a subtitle, or a translation of it into `language`) and what is beside
+    /// it; then loads it all again, and translates when asked.
+    func startSubtitleWork(task: SubtitleTask, trackID: Int?, referenceID: Int?, language: String, autoTranslate: Bool,
+                           retranslateAll: Bool = false) {
         editor.flush()
         if task == .translate { app.settings.targetLanguage = language }
         if let trackID, trackID != project.sourceTrackID || project.externalSubtitlePath != nil {
@@ -41,25 +43,25 @@ extension WorkspaceModel {
         chooseSubtitleTask(task)
         Task {
             await reload()
-            if task == .translate && autoTranslate { translateEpisode(undoManager: nil) }
+            if task == .translate && autoTranslate { translateEpisode(undoManager: nil, retranslateAll: retranslateAll) }
         }
     }
 
-    /// A subtitle written from scratch, alone on the screen.
-    func startBlankSubtitle(language: String) {
+    /// A subtitle written from scratch, alone on the screen, named `name` in the video.
+    func startBlankSubtitle(language: String, name: String) {
         guard !isBusy else { return }
         editor.flush()
         let workflow = workflow()
         let project = project
         Task {
             do {
-                var updated = try await workflow.startBlankSubtitle(project, language: language)
+                var updated = try await workflow.startBlankSubtitle(project, language: language, name: name)
                 updated.subtitleTask = .edit
                 self.project = updated
                 try store.save(updated)
                 chooseSubtitleTask(.edit)
                 await reload()
-                notice = (.info, "Legenda em branco criada. Use + para inserir falas e “Gravar no vídeo…” para gravá-la como faixa nova.")
+                notice = (.info, "Legenda em branco criada. Use + para inserir falas e Salvar › Gravar no vídeo… para gravá-la como faixa nova.")
             } catch {
                 app.report(error, context: "A legenda em branco não foi criada")
             }
@@ -93,9 +95,24 @@ extension WorkspaceModel {
         try? store.save(project)
     }
 
+    func setNewTrackName(_ name: String) {
+        project.newTrackName = name.isEmpty ? nil : name
+        try? store.save(project)
+    }
+
     // MARK: Reference beside the edited subtitle
 
     func loadReference() async {
+        // Translating: beside each line is the subtitle the translation comes from.
+        if project.subtitleTask == .translate {
+            referenceLines = [:]
+            editor.reference = [:]
+            let base = subtitleTracks.first { $0.id == project.sourceTrackID }
+            editor.referenceTitle = project.externalSubtitlePath != nil
+                ? (project.newTrackName ?? project.newTrackLanguage.map(Languages.name(for:)) ?? "Legenda aberta")
+                : base.map { "\($0.name ?? $0.codec) · \(Languages.display($0.displayLanguage))" } ?? "Original"
+            return
+        }
         guard project.subtitleTask == .edit, let id = project.referenceTrackID, id != project.sourceTrackID,
               let track = subtitleTracks.first(where: { $0.id == id }) else {
             if project.referenceTrackID != nil && project.referenceTrackID == project.sourceTrackID { project.referenceTrackID = nil }
@@ -107,25 +124,25 @@ extension WorkspaceModel {
         do {
             referenceLines = try await workflow().referenceLines(project, track: track)
             editor.reference = referenceLines
-            editor.referenceTitle = "\(Languages.display(track.displayLanguage)) · \(track.name ?? track.codec)"
+            editor.referenceTitle = "\(track.name ?? track.codec) · \(Languages.display(track.displayLanguage))"
         } catch {
             referenceLines = [:]
             notice = (.warning, "A referência não pôde ser carregada: \(LogRedactor.redact(error.localizedDescription))")
         }
     }
 
-    /// Changes what is edited (or the base) and what is beside it, from the Legendar bar.
-    /// Only the reference changing never loses anything; another main subtitle replaces the
-    /// draft, so it asks first when there is one.
+    /// Changes what is edited and what is beside it, from the Legendar bar. Changing only the
+    /// subtitle beside never loses anything; another edited subtitle replaces the current one,
+    /// so with unsaved changes it asks first (save, discard or keep editing).
     func requestTracks(main: Int, reference: Int?) {
         let reference = reference == main ? nil : reference
-        // -2 is the subtitle file from the disk, already the one being edited.
-        if main == -2 || (main == project.sourceTrackID && project.externalSubtitlePath == nil) {
-            setReference(reference)
+        // -2 is the subtitle open now (new or imported); -3 the translation being edited.
+        let isCurrent = main == -3 || main == -2 || (isEditingOriginal && main == project.sourceTrackID && project.externalSubtitlePath == nil)
+        if isCurrent {
+            if isEditingOriginal { setReference(reference) }
             return
         }
-        let target = LeaveTarget.tracks(main: main, reference: reference)
-        if hasUnsavedSubtitleChanges(on: .subtitles) || project.draftPending == true { pendingLeave = target } else { perform(target) }
+        requestNewSubtitle(.tracks(main: main, reference: reference))
     }
 
     /// ⇄: the subtitle beside becomes the one edited, and the other way around.
@@ -134,42 +151,23 @@ extension WorkspaceModel {
         requestTracks(main: reference, reference: main)
     }
 
-    /// Another output language for the new subtitle: each language has its own draft.
-    func changeOutputLanguage(_ language: String) {
-        guard language != app.settings.targetLanguage else { return }
-        editor.flush()
-        app.settings.targetLanguage = language
-        Task { await reload() }
-    }
-
     func setReference(_ id: Int?) {
         project.referenceTrackID = id
         try? store.save(project)
         Task { await loadReference() }
     }
 
-    /// What “Gravar no vídeo…” does for the current task.
+    /// Salvar › Gravar no vídeo…: the window with the track name and where to write.
     func requestWriteToVideo() {
-        if isEditingOriginal { requestSaveEdited() } else { requestEmbed() }
+        guard !isBusy, editor.hasDocument, isEditingOriginal || editor.translation != nil else { return }
+        editor.flush()
+        showWriteSheet = true
     }
 
-    /// Throws the draft away and goes back to what the video has.
-    func discardDraft() {
-        editor.flush()
-        do {
-            if isEditingOriginal, let url = store.sourceSubtitleURL(for: project) {
-                try? FileManager.default.removeItem(at: url)
-            } else if let url = store.translationURL(for: project, language: app.settings.targetLanguage), FileManager.default.fileExists(atPath: url.path) {
-                try store.backupTranslation(of: project, language: app.settings.targetLanguage)
-                try FileManager.default.removeItem(at: url)
-            }
-            project.draftPending = false
-            try store.save(project)
-            notice = (.info, "Rascunho descartado. A legenda voltou a ser a do vídeo.")
-            Task { await reload() }
-        } catch {
-            app.report(error, context: "O rascunho não foi descartado")
-        }
+    /// Writes what is edited into the video: a corrected track in place of the old one, or a
+    /// new subtitle (translation, blank, imported or from the audio) as a new track.
+    func writeToVideo(replaceOriginal: Bool) {
+        if isEditingOriginal { saveEditedSubtitle(replaceOriginal: replaceOriginal) } else { embedTranslation(replaceOriginal: replaceOriginal) }
     }
 
     // MARK: Extracting a track
@@ -209,12 +207,6 @@ extension WorkspaceModel {
 
     // MARK: Saving an edited subtitle
 
-    func requestSaveEdited() {
-        guard !isBusy, editor.source != nil else { return }
-        editor.flush()
-        askSaveEditedDestination = true
-    }
-
     /// Puts the corrected subtitle in the MKV in place of the track it came from.
     func saveEditedSubtitle(replaceOriginal: Bool) {
         guard !isBusy, editor.source != nil, claim("Salvar a legenda editada") else { return }
@@ -231,8 +223,6 @@ extension WorkspaceModel {
                 self.project = updated
                 self.project.draftPending = false
                 try? store.save(self.project)
-                beginSubtitleSession()
-                lastMux = (output, report)
                 release()
                 operation = nil
                 if replaceOriginal {
@@ -250,23 +240,6 @@ extension WorkspaceModel {
             }
             release()
             operation = nil
-        }
-    }
-
-    func exportSource() {
-        guard let source = editor.source, let format = project.sourceFormat else { return }
-        editor.flush()
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [UTType(filenameExtension: format.fileExtension) ?? .plainText]
-        panel.nameFieldStringValue = "\(project.title).\(format.fileExtension)"
-        panel.directoryURL = url.deletingLastPathComponent()
-        guard panel.runModal() == .OK, let destination = panel.url else { return }
-        do {
-            try source.write(to: destination)
-            notice = (.success, "Legenda salva em \(destination.path).")
-            noticeAction = ("Mostrar no Finder", { NSWorkspace.shared.activateFileViewerSelecting([destination]) })
-        } catch {
-            app.report(error, context: "A legenda não foi salva")
         }
     }
 }

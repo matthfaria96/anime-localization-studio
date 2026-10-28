@@ -49,20 +49,26 @@ struct AnimeLocalizationStudioApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("Abrir vídeo…") { app.presentOpenPanel() }.keyboardShortcut("o")
                 Button("Fechar vídeo") { app.closeVideo() }.disabled(app.workspace == nil)
+                Divider()
+                Button("Nova legenda…") { app.workspace?.showNewSubtitleSheet = true }
+                    .keyboardShortcut("n", modifiers: [.command, .shift])
+                    .disabled(!inSubtitles)
                 Button("Importar arquivo de legenda…") { app.workspace?.requestNewSubtitle(.importFile) }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
-                    .disabled(app.workspace == nil || app.screen != .subtitles)
+                    .disabled(!inSubtitles)
             }
             CommandGroup(after: .saveItem) {
-                Button("Salvar legenda como arquivo…") {
-                    if app.workspace?.isEditingOriginal == true { app.workspace?.exportSource() } else { app.workspace?.exportTranslation() }
-                }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
-                .disabled(app.workspace?.project.subtitleTask == nil || app.screen != .subtitles)
+                Button("Gravar legenda no vídeo…") { app.workspace?.requestWriteToVideo() }
+                    .keyboardShortcut("s", modifiers: .command)
+                    .disabled(!inSubtitles)
+                Button("Exportar legenda…") { app.workspace?.exportCurrent() }
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                    .disabled(!inSubtitles)
             }
             CommandMenu("Episódio") {
-                Button("Gravar legenda no vídeo…") { app.workspace?.requestWriteToVideo() }
-                    .disabled(app.workspace?.project.subtitleTask == nil || app.screen != .subtitles)
+                Button("Traduzir…") { app.workspace?.translateSheet = TranslateSheetStart() }
+                    .keyboardShortcut("t", modifiers: [.command, .shift])
+                    .disabled(!inSubtitles || app.workspace?.isBusy == true)
                 Button("Cancelar operação") { app.workspace?.cancelOperation() }
                     .keyboardShortcut(".", modifiers: .command)
                     .disabled(app.workspace?.isBusy != true)
@@ -77,6 +83,8 @@ struct AnimeLocalizationStudioApp: App {
             SettingsView().environment(app)
         }
     }
+
+    private var inSubtitles: Bool { app.workspace != nil && app.screen == .subtitles }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -84,6 +92,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func application(_ application: NSApplication, open urls: [URL]) {
         _ = app?.openDropped(urls)
+    }
+
+    /// ⌘Q with unsaved subtitle changes asks first (save, discard or keep editing).
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let app, !app.quitting, let workspace = app.workspace, workspace.hasUnsavedSubtitleChanges(on: app.screen) else { return .terminateNow }
+        workspace.pendingLeave = .quit
+        return .terminateCancel
     }
 
     func applicationWillTerminate(_ notification: Notification) {

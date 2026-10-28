@@ -124,6 +124,16 @@ final class AppModel {
         closeVideoNow()
     }
 
+    /// Quits after the question about unsaved changes was answered.
+    func quitNow() {
+        workspace?.close()
+        quitting = true
+        NSApp.terminate(nil)
+    }
+
+    /// Set once quitting was confirmed, so the app does not ask again.
+    var quitting = false
+
     func closeVideoNow() {
         workspace?.close()
         workspace = nil

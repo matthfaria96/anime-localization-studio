@@ -292,7 +292,6 @@ extension WorkspaceModel {
                 }
                 self.project = result.project
                 lastDub = nil
-                lastMux = (result.output, result.verification)
                 dubSession?.phase = .done(url: result.output, report: nil, verification: result.verification, replaced: replaceOriginal)
                 recordDub(DubRecord(outputPath: result.output.path, replacedOriginal: replaceOriginal, engine: "ElevenLabs", mode: "Automático",
                                     baseAudio: baseAudio, language: language, lines: 0, failedLines: 0, verified: result.verification.passed))
@@ -374,7 +373,6 @@ extension WorkspaceModel {
                 project = updated
                 self.project = updated
                 lastDub = (output, report, verification)
-                lastMux = (output, verification)
                 dubSession?.phase = .done(url: output, report: report, verification: verification, replaced: replaceOriginal)
                 recordDub(DubRecord(outputPath: output.path, replacedOriginal: replaceOriginal, engine: engine, mode: mode,
                                     baseAudio: dubAudioTrack.map(Self.describe) ?? "—", language: language,

@@ -4,17 +4,9 @@ import ASSRendering
 import SubtitleKit
 import SwiftUI
 
-enum OverlayMode: String, CaseIterable, Identifiable {
-    case translation, original, both, none
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .translation: "Tradução"
-        case .original: "Original"
-        case .both: "Original e tradução"
-        case .none: "Sem legenda"
-        }
-    }
+/// Which document is drawn over the video: the one being edited.
+enum OverlayMode {
+    case translation, original
 }
 
 struct PlayerView: View {
@@ -29,9 +21,7 @@ struct PlayerView: View {
                     Color.black
                     PlayerLayerView(player: player.player)
                     overlays(rect: rect)
-                    if workspace.overlayMode == .original || workspace.overlayMode == .translation {
-                        PositionHandle(workspace: workspace, rect: rect)
-                    }
+                    PositionHandle(workspace: workspace, rect: rect)
                     stateOverlay
                 }
                 .clipShape(.rect(cornerRadius: Theme.Radius.medium))
@@ -67,13 +57,6 @@ struct PlayerView: View {
             LibassOverlay(renderer: translated, time: time, revision: workspace.renderRevision, videoRect: rect, videoSize: size)
         case .original:
             LibassOverlay(renderer: original, time: time, revision: workspace.renderRevision, videoRect: rect, videoSize: size)
-        case .both:
-            LibassOverlay(renderer: original, time: time, revision: workspace.renderRevision, videoRect: rect, videoSize: size)
-                .opacity(0.6)
-                .offset(y: -rect.height * 0.12)
-            LibassOverlay(renderer: translated, time: time, revision: workspace.renderRevision, videoRect: rect, videoSize: size)
-        case .none:
-            EmptyView()
         }
     }
 
@@ -85,13 +68,6 @@ struct PlayerView: View {
             SubtitleOverlay(cues: editor.activeCues(at: player.currentTime, in: .translation), document: editor.translation ?? editor.source, videoRect: rect)
         case .original:
             SubtitleOverlay(cues: editor.activeCues(at: player.currentTime, in: .original), document: editor.source, videoRect: rect)
-        case .both:
-            SubtitleOverlay(cues: editor.activeCues(at: player.currentTime, in: .original), document: editor.source, videoRect: rect)
-                .opacity(0.65)
-                .offset(y: -rect.height * 0.12)
-            SubtitleOverlay(cues: editor.activeCues(at: player.currentTime, in: .translation), document: editor.translation ?? editor.source, videoRect: rect)
-        case .none:
-            EmptyView()
         }
     }
 
@@ -141,15 +117,11 @@ private struct TransportBar: View {
                 Button("Fala anterior", systemImage: "backward.end.fill") { workspace.jumpLine(by: -1) }
                     .keyboardShortcut(.upArrow, modifiers: [.option])
                     .hint("Fala anterior (↑)", "Seleciona a fala anterior e leva o vídeo até ela.")
-                Button("Voltar 15 segundos", systemImage: "gobackward.15") { player.skip(by: -15_000) }
-                    .hint("Voltar 15 s (←)", "Volta o vídeo 15 segundos.")
                 Button(player.isPlaying ? "Pausar" : "Reproduzir", systemImage: player.isPlaying ? "pause.fill" : "play.fill") { player.togglePlay() }
                     .keyboardShortcut(.space, modifiers: [.option])
                     .hint("Reproduzir ou pausar (Espaço)", "Toca ou pausa o vídeo. Clicar no vídeo também funciona.")
                     .font(.title3)
                     .frame(width: 30)
-                Button("Avançar 15 segundos", systemImage: "goforward.15") { player.skip(by: 15_000) }
-                    .hint("Avançar 15 s (→)", "Avança o vídeo 15 segundos.")
                 Button("Próxima fala", systemImage: "forward.end.fill") { workspace.jumpLine(by: 1) }
                     .keyboardShortcut(.downArrow, modifiers: [.option])
                     .hint("Próxima fala (↓)", "Seleciona a próxima fala e leva o vídeo até ela.")
@@ -171,16 +143,6 @@ private struct TransportBar: View {
                 .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .frame(minWidth: 52, alignment: .leading)
-
-            if !workspace.isEditingOriginal {
-                Picker("Legenda no vídeo", selection: $workspace.overlayMode) {
-                    ForEach(OverlayMode.allCases) { Text($0.label).tag($0) }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .frame(minWidth: 70, maxWidth: 170)
-                .hint("Legenda no vídeo", "Escolhe o que aparece sobre o vídeo: a tradução, o original, os dois ao mesmo tempo ou nada.")
-            }
 
             if workspace.audioTracks.count > 1 {
                 Picker("Áudio", selection: Binding(get: { workspace.previewAudioTrackID }, set: { workspace.selectPreviewAudio($0) })) {

@@ -104,6 +104,8 @@ public struct StudioProject: Sendable, Hashable, Codable, Identifiable {
     /// Language of a subtitle that did not come from the video (blank, imported, transcribed),
     /// written as its track language.
     public var newTrackLanguage: String?
+    /// Track name of that subtitle (chosen in Novo › Legenda or when writing it); nil = its language.
+    public var newTrackName: String?
     /// The track the working subtitle file was really extracted from. `sourceTrackID` is what
     /// the person chose; when they differ, the file is extracted again.
     public var sourceFileTrackID: Int?

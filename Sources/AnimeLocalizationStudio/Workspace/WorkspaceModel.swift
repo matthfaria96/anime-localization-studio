@@ -30,8 +30,6 @@ final class WorkspaceModel {
     var notice: (kind: InlineMessage.Kind, text: String)? {
         didSet { if notice?.text != oldValue?.text { noticeAction = nil } }
     }
-    var lastReport: TranslationReport?
-    var lastMux: (url: URL, report: VerificationReport)?
     var overlayMode: OverlayMode = .translation
     var previewAudioTrackID: Int?
     @ObservationIgnored var task: Task<Void, Never>?
@@ -48,7 +46,6 @@ final class WorkspaceModel {
         self.url = url
         self.app = app
         project = ProjectStore(paths: app.paths).project(for: url)
-        lastReport = project.lastReport
         // Legendar opens straight in the editor: correcting is the default.
         if project.subtitleTask == nil { project.subtitleTask = .edit }
         overlayMode = project.subtitleTask == .edit ? .original : .translation
@@ -79,6 +76,9 @@ final class WorkspaceModel {
             startPreview()
             await loadSubtitles()
             operation = nil
+            if project.draftPending == true && editor.hasDocument {
+                notice = (.info, "Esta legenda tem alterações que ainda não estão no vídeo (guardadas pelo app). Salve ou descarte quando terminar.")
+            }
             Task { await loadEmbeddedFonts(info); await loadAddedFonts() }
             applyTestHooks()
         } catch {
@@ -88,8 +88,6 @@ final class WorkspaceModel {
     }
 
     func loadSubtitles() async {
-        // Whatever is loaded now is the starting point that “Descartar” goes back to.
-        defer { beginSubtitleSession() }
         do {
             let (prepared, _, sourceURL) = try await workflow().prepareSource(project)
             project = prepared
@@ -170,6 +168,7 @@ final class WorkspaceModel {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = AppModel.subtitleTypes
         panel.message = "Escolha o arquivo de legenda (ASS, SSA ou SRT)"
+        panel.prompt = "Importar"
         guard panel.runModal() == .OK, let file = panel.url, let format = SubtitleFormat(fileExtension: file.pathExtension) else { return }
         editor.flush()
         do {
@@ -180,6 +179,9 @@ final class WorkspaceModel {
             project.externalSubtitlePath = copy.path
             project.sourceFormat = format
             project.sourceTrackID = nil
+            project.newTrackName = file.deletingPathExtension().lastPathComponent
+            // Not in the video yet: leaving asks to save or discard it.
+            project.draftPending = true
             try store.save(project)
             notice = nil
             Task { await reload() }
@@ -192,23 +194,18 @@ final class WorkspaceModel {
 
     /// Default audio/subtitle chosen in the inspector, not yet written to the file.
     var pendingDefaults: TrackFlagEditor.Defaults?
-    /// Asks “new file or replace the original?” before muxing.
-    var askEmbedDestination = false
-    /// Same question before saving an edited subtitle back into the MKV.
-    var askSaveEditedDestination = false
-    /// Glossaries and series notes, opened from Legendar.
+    /// Salvar › Gravar no vídeo… window (track name, new file or this file).
+    var showWriteSheet = false
+    /// Traduzir… window, opened with the source it starts on.
+    var translateSheet: TranslateSheetStart?
+    /// Novo › Legenda… window.
+    var showNewSubtitleSheet = false
+    /// Glossaries and series notes, opened from the Traduzir window.
     var showSeries = false
-    /// “Criar a partir do áudio” window.
-    var showFromAudio = false
     /// The track whose deletion is being confirmed in the Visão geral.
     var trackToDelete: MediaTrack?
     /// Where the person wanted to go when Legendar had unsaved changes (asks save or discard).
     var pendingLeave: LeaveTarget?
-    /// The subtitles as they were when Legendar loaded them.
-    @ObservationIgnored var sessionSource: SubtitleDocument?
-    @ObservationIgnored var sessionTranslation: SubtitleDocument?
-    var sessionRevision = 0
-    @ObservationIgnored var sessionDraftPending = false
     /// Asks “this file or a copy?” before writing default-track changes.
     var askDefaultsDestination = false
     /// Optional button shown with the notice (e.g. open the file just created).
@@ -273,44 +270,6 @@ final class WorkspaceModel {
         }
     }
 
-    // MARK: Linking a translation
-
-    var linkableTracks: [MediaTrack] {
-        subtitleTracks.filter { $0.textSubtitleExtension != nil && $0.id != project.sourceTrackID }
-    }
-
-    func linkTranslation(track: MediaTrack?, file: URL? = nil, undoManager: UndoManager?) {
-        guard !isBusy, claim("Vincular tradução") else { return }
-        editor.flush()
-        notice = nil
-        operation = RunningOperation(kind: .extracting, fraction: nil, message: "Vinculando a tradução…")
-        let workflow = workflow()
-        let project = project
-        task = Task {
-            do {
-                let (updated, result) = try await workflow.linkTranslation(project, track: track, file: file)
-                self.project = updated
-                editor.applyTranslation(result.document, undoManager: undoManager)
-                editor.flush()
-                overlayMode = .translation
-                notice = (result.matched == result.total ? .success : .warning,
-                          "Tradução vinculada: \(result.matched) de \(result.total) falas encontraram correspondência pelo tempo\(result.matched < result.total ? "; as outras ficaram no original" : ""). ⌘Z desfaz.")
-            } catch {
-                notice = (.error, LogRedactor.redact(error.localizedDescription))
-            }
-            release()
-            operation = nil
-        }
-    }
-
-    func linkTranslationFile(undoManager: UndoManager?) {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = AppModel.subtitleTypes
-        panel.message = "Escolha a legenda traduzida (ASS, SSA ou SRT) para editar ao lado do original"
-        guard panel.runModal() == .OK, let file = panel.url else { return }
-        linkTranslation(track: nil, file: file, undoManager: undoManager)
-    }
-
     // MARK: Translate
 
     /// Claims the project for a long operation, or explains why it cannot start.
@@ -335,7 +294,6 @@ final class WorkspaceModel {
                     Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
                 }
                 self.project = updated
-                lastReport = report
                 if let url = store.translationURL(for: updated, language: app.settings.targetLanguage) {
                     editor.applyTranslation(try SubtitleDocument.load(url), undoManager: undoManager)
                     editor.flush()
@@ -360,12 +318,6 @@ final class WorkspaceModel {
 
     // MARK: Mux
 
-    /// Asks where to write before muxing.
-    func requestEmbed() {
-        guard !isBusy, editor.translation != nil else { return }
-        askEmbedDestination = true
-    }
-
     func embedTranslation(replaceOriginal: Bool = false) {
         guard !isBusy, editor.translation != nil, claim("Gravar a legenda no vídeo") else { return }
         editor.flush()
@@ -381,8 +333,6 @@ final class WorkspaceModel {
                 self.project = updated
                 self.project.draftPending = false
                 try? store.save(self.project)
-                beginSubtitleSession()
-                lastMux = (output, report)
                 if replaceOriginal {
                     release()
                     operation = nil
@@ -427,6 +377,9 @@ final class WorkspaceModel {
                     Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
                 }
                 self.project = updated
+                // Not in the video yet: leaving asks to save or discard it.
+                self.project.draftPending = true
+                try? store.save(self.project)
                 if let old = store.translationURL(for: updated, language: app.settings.targetLanguage) { try? FileManager.default.removeItem(at: old) }
                 operation = nil
                 release()
@@ -507,26 +460,6 @@ final class WorkspaceModel {
     /// Size of this episode's dub work files, refreshed after dubbing or clearing.
     var dubStorageBytes: Int64 = 0
 
-    func exportTranslation() {
-        guard let translation = editor.translation, let format = project.sourceFormat else { return }
-        editor.flush()
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [UTType(filenameExtension: format.fileExtension) ?? .plainText]
-        panel.nameFieldStringValue = "\(project.title).\(app.settings.targetLanguage).\(format.fileExtension)"
-        panel.directoryURL = url.deletingLastPathComponent()
-        guard panel.runModal() == .OK, let destination = panel.url else { return }
-        do {
-            try translation.write(to: destination)
-            notice = (.success, "Legenda exportada: \(destination.lastPathComponent)")
-        } catch {
-            app.report(error, context: "Exportação falhou")
-        }
-    }
-
-    func revealOutput() {
-        if let output = lastMux?.url { NSWorkspace.shared.activateFileViewerSelecting([output]) }
-    }
-
     // MARK: Navigation
 
     func jumpLine(by delta: Int) {
@@ -585,7 +518,7 @@ final class WorkspaceModel {
     }
 
     /// UI test hooks, inert unless set: `ALS_SELECT=<line>`, `ALS_SEEK=<ms>`, `ALS_TASK=edit|translate`, `ALS_REFERENCE=<id>`,
-    /// `ALS_DELETE=<id>`, `ALS_TRACKS=main,reference`, `ALS_TRANSLATE=1`, `ALS_DUB=1|run`.
+    /// `ALS_DELETE=<id>`, `ALS_TRACKS=main,reference`, `ALS_TRANSLATE=1`, `ALS_DUB=1|run`, `ALS_SHEET=translate|new|write`.
     /// Used to capture the real window without driving the mouse or keyboard.
     private func applyTestHooks() {
         let env = ProcessInfo.processInfo.environment
@@ -612,6 +545,18 @@ final class WorkspaceModel {
             }
         }
         if env["ALS_TRANSLATE"] == "1" { translateEpisode(undoManager: nil) }
+        // ALS_SHEET=translate|new|write: opens that Legendar window.
+        if let sheet = env["ALS_SHEET"] {
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                switch sheet {
+                case "translate": translateSheet = TranslateSheetStart()
+                case "new": showNewSubtitleSheet = true
+                case "write": showWriteSheet = true
+                default: break
+                }
+            }
+        }
         if env["ALS_DUB"] == "1" || env["ALS_DUB"] == "run" { startDubSession() }
         if env["ALS_DUB"] == "run" { autoDub(cast: cast, undoManager: nil) }
     }

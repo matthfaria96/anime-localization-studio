@@ -147,29 +147,6 @@ public struct EpisodeWorkflow: Sendable {
         return (project, url, report)
     }
 
-    /// Uses an existing translation (another track of the file, or a subtitle file) as the
-    /// project's translation, aligned by time to the original. The current one is backed up.
-    public func linkTranslation(_ project: StudioProject, track: MediaTrack? = nil, file: URL? = nil) async throws -> (StudioProject, TranslationAlignment.Result) {
-        var (project, info, sourceURL) = try await prepareSource(project)
-        let source = try SubtitleDocument.load(sourceURL)
-        let other: SubtitleDocument
-        if let file {
-            other = try SubtitleDocument.load(file)
-        } else if let track, let ext = track.textSubtitleExtension {
-            let temp = store.directory(for: project.id).appendingPathComponent(".link-\(UUID().uuidString.prefix(6)).\(ext)")
-            defer { try? FileManager.default.removeItem(at: temp) }
-            _ = try await TrackExtractor(tools: tools).extractSubtitle(track, from: info, to: temp)
-            other = try SubtitleDocument.load(temp)
-        } else {
-            throw WorkflowError.noTextSubtitle
-        }
-        let result = TranslationAlignment.align(other, onto: source)
-        try store.backupTranslation(of: project, language: settings.targetLanguage)
-        try result.document.write(to: store.translationURL(for: project, language: settings.targetLanguage)!)
-        project.translationStatus = .reviewed
-        try store.save(project)
-        return (project, result)
-    }
 
     /// “Japonês”, “Português (Brasil)”: how players name a track in that language.
     public static func trackName(for language: String) -> String {
@@ -178,7 +155,7 @@ public struct EpisodeWorkflow: Sendable {
     }
 
     /// A blank subtitle (one empty line) to write from scratch, sized to the video.
-    public func startBlankSubtitle(_ project: StudioProject, language: String) async throws -> StudioProject {
+    public func startBlankSubtitle(_ project: StudioProject, language: String, name: String? = nil) async throws -> StudioProject {
         var project = project
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         let video = info.tracks(.video).first
@@ -195,6 +172,7 @@ public struct EpisodeWorkflow: Sendable {
         project.sourceTrackID = nil
         project.referenceTrackID = nil
         project.newTrackLanguage = language
+        project.newTrackName = name.flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0.trimmingCharacters(in: .whitespaces) }
         project.draftPending = true
         try store.save(project)
         return project
@@ -378,7 +356,7 @@ public struct EpisodeWorkflow: Sendable {
         // A subtitle that did not come from the video (blank, imported, transcribed) is a new track.
         let language = old?.languageIETF ?? old?.language ?? project.newTrackLanguage ?? settings.targetLanguage
         let track = NewTrack(file: sourceURL, kind: .subtitles, language: language,
-                             name: old?.name ?? Self.trackName(for: language), isDefault: old?.isDefault ?? settings.makeDefault, isForced: old?.isForced ?? false)
+                             name: old?.name ?? project.newTrackName ?? Self.trackName(for: language), isDefault: old?.isDefault ?? settings.makeDefault, isForced: old?.isForced ?? false)
         var plan = MuxPlan(source: info, output: MuxPlan.defaultOutputURL(for: project.mediaURL, suffix: "editado"),
                            newTracks: [track], clearOtherDefaults: track.isDefault, placeNewTracksFirst: false)
         if let old { plan.excludedTrackIDs = [old.id] }

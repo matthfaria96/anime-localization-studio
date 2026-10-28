@@ -8,6 +8,8 @@ struct EditorPane: View {
     @State private var showStyles = false
     @State private var showShift = false
     @State private var showCharacter = false
+    /// Width of the line panel chosen by dragging its edge (0 = the minimum).
+    @AppStorage("lineDetailWidth") private var detailWidth: Double = 0
 
     var editor: EditorModel { workspace.editor }
 
@@ -18,12 +20,15 @@ struct EditorPane: View {
                 Divider()
                 // A plain stack honors the width it is given; split views size by content and overflow.
                 GeometryReader { proxy in
+                    let minimum: CGFloat = proxy.size.width >= 900 ? 360 : 300
+                    let maximum = max(minimum, proxy.size.width * 0.6)
+                    let panel = min(max(minimum, detailWidth), maximum)
                     HStack(spacing: 0) {
-                        LinesTable(workspace: workspace)
+                        LinesTable(workspace: workspace, width: proxy.size.width - panel - 1)
                             .frame(maxWidth: .infinity)
-                        Divider()
+                        PanelEdge(width: $detailWidth, current: panel, range: minimum...maximum)
                         LineDetailView(workspace: workspace)
-                            .frame(width: proxy.size.width >= 900 ? 360 : 300)
+                            .frame(width: panel)
                     }
                 }
             }
@@ -40,14 +45,14 @@ struct EditorPane: View {
             EmptyStateView(title: "Este vídeo não tem legenda de texto",
                            message: "Comece uma em branco, importe um arquivo ou deixe o app criar a legenda ouvindo o áudio, no tempo de cada fala.",
                            systemImage: "captions.bubble") {
-                Button("Começar em branco") { workspace.requestNewSubtitle(.blank(language: workspace.app.settings.targetLanguage)) }
-                    .hint("Começar em branco", "Uma legenda vazia, no idioma de saída escolhido em Ajustes, para escrever do zero.")
+                Button("Nova legenda…") { workspace.showNewSubtitleSheet = true }
+                    .hint("Nova legenda", "Uma legenda em branco, com o nome e o idioma que você escolher, para escrever do zero.")
                 Button("Importar arquivo…") { workspace.requestNewSubtitle(.importFile) }
                     .hint("Importar arquivo", "Abre um arquivo ASS, SSA ou SRT do disco.")
-                Button("Criar a partir do áudio…") { workspace.showFromAudio = true }
+                Button("Traduzir do áudio…") { workspace.translateSheet = TranslateSheetStart(fromAudio: true) }
                     .buttonStyle(.glassProminent)
                     .disabled(workspace.isBusy || workspace.audioTracks.isEmpty)
-                    .hint("Criar a partir do áudio", "Ouve o vídeo e escreve o que é dito, no idioma falado, no tempo certo. Tudo no Mac.")
+                    .hint("Traduzir do áudio", "Ouve o vídeo e escreve o que é dito no tempo certo, no idioma falado ou já traduzido. Tudo no Mac.")
                 if !workspace.bitmapSubtitleTracks.isEmpty {
                     Menu("Reconhecer texto (OCR)") {
                         ForEach(TranscriptionLanguage.all, id: \.code) { language in
@@ -159,14 +164,6 @@ private struct EditorToolbar: View {
 
     @ViewBuilder
     private var replaceControls: some View {
-        if !editor.editsOriginal {
-            Picker("Onde", selection: $editor.searchSide) {
-                ForEach(DocumentSide.allCases) { Text($0.label).tag($0) }
-            }
-            .labelsHidden()
-            .fixedSize()
-            .hint("Onde substituir", "Escolhe se “Substituir tudo” altera a tradução ou a legenda original.")
-        }
         Toggle("Aa", isOn: $editor.caseSensitive)
             .toggleStyle(.button)
             .hint("Maiúsculas e minúsculas", "Ligado: a busca diferencia “Kirito” de “kirito”. Desligado: encontra os dois.")
@@ -208,8 +205,22 @@ private struct EditorToolbar: View {
 
 struct LinesTable: View {
     @Bindable var workspace: WorkspaceModel
+    /// Width the list has: the text and the subtitle beside always get equal halves of what the
+    /// other columns leave, so widening the line panel narrows both alike.
+    let width: CGFloat
     @Environment(\.undoManager) private var undoManager
     var editor: EditorModel { workspace.editor }
+
+    private static let numberWidth: CGFloat = 56, timeWidth: CGFloat = 70, characterWidth: CGFloat = 120
+    /// Insets, cell spacing and the scroller of the table (kept generous: a column wider than
+    /// the room left makes the table scroll sideways).
+    private static let chrome: CGFloat = 110
+
+    private var hasBeside: Bool { !editor.editsOriginal || editor.referenceTitle != nil }
+    private var textWidth: CGFloat {
+        let free = max(160, width - Self.numberWidth - Self.timeWidth - Self.characterWidth - Self.chrome)
+        return hasBeside ? floor(free / 2) : free
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -223,7 +234,7 @@ struct LinesTable: View {
                                           : "Ponto livre, \(row.screenPoint.map { ScreenPosition.name(ScreenPosition.area(of: $0)).lowercased() } ?? "fora das áreas da grade").")
                     }
                 }
-                .width(min: 44, ideal: 52, max: 70)
+                .width(Self.numberWidth)
                 TableColumn("Tempo") { row in
                     VStack(alignment: .leading, spacing: 0) {
                         Text(SubtitleTime.formatDisplay(row.start)).monospacedDigit()
@@ -232,7 +243,7 @@ struct LinesTable: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("De \(SubtitleTime.formatDisplay(row.start)) a \(SubtitleTime.formatDisplay(row.end))")
                 }
-                .width(min: 56, ideal: 66, max: 90)
+                .width(Self.timeWidth)
                 TableColumn("Personagem") { row in
                     VStack(alignment: .leading, spacing: 0) {
                         Text(row.actor.isEmpty ? "—" : row.actor).lineLimit(1)
@@ -240,25 +251,25 @@ struct LinesTable: View {
                         if !row.style.isEmpty { Text("estilo \(row.style)").font(.caption2).foregroundStyle(.tertiary).lineLimit(1) }
                     }
                 }
-                .width(min: 60, ideal: 90, max: 180)
-                if editor.editsOriginal && editor.referenceTitle != nil {
+                .width(Self.characterWidth)
+                TableColumn("Texto") { row in
+                    if editor.editsOriginal {
+                        Text(row.original.replacingOccurrences(of: "\n", with: " ⏎ "))
+                            .lineLimit(2)
+                            .foregroundStyle(row.isComment ? .tertiary : .primary)
+                            .italic(row.isComment)
+                    } else {
+                        TranslationCell(row: row, maxReadingSpeed: editor.maxReadingSpeed)
+                    }
+                }
+                .width(textWidth)
+                if hasBeside {
                     TableColumn(LocalizedStringKey(editor.referenceTitle.map { "Ao lado · \($0)" } ?? "Ao lado")) { row in
-                        Text(editor.reference[row.id]?.replacingOccurrences(of: "\n", with: " ⏎ ") ?? "—")
+                        Text((editor.editsOriginal ? editor.reference[row.id] : row.original)?.replacingOccurrences(of: "\n", with: " ⏎ ") ?? "—")
                             .lineLimit(2)
                             .foregroundStyle(.secondary)
                     }
-                    .width(min: 80, ideal: 220)
-                }
-                TableColumn(editor.editsOriginal ? "Texto" : "Original") { row in
-                    Text(row.original.replacingOccurrences(of: "\n", with: " ⏎ "))
-                        .lineLimit(2)
-                        .foregroundStyle(row.isComment ? .tertiary : .primary)
-                        .italic(row.isComment)
-                }
-                .width(min: 80, ideal: 220)
-                if !editor.editsOriginal {
-                    TableColumn("Tradução") { row in TranslationCell(row: row, maxReadingSpeed: editor.maxReadingSpeed) }
-                        .width(min: 80, ideal: 220)
+                    .width(textWidth)
                 }
             }
             .tableStyle(.inset(alternatesRowBackgrounds: true))
@@ -343,10 +354,9 @@ struct SpeakerModelConsent: ViewModifier {
     }
 }
 
-/// ↑ ↓ change line, ← → go back or forward 15 s and Space plays or pauses, wherever the focus
-/// is in Legendar, except while typing in a field (there the keys edit the text). The list
-/// alone only gets the arrows while it has the keyboard focus, which a click on the video,
-/// the text or a button takes away.
+/// ↑ ↓ change line and Space plays or pauses, wherever the focus is in Legendar, except while
+/// typing in a field (there the keys edit the text). The list alone only gets the arrows while
+/// it has the keyboard focus, which a click on the video, the text or a button takes away.
 private struct KeyboardNavigation: ViewModifier {
     let workspace: WorkspaceModel
     @State private var monitor: Any?
@@ -366,12 +376,10 @@ private struct KeyboardNavigation: ViewModifier {
     private func handle(_ event: NSEvent) -> Bool {
         guard let window = event.window, window === NSApp.mainWindow, window.attachedSheet == nil,
               event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
-              !(window.firstResponder is NSText) else { return false }
+              (window.firstResponder as? NSTextView)?.isEditable != true else { return false }
         switch event.keyCode {
         case 126: workspace.moveSelection(by: -1)
         case 125: workspace.moveSelection(by: 1)
-        case 123: workspace.player.skip(by: -15_000)
-        case 124: workspace.player.skip(by: 15_000)
         case 49: workspace.player.togglePlay()
         default: return false
         }
@@ -390,6 +398,37 @@ private struct PlaybackFollower: View {
                 let editor = workspace.editor
                 guard editor.followPlayback, workspace.player.isPlaying, let line = editor.line(at: time), !editor.selection.contains(line) else { return }
                 Task { @MainActor in editor.selection = [line] }
+            }
+    }
+}
+
+/// The edge between the list and the line panel: drag it to widen the panel (never narrower
+/// than its minimum).
+private struct PanelEdge: View {
+    @Binding var width: Double
+    let current: CGFloat
+    let range: ClosedRange<CGFloat>
+    @State private var start: CGFloat?
+
+    var body: some View {
+        Rectangle()
+            .fill(.separator)
+            .frame(width: 1)
+            .overlay {
+                Color.clear
+                    .frame(width: 9)
+                    .contentShape(.rect)
+                    .pointerStyle(.columnResize)
+                    .gesture(
+                        DragGesture(minimumDistance: 1)
+                            .onChanged { value in
+                                let origin = start ?? current
+                                start = origin
+                                width = Double(min(max(range.lowerBound, origin - value.translation.width), range.upperBound))
+                            }
+                            .onEnded { _ in start = nil }
+                    )
+                    .hint("Largura do painel", "Arraste para alargar ou estreitar o painel da fala.")
             }
     }
 }

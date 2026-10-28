@@ -11,6 +11,11 @@ enum Languages {
         all.first { $0.code == code }?.name ?? Locale.current.localizedString(forIdentifier: code) ?? code
     }
 
+    /// `pt-BR` → `pt`, `ja-JP` → `ja`: to compare languages whatever the region.
+    static func base(_ code: String) -> String {
+        String(code.split(separator: "-").first ?? Substring(code)).lowercased()
+    }
+
     /// A track's language as people read it (“und” is “sem idioma”).
     static func display(_ code: String) -> String {
         code.isEmpty || code == "und" ? "sem idioma" : code.uppercased()

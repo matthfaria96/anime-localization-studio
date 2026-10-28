@@ -67,11 +67,11 @@ final class EditorModel {
     var replacement = ""
     var caseSensitive = false
     var searchSide: DocumentSide = .translation
-    /// Editing one subtitle (no translation): the translation column, filters and editor are hidden.
+    /// Editing a subtitle itself (not a translation of it): search, replace and the text editor
+    /// act on the original; while translating they act on the translation.
     var editsOriginal = false {
         didSet {
-            guard editsOriginal else { return }
-            searchSide = .original
+            searchSide = editsOriginal ? .original : .translation
             if !availableFilters.contains(filter) { filter = .all }
         }
     }

@@ -47,33 +47,3 @@ struct RobustnessTests {
         #expect(srt.serialized().hasPrefix("1\n00:00:05,000"))
     }
 }
-
-@Suite("Linking an existing translation")
-struct TranslationAlignmentTests {
-    @Test func alignsByTimeAcrossFormatsAndLineCounts() throws {
-        let original = SubtitleDocument.ass(ASSDocument.parse(text: """
-        [Events]
-        Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-        Dialogue: 0,0:00:01.00,0:00:03.00,Default,Kirito,0,0,0,,{\\an8}I won't let you hurt my friends!
-        Dialogue: 0,0:00:04.00,0:00:06.00,Default,Asuna,0,0,0,,Wait!
-        Dialogue: 0,0:00:10.00,0:00:11.00,Default,,0,0,0,,Unmatched line
-        """))
-        let spanish = try SubtitleDocument.parse(Data("""
-        1
-        00:00:01,100 --> 00:00:02,900
-        ¡No dejaré que lastimes a mis amigos!
-
-        2
-        00:00:03,950 --> 00:00:06,100
-        <i>¡Espera!</i>
-
-        """.utf8), format: .srt)
-        let result = TranslationAlignment.align(spanish, onto: original)
-        #expect(result.matched == 2 && result.total == 3)
-        #expect(result.document.rawText(at: 0) == #"{\an8}¡No dejaré que lastimes a mis amigos!"#)
-        #expect(result.document.rawText(at: 1) == "¡Espera!")
-        #expect(result.document.rawText(at: 2) == "Unmatched line")
-        #expect(result.document.cues[0].actor == "Kirito")
-        #expect(StructureCheck.compare(source: original, translated: result.document).isValid)
-    }
-}
