@@ -66,18 +66,6 @@ public struct RemoteDub: Sendable, Hashable, Codable {
 
 public enum WorkStatus: String, Sendable, Codable, CaseIterable {
     case new, extracted, translating, translated, reviewed, muxed, failed
-
-    public var label: String {
-        switch self {
-        case .new: "Novo"
-        case .extracted: "Legenda extraída"
-        case .translating: "Traduzindo"
-        case .translated: "Traduzido"
-        case .reviewed: "Revisado"
-        case .muxed: "Faixa incorporada"
-        case .failed: "Falhou"
-        }
-    }
 }
 
 /// Everything the app knows about one media file: chosen source track, working subtitle
@@ -244,7 +232,6 @@ public struct SeriesStore: Sendable {
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
-    public func series(_ id: UUID) -> Series? { try? JSONFile.read(Series.self, from: file(for: id)) }
     public func save(_ series: Series) throws { try JSONFile.write(series, to: file(for: series.id)) }
     public func delete(_ id: UUID) throws { try FileManager.default.removeItem(at: file(for: id)) }
 }

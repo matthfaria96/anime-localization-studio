@@ -3,8 +3,8 @@ import StudioCore
 import SwiftUI
 import TranslationKit
 
-/// Right column of Legendar. Correcting: what is shown beside the text, and other ways to
-/// save. New subtitle: the translation tools and how the new track is named and placed.
+/// Right column of Legendar while translating: the translation tools, how the new track is
+/// named and placed, and other ways to save. (Correcting shows nothing beside the editor.)
 /// Writing into the video is always the “Gravar no vídeo…” button at the top.
 struct InspectorView: View {
     @Bindable var workspace: WorkspaceModel
@@ -12,7 +12,6 @@ struct InspectorView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.undoManager) private var undoManager
 
-    private var isEditing: Bool { workspace.isEditingOriginal }
     private var editor: EditorModel { workspace.editor }
 
     var body: some View {
@@ -26,10 +25,8 @@ struct InspectorView: View {
                     InlineMessage(kind: notice.kind, text: notice.text)
                     if let action = workspace.noticeAction { Button(action.title, action: action.run).buttonStyle(.link) }
                 }
-                if !isEditing {
-                    translationSection
-                    trackSection
-                }
+                translationSection
+                trackSection
                 otherWays
                 if let mux = workspace.lastMux {
                     VStack(alignment: .leading, spacing: Theme.Spacing.s) {
@@ -115,19 +112,12 @@ struct InspectorView: View {
 
     private var otherWays: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Button("Salvar como arquivo de legenda…", systemImage: "square.and.arrow.up") {
-                if isEditing { workspace.exportSource() } else { workspace.exportTranslation() }
-            }
-            .buttonStyle(.link)
-            .disabled(isEditing ? !editor.hasDocument : editor.translation == nil)
-            .hint("Salvar como arquivo", "Salva a legenda como um arquivo ASS/SRT separado, sem mexer no vídeo.")
-            if isEditing {
-                Button("Editar séries e glossários…", systemImage: "books.vertical") { workspace.showSeries = true }.buttonStyle(.link)
-                    .hint("Séries e glossários", "Termos fixos e notas de cada série.")
-            } else {
-                Button("Editar glossários…", systemImage: "books.vertical") { workspace.showSeries = true }.buttonStyle(.link)
-                    .hint("Editar glossários", "Termos que devem ser traduzidos sempre do mesmo jeito e notas de estilo da série.")
-            }
+            Button("Salvar como arquivo de legenda…", systemImage: "square.and.arrow.up") { workspace.exportTranslation() }
+                .buttonStyle(.link)
+                .disabled(editor.translation == nil)
+                .hint("Salvar como arquivo", "Salva a tradução como um arquivo ASS/SRT separado, sem mexer no vídeo.")
+            Button("Editar glossários…", systemImage: "books.vertical") { workspace.showSeries = true }.buttonStyle(.link)
+                .hint("Editar glossários", "Termos que devem ser traduzidos sempre do mesmo jeito e notas de estilo da série.")
         }
     }
 }

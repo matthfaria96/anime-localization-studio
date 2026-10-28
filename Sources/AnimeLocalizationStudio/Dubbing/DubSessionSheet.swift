@@ -29,9 +29,12 @@ struct DubSessionSheet: View {
 
     private var isRunning: Bool { if case .running = workspace.dubSession?.phase { true } else { false } }
     private var online: Bool { workspace.dubsOnline }
+    private var language: String { online ? app.settings.targetLanguage : workspace.dubLanguage }
     private var outputName: String {
-        FileOps.uniqueURL(for: MuxPlan.defaultOutputURL(for: workspace.url, suffix: "\(app.settings.targetLanguage.uppercased()) DUB")).lastPathComponent
+        FileOps.uniqueURL(for: MuxPlan.defaultOutputURL(for: workspace.url, suffix: "\(language.uppercased()) DUB")).lastPathComponent
     }
+    /// The local dub also adds the app's translation; a subtitle of the video is already there.
+    private var addsSubtitle: Bool { !online && workspace.dubText?.isVideoTrack == false }
 
     // MARK: Before
 
@@ -42,7 +45,7 @@ struct DubSessionSheet: View {
             Text("Dublar “\(workspace.title)”").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 summary("waveform", "Áudio de base", workspace.dubAudioTrack.map(WorkspaceModel.describe) ?? "—")
-                summary("globe", "Dublar para", Languages.name(for: online ? app.settings.targetLanguage : workspace.dubLanguage))
+                summary("globe", "Dublar para", Languages.name(for: language))
                 if online {
                     summary("cloud", "Motor", "ElevenLabs: separa os personagens, traduz e dubla com a voz de cada um")
                     summary("person.wave.2", "Idioma falado", app.settings.dubbingSourceLanguage.map { code in
@@ -80,7 +83,7 @@ struct DubSessionSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 Text("Onde gravar").font(.headline)
                 destination(false, "Criar um novo arquivo", "“\(outputName)”, na mesma pasta do original. O original não muda.")
-                destination(true, "Gravar neste arquivo", "O áudio dublado\(online ? "" : " e a legenda") entram no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.")
+                destination(true, "Gravar neste arquivo", "O áudio dublado\(addsSubtitle ? " e a legenda traduzida" : "") \(addsSubtitle ? "entram" : "entra") no arquivo aberto. Ele é regravado sem recodificar o vídeo, conferido, e o original vai para a Lixeira.")
             }
             HStack {
                 Spacer()

@@ -41,7 +41,7 @@ public struct ClonedVoiceSynthesizer: SpeechSynthesizer {
         FileManager.default.fileExists(atPath: modelsDirectory.appendingPathComponent("model.safetensors").path)
     }
 
-    public func synthesize(_ text: String, voice: String, style: String?, speed: Double, to url: URL) async throws {
+    public func synthesize(_ text: String, voice: String, to url: URL) async throws {
         guard let languageCode else { throw unsupported }
         do {
             let samples = try await ChatterboxEngine.shared.speak(text, reference: URL(fileURLWithPath: voice), language: languageCode,

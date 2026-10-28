@@ -12,24 +12,7 @@ public enum SubtitleFormat: String, Sendable, Codable, CaseIterable {
         }
     }
 
-    /// Matroska codec ids (`S_TEXT/ASS`, `S_TEXT/UTF8`…) and FFmpeg codec names.
-    public init?(codec: String) {
-        switch codec.lowercased() {
-        case "s_text/ass", "ass", "substation alpha", "advanced substation alpha": self = .ass
-        case "s_text/ssa", "ssa": self = .ssa
-        case "s_text/utf8", "subrip", "srt", "subrip/srt": self = .srt
-        default: return nil
-        }
-    }
-
     public var fileExtension: String { rawValue }
-    public var displayName: String {
-        switch self {
-        case .ass: "ASS"
-        case .ssa: "SSA"
-        case .srt: "SRT"
-        }
-    }
 }
 
 /// What the editor shows for one line of any format.

@@ -45,7 +45,7 @@ struct DubVoicesSection: View {
                 OptionCard(title: "Voice-over", systemImage: "person.2.wave.2",
                            detail: "A voz nova fala por cima; o áudio original abaixa enquanto ela fala.",
                            selected: app.settings.dubbingMode == .voiceOver) { app.settings.dubbingMode = .voiceOver }
-                    .hint("Voice-over", "Como em documentários: o áudio original continua, só que mais baixo enquanto a voz em português fala por cima.")
+                    .hint("Voice-over", "Como em documentários: o áudio original continua, só que mais baixo enquanto a voz dublada fala por cima.")
             }
         }
     }
@@ -64,11 +64,11 @@ struct DubVoicesSection: View {
                 if workspace.hasAutoSpeakers || workspace.cast.members.contains(where: { $0.name.hasPrefix("Falante ") || $0.name.hasPrefix("Voz ") }) {
                     Button("Limpar", systemImage: "xmark.circle") { workspace.clearIdentifiedSpeakers(undoManager: undoManager) }
                         .disabled(workspace.isBusy)
-                        .hint("Limpar personagens identificados", "Esquece os “Falante 1, 2…” achados pelo áudio e tira esses nomes da legenda. A próxima dublagem identifica de novo, sem gravar nada na legenda.")
+                        .hint("Limpar personagens identificados", "Esquece as “Voz 1, Voz 2…” achadas pelo áudio (e tira da legenda os “Falante N” que versões antigas gravavam). A próxima dublagem identifica de novo, sem gravar nada na legenda.")
                 }
                 Button("Identificar falantes no áudio", systemImage: "person.wave.2") { workspace.identifyDubSpeakers() }
                     .disabled(workspace.isBusy || workspace.dubText == nil || workspace.audioTracks.isEmpty)
-                    .hint("Identificar falantes no áudio", "Descobre pelo áudio quem fala em cada linha sem personagem (“Falante 1”, “Falante 2”…), para dar uma voz a cada um. Fica guardado no app: a legenda não muda. A dublagem faz isso sozinha quando precisa.")
+                    .hint("Identificar falantes no áudio", "Descobre pelo áudio quem fala em cada linha sem personagem (“Voz 1”, “Voz 2”…), para dar uma voz a cada um. Fica guardado no app: a legenda não muda. A dublagem faz isso sozinha quando precisa.")
             }
             if workspace.cast.members.isEmpty {
                 Text(workspace.editor.hasDocument
@@ -82,13 +82,12 @@ struct DubVoicesSection: View {
 
     private func castRow(_ member: Binding<CastMember>) -> some View {
         let name = member.wrappedValue.name
-        let lines = segments.filter { $0.speaker == name }
+        let lines = segments.filter { workspace.cast.member(for: $0.speaker)?.id == member.wrappedValue.id }
         return HStack(spacing: Theme.Spacing.m) {
             Image(systemName: "person.crop.circle.fill").font(.title2).foregroundStyle(.tint.opacity(0.8))
             VStack(alignment: .leading, spacing: 2) {
                 CastNameField(name: name) { newName in
-                    workspace.renameSpeaker(name, to: newName, undoManager: undoManager)
-                    member.wrappedValue.name = newName
+                    workspace.renameCastMember(member.wrappedValue.id, to: newName, undoManager: undoManager)
                 }
                 Text(Plural.count(lines.count, "fala", "falas")).font(.caption).foregroundStyle(.secondary)
             }
@@ -99,11 +98,11 @@ struct DubVoicesSection: View {
             Stepper(value: member.speed, in: 0.7...1.5, step: 0.05) {
                 Text("Velocidade \(member.wrappedValue.speed, format: .number.precision(.fractionLength(2)))").monospacedDigit()
             }
-            .hint("Velocidade", "Deixa a voz deste personagem mais lenta (abaixo de 1) ou mais rápida (acima de 1).")
+            .hint("Velocidade", "Deixa as falas deste personagem mais lentas (abaixo de 1) ou mais rápidas (acima de 1) na dublagem. Falas que não cabem no tempo ainda são aceleradas um pouco.")
             Spacer()
             Button("Ouvir dublada", systemImage: "play.circle") { Task { await sample(member.wrappedValue, line: lines.first?.text) } }
                 .disabled(member.wrappedValue.voiceID == nil)
-                .hint("Ouvir dublada", "Toca uma fala deste personagem em português com a voz escolhida. Depois da primeira dublagem automática, toca a voz que o app escolheu.")
+                .hintVerbatim("Ouvir dublada", "Toca uma fala deste personagem em \(Languages.name(for: workspace.dubLanguage)) com a voz preparada na última dublagem.")
             if let state = sampleState[member.wrappedValue.id] { Text(state).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
         }
         .padding(Theme.Spacing.s)
@@ -125,8 +124,8 @@ struct DubVoicesSection: View {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("als-sample-\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: file) }
         do {
-            try await app.settings.makeSynthesizer(paths: app.paths).synthesize(line ?? "Olá! Esta é uma amostra da minha voz.", voice: voice,
-                                                                 style: member.style.isEmpty ? nil : member.style, speed: member.speed, to: file)
+            guard let line else { sampleState[member.id] = "Este personagem não tem falas no texto escolhido."; return }
+            try await app.settings.makeSynthesizer(paths: app.paths, language: workspace.dubLanguage).synthesize(line, voice: voice, to: file)
             audioPlayer = try AVAudioPlayer(data: Data(contentsOf: file))
             audioPlayer?.play()
             sampleState[member.id] = nil
@@ -149,6 +148,6 @@ private struct CastNameField: View {
             .onAppear { draft = name }
             .onChange(of: name) { draft = name }
             .onSubmit { if draft != name { rename(draft) } }
-            .hint("Nome do personagem", "Digite o nome e aperte Return (ex.: Falante 1 → Kirito). Todas as falas desse falante passam a usar o nome.")
+            .hint("Nome do personagem", "Digite o nome e aperte Return (ex.: Voz 1 → Kirito). Todas as falas dessa voz passam a usar o nome; a legenda do vídeo não muda.")
     }
 }

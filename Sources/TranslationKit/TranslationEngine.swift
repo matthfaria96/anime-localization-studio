@@ -54,14 +54,6 @@ public enum EngineAvailability: Sendable, Hashable {
     /// Usable after a step the person must take (download languages, start a server…).
     case needsSetup(String)
     case unavailable(String)
-
-    public var isAvailable: Bool { self == .available }
-    public var message: String? {
-        switch self {
-        case .available: nil
-        case .needsSetup(let m), .unavailable(let m): m
-        }
-    }
 }
 
 public enum TranslationEngineError: Error, LocalizedError, Equatable {

@@ -57,8 +57,8 @@ public struct DubbingReport: Sendable, Hashable, Codable {
 /// Voice-over dub of an episode: synthesize every line with the cast's voices, fit each clip to
 /// its slot, lay them on one voice track and mix it over the original audio with ducking.
 /// Clips are cached by text, voice and engine, so an interrupted or repeated run only
-/// synthesizes what changed. Replacing the original voices (instead of talking over them)
-/// needs source separation, which is not part of this pipeline yet.
+/// synthesizes what changed. Replacing the original voices separates the dialogue from the
+/// music and effects first (`VoiceSeparator`).
 public struct DubbingPipeline: Sendable {
     public let synthesizer: any SpeechSynthesizer
     public let tools: ToolLocator
@@ -92,20 +92,20 @@ public struct DubbingPipeline: Sendable {
                 continue
             }
             let speed = member?.speed ?? 1
-            let key = Self.cacheKey(segment.text, voice: voice, style: member?.style, speed: speed, engine: synthesizer.id)
+            let key = Self.cacheKey(segment.text, voice: voice, engine: synthesizer.id)
             let raw = clips.appendingPathComponent("\(key).wav")
-            let fitted = clips.appendingPathComponent("\(key)-\(segment.slot).fit.wav")
+            let fitted = clips.appendingPathComponent("\(key)-\(segment.slot)-\(String(format: "%.2f", speed)).fit.wav")
             do {
                 if FileManager.default.fileExists(atPath: raw.path) {
                     report.reusedClips += 1
                 } else {
                     let partial = clips.appendingPathComponent(".\(key).\(UUID().uuidString.prefix(6)).wav")
-                    try await synthesizer.synthesize(segment.text, voice: voice, style: member?.style, speed: speed, to: partial)
+                    try await synthesizer.synthesize(segment.text, voice: voice, to: partial)
                     try FileOps.replaceItem(at: raw, with: partial)
                     report.synthesized += 1
                 }
-                let clip = try await mixer.fit(raw, slot: segment.slot, maxSpeedup: options.maxSpeedup, to: fitted)
-                if clip.tempo > 1.001 { report.spedUp.append(segment.id) }
+                let clip = try await mixer.fit(raw, slot: segment.slot, speed: speed, maxSpeedup: options.maxSpeedup, to: fitted)
+                if clip.tempo > speed + 0.001 { report.spedUp.append(segment.id) }
                 if clip.overflows { report.overflowing.append(segment.id) }
                 placements.append(.init(id: segment.id, url: clip.url, start: segment.start))
             } catch let error as SynthesisError {
@@ -156,8 +156,9 @@ public struct DubbingPipeline: Sendable {
         return background
     }
 
-    static func cacheKey(_ text: String, voice: String, style: String?, speed: Double, engine: String) -> String {
-        let material = [engine, voice, style ?? "", String(format: "%.3f", speed), text].joined(separator: "\u{1F}")
+    /// The empty style and the speed of 1 keep the keys of clips made by earlier versions.
+    static func cacheKey(_ text: String, voice: String, engine: String) -> String {
+        let material = [engine, voice, "", "1.000", text].joined(separator: "\u{1F}")
         return SHA256.hash(data: Data(material.utf8)).prefix(12).map { String(format: "%02x", $0) }.joined()
     }
 }

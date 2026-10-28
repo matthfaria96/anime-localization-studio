@@ -1,9 +1,9 @@
 import Foundation
 import Observation
 
-/// Which projects are being processed right now, by the queue or by the open episode. A
-/// project runs one long operation at a time: two runs on the same episode would race on its
-/// working files and its output.
+/// Which projects are being processed right now. A project runs one long operation at a time
+/// (two runs on the same video would race on its working files and its output), and Ajustes ›
+/// Armazenamento does not clear the files of a project in use.
 @MainActor
 @Observable
 public final class ProjectActivity {

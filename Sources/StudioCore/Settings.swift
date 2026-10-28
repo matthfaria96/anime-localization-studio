@@ -79,9 +79,10 @@ public struct AppSettings: Sendable, Hashable, Codable {
         TranslationOptions(sourceLanguage: sourceLanguage, targetLanguage: targetLanguage, contextLines: contextLines, translateKaraoke: translateKaraoke)
     }
 
-    /// The on-device voice (ElevenLabs is not a synthesizer: it dubs the whole audio).
-    public func makeSynthesizer(paths: AppPaths = AppPaths()) -> any SpeechSynthesizer {
-        ClonedVoiceSynthesizer(modelsDirectory: paths.voiceModels, language: targetLanguage)
+    /// The on-device voice speaking `language` (the output language when nil). ElevenLabs is
+    /// not a synthesizer: it dubs the whole audio.
+    public func makeSynthesizer(paths: AppPaths = AppPaths(), language: String? = nil) -> any SpeechSynthesizer {
+        ClonedVoiceSynthesizer(modelsDirectory: paths.voiceModels, language: language ?? targetLanguage)
     }
 
     public func makeEngine(apiKey: String?) -> any TranslationEngine {

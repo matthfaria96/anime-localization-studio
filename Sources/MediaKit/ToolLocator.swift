@@ -14,7 +14,7 @@ public enum ExternalTool: String, CaseIterable, Sendable, Codable, Identifiable 
 
     public var purpose: String {
         switch self {
-        case .mkvmerge: "Inspecionar MKV e incorporar faixas sem recodificar"
+        case .mkvmerge: "Ler o MKV e gravar faixas nele sem recodificar"
         case .mkvextract: "Extrair legendas e áudio do MKV sem perdas"
         case .mkvpropedit: "Trocar faixa padrão e nomes no próprio MKV, sem regravar"
         case .ffmpeg: "Pré-visualização, extração de áudio e verificação de quadros"

@@ -30,7 +30,7 @@ public struct StorageInventory: Sendable {
             case .fonts: "Fontes dos MKVs para a pré-visualização fiel. São extraídas de novo quando preciso."
             case .work: "Sobras de operações interrompidas."
             case .dubs: "Falas geradas, vozes separadas e música de fundo de cada episódio. Apagar faz a próxima dublagem gerar tudo do zero."
-            case .projects: "Legendas extraídas, traduções e revisões de cada episódio. Apagar perde as traduções não incorporadas."
+            case .projects: "Legendas extraídas, traduções e revisões de cada episódio. Apagar perde as traduções e correções ainda não gravadas no vídeo."
             case .voiceModels: "Baixados na primeira dublagem com a voz original. São baixados de novo quando preciso."
             case .speakerModels: "Baixados na primeira identificação de falantes. São baixados de novo quando preciso."
             }

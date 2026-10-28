@@ -21,7 +21,7 @@ struct OriginalVoicesTests {
         var cursor = 500
         for (n, turn) in turns.enumerated() {
             let url = dir.appendingPathComponent("\(n).wav")
-            try await SystemVoiceSynthesizer().synthesize(turn.1, voice: turn.0, style: nil, speed: 1, to: url)
+            try await SystemVoiceSynthesizer().synthesize(turn.1, voice: turn.0, to: url)
             let length = try await AudioMixer(tools: tools).duration(of: url)
             lines.append((n, cursor, cursor + length, turn.0 == "Luciana" ? "Falante 1" : "Falante 2", turn.1))
             parts.append(url)

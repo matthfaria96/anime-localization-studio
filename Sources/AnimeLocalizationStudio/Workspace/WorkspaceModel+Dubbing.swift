@@ -15,7 +15,6 @@ extension WorkspaceModel {
         return ((try? FileManager.default.contentsOfDirectory(atPath: clips.path)) ?? []).filter { $0.hasSuffix(".wav") && !$0.contains(".fit.") }.count
     }
 
-
     var dubDirectory: URL { StorageInventory(paths: app.paths).dubDirectory(projectID: project.id) }
 
     /// The audio track the dub is based on: the voices are cloned from it and its music and
@@ -41,7 +40,6 @@ extension WorkspaceModel {
         notice = (.info, "A dublagem agora usa o áudio “\(dubAudioTrack.map(Self.describe) ?? "")”. As vozes e o fundo serão tirados dele.")
     }
 
-    /// Deletes the synthesized lines, voices and separated audio of this episode.
     /// Deletes the synthesized lines, voices and separated audio of this episode, and forgets
     /// the voices made from them, so the next dub starts from scratch.
     func clearDubFiles() {
@@ -105,16 +103,28 @@ extension WorkspaceModel {
     /// Speakers found from the audio for the current text (kept in the app, not in the subtitle).
     var hasAutoSpeakers: Bool { !(project.autoSpeakers?[dubText?.key ?? ""] ?? [:]).isEmpty }
 
-    /// Renames a character in the subtitle and in the speakers kept in the app.
-    func renameSpeaker(_ old: String, to new: String, undoManager: UndoManager?) {
+    /// Renames a character of the dub. A voice found from the audio (“Voz 1”) is renamed in
+    /// the speakers kept for this video; a name from the app's translation is renamed in it;
+    /// a name from a subtitle of the video is kept as another name of the character, so that
+    /// subtitle never changes.
+    func renameCastMember(_ id: UUID, to new: String, undoManager: UndoManager?) {
         let name = new.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty, name != old else { return }
-        editor.renameActor(old, to: name, undoManager: undoManager)
-        if var all = project.autoSpeakers {
-            for key in all.keys { all[key] = all[key]?.mapValues { $0 == old ? name : $0 } }
-            project.autoSpeakers = all
+        guard let index = cast.members.firstIndex(where: { $0.id == id }), !name.isEmpty, name != cast.members[index].name,
+              let text = dubText else { return }
+        let old = cast.members[index].name
+        var renamed = cast
+        if let speakers = project.autoSpeakers?[text.key], speakers.values.contains(old) {
+            project.autoSpeakers?[text.key] = speakers.mapValues { $0 == old ? name : $0 }
             try? store.save(project)
+        } else if text.key == "translation" && editor.translation != nil {
+            editor.renameActor(old, to: name, undoManager: undoManager)
+            editor.flush()
+            Task { await loadDubText() }
+        } else if !renamed.members[index].speakerLabels.contains(old) {
+            renamed.members[index].speakerLabels.append(old)
         }
+        renamed.members[index].name = name
+        cast = renamed
     }
 
     /// Finds who speaks each line of the dub text from the audio, kept in the project only.
@@ -254,7 +264,6 @@ extension WorkspaceModel {
         dubsOnline ? !audioTracks.isEmpty && app.elevenLabsKey != nil : !dubSegments.isEmpty
     }
 
-
     func startDubSession() {
         guard !isBusy, canStartDub else { return }
         dubSession = DubSession()
@@ -308,8 +317,8 @@ extension WorkspaceModel {
         if dubsOnline { onlineDub() } else { autoDub(cast: cast, undoManager: undoManager) }
     }
 
-    /// Identifies who speaks (when the subtitle does not say), gives each character a voice (a
-    /// clone of the original, or a similar macOS voice), dubs every line and writes the MKV.
+    /// Identifies who speaks (when the subtitle does not say), gives each character a clone of
+    /// their original voice, dubs every line and writes the MKV.
     func autoDub(cast: VoiceCast, allowDiarizationDownload: Bool = false, undoManager: UndoManager?) {
         guard !isBusy, let text = dubText, claim("Dublagem automática") else { return }
         let textTrackID = dubTextTrackID
@@ -431,8 +440,7 @@ extension WorkspaceModel {
         return LogRedactor.redact(error.localizedDescription) + " Nenhum arquivo foi criado ou alterado."
     }
 
-    // MARK: Dub
-
+    // MARK: Cast
 
     /// The cast of the series (shared by its episodes) or, without a series, of this project.
     func loadCast() -> VoiceCast {

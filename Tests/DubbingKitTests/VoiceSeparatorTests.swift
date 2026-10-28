@@ -30,7 +30,7 @@ struct VoiceSeparatorTests {
         let ffmpeg = try tools.require(.ffmpeg)
         let speechRaw = dir.appendingPathComponent("speech-raw.wav")
         try await SystemVoiceSynthesizer().synthesize("Eu não vou deixar você machucar meus amigos. Precisamos chegar ao último andar.",
-                                                      voice: "Luciana", style: nil, speed: 1, to: speechRaw)
+                                                      voice: "Luciana", to: speechRaw)
         let speech = dir.appendingPathComponent("speech.wav"), music = dir.appendingPathComponent("music.wav")
         let mix = dir.appendingPathComponent("mix.wav"), leftover = dir.appendingPathComponent("leftover.wav")
         try await ProcessRunner.runChecked(ffmpeg, ["-nostdin", "-v", "error", "-y", "-i", speechRaw.path, "-af", "apad=pad_dur=1",

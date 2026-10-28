@@ -8,68 +8,6 @@ private func tempPaths() -> AppPaths {
     return AppPaths(root: base.appendingPathComponent("Support"), caches: base.appendingPathComponent("Caches"))
 }
 
-private struct InstantPerformer: JobPerformer {
-    func perform(_ job: Job, progress: @escaping @Sendable (Double, String) -> Void) async throws -> String? {
-        progress(0.5, "meio")
-        if job.title.contains("falha") { throw TranslationEngineError.permanent("api_key=sk-proj-abcdefghijklmnop recusada") }
-        return "/tmp/\(job.title).mkv"
-    }
-}
-
-private struct HangingPerformer: JobPerformer {
-    func perform(_ job: Job, progress: @escaping @Sendable (Double, String) -> Void) async throws -> String? {
-        try await Task.sleep(for: .seconds(30))
-        return nil
-    }
-}
-
-@MainActor
-@Suite("Job queue")
-struct JobQueueTests {
-    @Test func runsJobsInOrderAndPersists() async throws {
-        let paths = tempPaths()
-        let queue = JobQueue(file: paths.jobs, performer: InstantPerformer())
-        queue.enqueue(.translate, mediaURLs: [URL(fileURLWithPath: "/m/ep1.mkv"), URL(fileURLWithPath: "/m/ep2 falha.mkv")], seriesID: nil)
-        try await waitUntil { queue.jobs.allSatisfy(\.status.isFinished) }
-        #expect(queue.jobs[0].status == .done && queue.jobs[0].outputPath == "/tmp/ep1.mkv")
-        #expect(queue.jobs[1].status == .failed)
-        #expect(!queue.jobs[1].message.contains("sk-proj"), "secrets must be redacted")
-        let reloaded = JobQueue(file: paths.jobs, performer: InstantPerformer())
-        #expect(reloaded.jobs.count == 2)
-    }
-
-    @Test func runningJobsComeBackInterruptedAndResume() async throws {
-        let paths = tempPaths()
-        do {
-            let queue = JobQueue(file: paths.jobs, performer: HangingPerformer())
-            queue.enqueue(.translateAndMux, mediaURLs: [URL(fileURLWithPath: "/m/ep1.mkv")], seriesID: nil)
-            #expect(queue.jobs[0].status == .running)
-        }
-        // A new queue reading the same file simulates relaunching after a crash.
-        let relaunched = JobQueue(file: paths.jobs, performer: InstantPerformer())
-        #expect(relaunched.jobs[0].status == .interrupted)
-        #expect(relaunched.interruptedCount == 1)
-        relaunched.resumeInterrupted()
-        try await waitUntil { relaunched.jobs[0].status == .done }
-    }
-
-    @Test func cancelStopsTheRunningJob() async throws {
-        let queue = JobQueue(file: tempPaths().jobs, performer: HangingPerformer())
-        queue.enqueue(.translate, mediaURLs: [URL(fileURLWithPath: "/m/a.mkv"), URL(fileURLWithPath: "/m/b.mkv")], seriesID: nil)
-        queue.cancelAll()
-        try await waitUntil { queue.jobs.allSatisfy(\.status.isFinished) }
-        #expect(queue.jobs.allSatisfy { $0.status == .cancelled })
-    }
-
-    private func waitUntil(timeout: Duration = .seconds(5), _ condition: () -> Bool) async throws {
-        let deadline = ContinuousClock.now + timeout
-        while !condition() {
-            guard ContinuousClock.now < deadline else { Issue.record("timed out"); return }
-            try await Task.sleep(for: .milliseconds(20))
-        }
-    }
-}
-
 @Suite("Storage and settings")
 struct StorageTests {
     @Test func projectsAreStablePerFile() throws {
@@ -113,19 +51,8 @@ struct StorageTests {
     }
 }
 
-@Suite("Season report and redaction")
-struct SeasonReportTests {
-    @Test func reportListsEveryJob() {
-        let store = ProjectStore(paths: AppPaths(root: FileManager.default.temporaryDirectory.appendingPathComponent("ALSRep-\(UUID().uuidString)")))
-        var failed = Job(kind: .translate, mediaURL: URL(fileURLWithPath: "/m/Ep 02.mkv"), seriesID: nil)
-        failed.status = .failed
-        failed.message = "quota | acabou"
-        let markdown = SeasonReport.markdown(jobs: [failed, Job(kind: .dub, mediaURL: URL(fileURLWithPath: "/m/Ep 01.mkv"), seriesID: nil)], store: store)
-        #expect(markdown.contains("| Ep 01 | Dublar (voice-over) | Na fila |"))
-        #expect(markdown.contains("## Falhas"))
-        #expect(markdown.contains("quota | acabou"))
-    }
-
+@Suite("Redaction")
+struct RedactionTests {
     @Test func registeredSecretsAreHidden() {
         LogRedactor.register(secret: "AIzaUnprefixedKey123456")
         #expect(!LogRedactor.redact("failed with AIzaUnprefixedKey123456").contains("Unprefixed"))

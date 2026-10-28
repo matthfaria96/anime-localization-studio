@@ -6,11 +6,6 @@ import Vision
 public struct SubtitleOCR: Sendable {
     public init() {}
 
-    /// Languages Vision can read on this Mac (BCP 47).
-    public static func supportedLanguages() -> [String] {
-        RecognizeTextRequest().supportedRecognitionLanguages.map { $0.maximalIdentifier }
-    }
-
     /// Recognized text of one caption, lines top to bottom joined with `\n`.
     public func recognize(_ image: CGImage, language: String) async throws -> String {
         var request = RecognizeTextRequest()

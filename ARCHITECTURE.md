@@ -5,7 +5,7 @@ As bibliotecas não importam SwiftUI e podem ser testadas sem interface.
 
 ```
 AnimeLocalizationStudio (SwiftUI, isolamento padrão MainActor)
- ├── StudioCore      projetos, séries/glossários, ajustes, Keychain, fila, logs, fluxo do episódio
+ ├── StudioCore      projetos, séries/glossários, ajustes, Keychain, logs, fluxo do episódio
  │    ├── TranslationKit   motores, glossário, pipeline em lotes com checkpoints
  │    │    └── SubtitleKit      ASS/SSA/SRT, tags, tempos, verificação de estrutura
  │    ├── DubbingKit       ElevenLabs (online), voz original no Mac, elenco, plano de segmentos
@@ -26,7 +26,7 @@ AnimeLocalizationStudio (SwiftUI, isolamento padrão MainActor)
 | 8. Audio Separation and Mixing | `DubbingKit/VoiceSeparator.swift`, `AudioMixer.swift`, `DubbingPipeline.swift` | Pronto (separação nativa aproximada, voice-over e substituir falas) |
 | 9. Voice Casting | `DubbingKit/DubbingPlan.swift`, `App/Dubbing/DubbingView.swift` | Pronto (elenco salvo na série/projeto) |
 | 10. MKV Muxing Engine | `MediaKit/MKVMuxer.swift`, `IntegrityVerifier.swift` | Pronto (legendas; áudio usa o mesmo caminho) |
-| 11. Job Queue | `StudioCore/JobQueue.swift` | Pronto (persistente, retomada) |
+| 11. Job Queue | — | Removida na 0.21.0 (a interface trabalha com um vídeo por vez desde a 0.11.0) |
 | 12. Project Storage | `StudioCore/ProjectStore.swift`, `AppPaths.swift` | Pronto (JSON atômico) |
 | 13. Settings | `StudioCore/Settings.swift`, `App/Settings/SettingsView.swift` | Pronto |
 | 14. Logging and Diagnostics | `StudioCore/AppLog.swift`, `App/Diagnostics/DiagnosticsView.swift` (em Ajustes), `StudioCore/StorageInventory.swift` | Pronto |
@@ -114,15 +114,15 @@ e `$` são seguros), lê saída em fluxo para progresso e encerra o processo qua
 cancelada.
 
 **Persistência.** JSON com escrita atômica em `~/Library/Application Support/Anime Localization
-Studio/` (`Projects/<id>/`, `Series/`, `jobs.json`, `settings.json`, `library.json`, `Logs/`).
+Studio/` (`Projects/<id>/`, `Series/`, `settings.json`, `Logs/`).
 Cada projeto guarda `source.<ext>`, `translation.pt-BR.<ext>`, `checkpoint.pt-BR.json` e
 `Backups/` (cópia da tradução antes de ser substituída). O id do projeto é o SHA-256 do caminho
-do vídeo. SQLite foi considerado e descartado por ora: os volumes (centenas de projetos, uma
-fila curta) não justificam o esquema, e JSON é legível para diagnóstico.
+do vídeo. SQLite foi considerado e descartado por ora: os volumes (centenas de projetos) não
+justificam o esquema, e JSON é legível para diagnóstico.
 
 **Segredos.** Chaves de API ficam só no Keychain (`KeychainStore`) e viajam apenas no cabeçalho
 `Authorization`. `LogRedactor` remove tokens Bearer, chaves com prefixos conhecidos,
-`api_key=…` e o caminho da pasta pessoal de tudo que vai para logs, fila e mensagens de erro.
+`api_key=…` e o caminho da pasta pessoal de tudo que vai para logs e mensagens de erro.
 
 **Concorrência.** O alvo do app usa `defaultIsolation(MainActor)`. Modelos de tela são
 `@Observable` no MainActor; trabalho pesado roda em funções `async` das bibliotecas
@@ -161,8 +161,8 @@ fala o falante com maior sobreposição de tempo. Os modelos ficam em
 confirmação do download.
 
 **Trava por projeto.** `ProjectActivity` (MainActor) registra qual projeto está em operação
-longa. A fila espera enquanto o episódio aberto traduz/incorpora/dubla o mesmo arquivo, e o
-episódio avisa quando a fila está usando o arquivo.
+longa: uma operação por vez no vídeo aberto, e Ajustes › Armazenamento não apaga os arquivos
+de um projeto em uso.
 
 ## Fluxos
 
@@ -170,11 +170,8 @@ episódio avisa quando a fila está usando o arquivo.
 preferido, evitando "Signs/Songs" e forçadas) → `mkvextract` para `source.ass` → pipeline →
 `translation.pt-BR.ass` (com backup da anterior) → editor (desfazível com ⌘Z).
 
-**Incorporar ao MKV:** salva edições pendentes → `MuxPlan` (nova faixa pt-BR, nome, padrão,
+**Gravar no vídeo:** salva edições pendentes → `MuxPlan` (nova faixa pt-BR, nome, padrão,
 ordem) → mkvmerge → verificação → renomeação → relatório na tela.
-
-**Temporada (só no núcleo):** `JobQueue` e `EpisodeJobPerformer` continuam em StudioCore, com
-testes, mas a interface trabalha com um vídeo por vez e não os usa desde a 0.11.0.
 
 ## Tratamento de falhas
 
@@ -187,4 +184,4 @@ testes, mas a interface trabalha com um vídeo por vez e não os usa desde a 0.1
 | Mux com erro ou verificação reprovada | Parcial apagado, motivo listado |
 | Motor indisponível | Mensagem do próprio motor (idiomas não baixados, Apple Intelligence desligada, servidor fechado) |
 | Fala que o motor não devolve | Fica no original, listada no relatório e no filtro "Sem tradução" |
-| App fechado no meio | Checkpoint por lote; fila marca "Interrompido" e retoma |
+| App fechado no meio | Checkpoint por lote; a tradução retoma de onde parou |

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.21.0 — 27/10/2026
+
+Revisão do app inteiro: fluxo, textos e código sem uso.
+
+### Corrigido
+- **Velocidade** de cada personagem (Dublar › Ajustar vozes) não fazia nada com a voz do Mac. Agora as falas do personagem saem mais lentas ou mais rápidas, e as que ainda não cabem no tempo são aceleradas um pouco além disso. Mudar a velocidade não gera a fala de novo, só reencaixa.
+- Renomear um personagem em Dublar mudava a legenda aberta em Legendar, que podia ser outra, e com texto de uma legenda do vídeo o nome novo "sumia" (o personagem ficava com 0 falas). Agora: vozes achadas pelo áudio ("Voz 1") são renomeadas no app; nomes da tradução feita no app são renomeados nela; nomes de uma legenda do vídeo viram outro nome do mesmo personagem, sem mexer na legenda.
+- "Ouvir dublada" falava sempre no idioma de saída dos Ajustes e com uma frase em português; agora fala uma fala real do personagem no idioma do texto falado.
+- Menu Arquivo › "Abrir legenda externa…" trocava a legenda sem perguntar sobre alterações não gravadas. Virou "Importar arquivo de legenda…" (⇧⌘O), o mesmo caminho do botão Nova legenda, só em Legendar.
+- A janela Dublar dizia que "a legenda" entraria no arquivo também quando o texto falado já era uma legenda do vídeo (ela não é adicionada de novo), e o nome do novo arquivo usava o idioma dos Ajustes em vez do idioma da dublagem.
+
+### Mudou
+- Corrigindo uma legenda, o menu ⋯ (com "Editar séries e glossários", que só vale para traduzir) virou um botão "Salvar como arquivo" (⇧⌘E). O glossário continua no painel da tradução.
+- Textos: sem "Falante N" nas dicas (as vozes se chamam "Voz 1, 2…"), sem "no estúdio", sem "incorporar"; tela inicial e aba Dublar explicam também a ElevenLabs.
+
+### Removido (código sem uso)
+- A fila de episódios e o relatório da temporada (`JobQueue`, `EpisodeJobPerformer`, `SeasonReport`), fora da interface desde a 0.11.0, e os testes deles.
+- A identificação de falantes que escrevia nomes na legenda (só um gancho de teste ainda chamava), e funções, propriedades e imports que nada usava (achados com o Periphery).
+- `style` e `speed` do protocolo de síntese de voz: o Chatterbox não usa nenhum dos dois.
+
 ## 0.20.0 — 27/10/2026
 
 ### Adicionado

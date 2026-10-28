@@ -9,7 +9,6 @@ import Foundation
 /// - `POST /v1/dubbing` (multipart: `file`, `target_lang`, `source_lang`, `num_speakers`, `name`, `watermark`)
 /// - `GET /v1/dubbing/{id}` → `status`, `error`, `target_languages`
 /// - `GET /v1/dubbing/{id}/audio/{language}` → the dubbed MP3/MP4
-/// - `DELETE /v1/dubbing/{id}`
 /// - `GET /v1/user/subscription` → plan and credits (to check the key)
 public struct ElevenLabsDubbing: Sendable {
     public var apiKey: String
@@ -130,10 +129,6 @@ public struct ElevenLabsDubbing: Sendable {
     public func downloadAudio(_ id: String, language: String, to destination: URL) async throws {
         let data = try await send(request("GET", "/v1/dubbing/\(id)/audio/\(Self.languageCode(language))", timeout: 600))
         try data.write(to: destination, options: .atomic)
-    }
-
-    public func delete(_ id: String) async throws {
-        _ = try await send(request("DELETE", "/v1/dubbing/\(id)", timeout: 30))
     }
 
     // MARK: HTTP

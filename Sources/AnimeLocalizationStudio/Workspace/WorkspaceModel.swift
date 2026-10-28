@@ -169,7 +169,7 @@ final class WorkspaceModel {
     func openExternalSubtitle() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = AppModel.subtitleTypes
-        panel.message = "Escolha a legenda original (ASS, SSA ou SRT)"
+        panel.message = "Escolha o arquivo de legenda (ASS, SSA ou SRT)"
         guard panel.runModal() == .OK, let file = panel.url, let format = SubtitleFormat(fileExtension: file.pathExtension) else { return }
         editor.flush()
         do {
@@ -323,7 +323,7 @@ final class WorkspaceModel {
     func release() { app.activity.end(project.id) }
 
     func translateEpisode(undoManager: UndoManager?, retranslateAll: Bool = false) {
-        guard !isBusy, claim("Tradução no estúdio") else { return }
+        guard !isBusy, claim("Tradução") else { return }
         editor.flush()
         notice = nil
         operation = RunningOperation(kind: .translating, fraction: 0, message: "Preparando tradução…")
@@ -411,11 +411,9 @@ final class WorkspaceModel {
     /// Set when the speaker-identification models must be downloaded first: the action to retry.
     var pendingDiarizationDownload: (() -> Void)?
 
-    var speakerModelsInstalled: Bool { SpeakerDiarization(modelsDirectory: app.paths.diarizationModels).modelsInstalled }
-
     func transcribeAudio(language: String, allowModelDownload: Bool = false, identifySpeakers: Bool = false, allowDiarizationDownload: Bool = false,
                          audioTrackID: Int? = nil, then: (@MainActor () -> Void)? = nil) {
-        guard !isBusy, claim("Transcrição no estúdio") else { return }
+        guard !isBusy, claim("Transcrição") else { return }
         editor.flush()
         notice = nil
         operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando transcrição…")
@@ -460,48 +458,10 @@ final class WorkspaceModel {
         }
     }
 
-    /// Fills the character field of the spoken lines from the audio, keeping characters that
-    /// are already set unless `replaceExisting`.
-    func identifySpeakers(allowModelDownload: Bool = false, replaceExisting: Bool = false, undoManager: UndoManager?) {
-        guard !isBusy, let document = editor.translation ?? editor.source, claim("Identificação de falantes") else { return }
-        editor.flush()
-        notice = nil
-        operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando a identificação de falantes…")
-        let workflow = workflow()
-        let project = project
-        task = Task {
-            do {
-                var speakers = try await workflow.identifySpeakers(in: document, of: project, allowModelDownload: allowModelDownload) { step in
-                    Task { @MainActor in self.operation?.fraction = step.fraction; self.operation?.message = step.message }
-                }
-                if !replaceExisting {
-                    let named = Set(editor.rows.filter { !$0.actor.isEmpty }.map(\.id))
-                    speakers = speakers.filter { !named.contains($0.key) }
-                }
-                editor.setActors(speakers, undoManager: undoManager)
-                editor.flush()
-                let count = Set(speakers.values).count
-                notice = speakers.isEmpty
-                    ? (.info, "Nenhuma fala sem personagem para identificar.")
-                    : (.success, "\(speakers.count) falas atribuídas a \(count) falantes. Renomeie cada falante com o nome do personagem (⌘Z desfaz).")
-            } catch SpeakerDiarization.DiarizationError.modelsNotInstalled {
-                pendingDiarizationDownload = {
-                    self.identifySpeakers(allowModelDownload: true, replaceExisting: replaceExisting, undoManager: undoManager)
-                }
-            } catch is CancellationError {
-                notice = (.info, "Identificação de falantes cancelada.")
-            } catch {
-                notice = (.error, LogRedactor.redact(error.localizedDescription))
-            }
-            release()
-            operation = nil
-        }
-    }
-
     var bitmapSubtitleTracks: [MediaTrack] { subtitleTracks.filter(\.isBitmapSubtitle) }
 
     func recognizeBitmapSubtitle(language: String) {
-        guard !isBusy, claim("OCR no estúdio") else { return }
+        guard !isBusy, claim("Reconhecimento de texto (OCR)") else { return }
         editor.flush()
         notice = nil
         operation = RunningOperation(kind: .extracting, fraction: 0, message: "Preparando OCR…")
@@ -613,7 +573,8 @@ final class WorkspaceModel {
         }
     }
 
-    /// UI test hooks, inert unless set: `ALS_SELECT=<line>`, `ALS_SEEK=<ms>`, `ALS_TASK=edit|translate`, `ALS_TRANSLATE=1`, `ALS_DUB=1`, `ALS_IDENTIFY=1`.
+    /// UI test hooks, inert unless set: `ALS_SELECT=<line>`, `ALS_SEEK=<ms>`, `ALS_TASK=edit|translate`, `ALS_REFERENCE=<id>`,
+    /// `ALS_DELETE=<id>`, `ALS_TRACKS=main,reference`, `ALS_TRANSLATE=1`, `ALS_DUB=1|run`.
     /// Used to capture the real window without driving the mouse or keyboard.
     private func applyTestHooks() {
         let env = ProcessInfo.processInfo.environment
@@ -642,7 +603,6 @@ final class WorkspaceModel {
         if env["ALS_TRANSLATE"] == "1" { translateEpisode(undoManager: nil) }
         if env["ALS_DUB"] == "1" || env["ALS_DUB"] == "run" { startDubSession() }
         if env["ALS_DUB"] == "run" { autoDub(cast: cast, undoManager: nil) }
-        if env["ALS_IDENTIFY"] == "1" { identifySpeakers(undoManager: nil) }
     }
 
     func close() {

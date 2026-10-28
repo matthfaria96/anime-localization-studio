@@ -1,4 +1,3 @@
-import StudioCore
 import SwiftUI
 
 /// One window, no sidebar: the start screen until a video is open, then the video's three
@@ -75,8 +74,8 @@ private struct WelcomeView: View {
     private var screens: some View {
         HStack(alignment: .top, spacing: Theme.Spacing.xl) {
             screen("film", "Visão geral", "Tamanho, codecs e faixas do vídeo. Escolha o áudio e a legenda padrão e extraia faixas.")
-            screen("captions.bubble", "Legendar", "Corrija uma legenda existente ou crie uma tradução a partir dela, preservando estilos e tags.")
-            screen("waveform.and.person.filled", "Dublar", "A legenda traduzida vira uma faixa de áudio com as vozes dos personagens.")
+            screen("captions.bubble", "Legendar", "Corrija uma legenda, traduza para outro idioma ou crie uma ouvindo o áudio, preservando estilos e tags.")
+            screen("waveform.and.person.filled", "Dublar", "Uma faixa de áudio dublada com a voz de cada personagem: pela ElevenLabs ou no próprio Mac.")
         }
         .frame(maxWidth: 760)
     }

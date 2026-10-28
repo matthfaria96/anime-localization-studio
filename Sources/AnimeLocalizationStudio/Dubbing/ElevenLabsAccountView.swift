@@ -1,5 +1,4 @@
 import DubbingKit
-import StudioCore
 import SwiftUI
 
 /// The ElevenLabs key (kept only in the Keychain) and what the account has left.

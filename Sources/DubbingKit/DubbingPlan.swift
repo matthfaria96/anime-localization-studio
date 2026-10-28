@@ -6,14 +6,16 @@ public struct CastMember: Sendable, Hashable, Codable, Identifiable {
     public var id: UUID
     /// Name as it appears in the subtitle's Actor/Name field or the diarization label.
     public var name: String
-    /// VoiceStudio voice profile id, or `nil` while not cast.
+    /// The reference clip the voice is cloned from (made by `OriginalVoices`), or `nil` while
+    /// not cast.
     public var voiceID: String?
-    /// Style instructions forwarded to the TTS engine (“voz jovem, enérgica”).
+    /// Unused; kept so casts saved by earlier versions still load.
     public var style: String
+    /// Pace of this character's lines (1 = as generated; below 1 slower, above 1 faster).
     public var speed: Double
     /// Speaker labels from diarization that belong to this character.
     public var speakerLabels: [String]
-    /// Engine that made `voiceID` (`system`, `voiceStudio`); voices are not portable between them.
+    /// Engine that made `voiceID`; voices are not portable between engines.
     public var engine: String?
 
     public init(id: UUID = UUID(), name: String, voiceID: String? = nil, style: String = "", speed: Double = 1, speakerLabels: [String] = []) {

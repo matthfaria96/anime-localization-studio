@@ -5,7 +5,7 @@ import MediaKit
 public protocol SpeechSynthesizer: Sendable {
     /// Stable id, part of the clip cache key (changing engines regenerates the clips).
     var id: String { get }
-    func synthesize(_ text: String, voice: String, style: String?, speed: Double, to url: URL) async throws
+    func synthesize(_ text: String, voice: String, to url: URL) async throws
 }
 
 public enum SynthesisError: Error, LocalizedError, Equatable {
@@ -28,11 +28,9 @@ public struct SystemVoiceSynthesizer: SpeechSynthesizer {
 
     public init() {}
 
-    public func synthesize(_ text: String, voice: String, style: String?, speed: Double, to url: URL) async throws {
-        // `say` speaks about 175 words per minute by default.
-        let rate = Int((175 * min(2, max(0.5, speed))).rounded())
+    public func synthesize(_ text: String, voice: String, to url: URL) async throws {
         do {
-            try await ProcessRunner.runChecked(executable, ["-v", voice, "-r", String(rate), "-o", url.path,
+            try await ProcessRunner.runChecked(executable, ["-v", voice, "-o", url.path,
                                                             "--file-format=WAVE", "--data-format=LEI16@24000", "--", text])
         } catch let error as ProcessError {
             throw SynthesisError.failed(error.localizedDescription)

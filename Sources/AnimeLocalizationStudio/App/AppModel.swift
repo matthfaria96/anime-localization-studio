@@ -27,7 +27,7 @@ enum EpisodeScreen: String, CaseIterable, Identifiable {
         switch self {
         case .overview: "Dados e faixas do vídeo: tamanho, codecs, áudio e legenda padrão, extração."
         case .subtitles: "Corrigir uma legenda do vídeo ou criar uma nova a partir de outra."
-        case .dubbing: "Criar uma faixa de áudio dublada a partir da legenda traduzida."
+        case .dubbing: "Criar uma faixa de áudio dublada com a voz de cada personagem (ElevenLabs, ou no Mac a partir de uma legenda)."
         }
     }
 }

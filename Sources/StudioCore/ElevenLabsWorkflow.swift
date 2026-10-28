@@ -20,7 +20,7 @@ extension EpisodeWorkflow {
         guard let audio = audioTrackID.flatMap({ id in info.tracks.first { $0.id == id } }) ?? info.tracks(.audio).first(where: \.isDefault) ?? info.tracks(.audio).first,
               let ordinal = info.ordinal(of: audio) else { throw WorkflowError.noAudio }
         let ffmpeg = try tools.require(.ffmpeg)
-        let work = store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
+        let work = dubWorkDirectory(project)
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
         let language = settings.targetLanguage
 

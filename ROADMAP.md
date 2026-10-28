@@ -38,7 +38,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 - ✅ Adaptador HTTP (`VoiceStudioClient`: capacidades, vozes, TTS, transcrição) com testes
 - ✅ Motores de tradução: Apple Translation, Apple Foundation Models, servidor compatível com OpenAI
 - ✅ Voice casting: personagens a partir do campo Ator do ASS, voz por personagem, velocidade, estilo (VoiceStudio), amostra
-- ✅ Elenco salvo na série (ou no projeto, sem série) e reaproveitado entre episódios e na fila
+- ✅ Elenco salvo na série (ou no projeto, sem série) e reaproveitado entre episódios
 - ✅ Transcrição no Mac (`SpeechAnalyzer`/`SpeechTranscriber`, 45 idiomas) para vídeos sem legenda, com confirmação antes de o macOS baixar o modelo de um idioma
 - ✅ Identificação de falantes (FluidAudio: pyannote Community-1 + WeSpeaker + PLDA/VBx em Core ML, ~22 MB baixados com confirmação): na transcrição ou numa legenda existente sem personagens; renomear "Falante N" aplica o nome a todas as falas
 - ⬜ Clonagem de voz com registro de consentimento (o VoiceStudio já tem `/profiles/{id}/consent`)
@@ -63,10 +63,9 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 ## Fase 5 — Automação 🟡
 
 - 🚫 Biblioteca de pastas (removida da interface na 0.11.0)
-- ✅ Fila persistente: ordem, progresso, cancelamento, retomada após fechar o app, registro por trabalho
-- ✅ Glossário por série reaproveitado na fila
+- 🚫 Fila persistente e relatório da temporada (fora da interface desde a 0.11.0; código removido na 0.21.0)
+- ✅ Glossário por série
 - ⬜ Reprocessar só falas novas/alteradas
-- ✅ Relatório da temporada em Markdown (Fila › Exportar relatório)
 - ✅ Contexto entre episódios: as últimas falas traduzidas do episódio anterior (mesma pasta, ordem do nome) entram como contexto do início do próximo
 
 ## Fase 6 — Acabamento e distribuição ⬜
@@ -111,7 +110,7 @@ Atualizado em 26/10/2026. Legenda: ✅ feito e testado · 🟡 parcial · ⬜ n�
 | SubtitleKitTests (27) | Round-trip byte a byte (BOM + CRLF), SSA, campos com vírgula, tags, desenho, karaokê, marcadores, fallback por partes, quebra de linha, SRT, busca/substituição, deslocamento, verificação de estrutura, `\r` solto que não quebra a linha |
 | MediaKitTests (11) | MKV real gerado no teste: inspeção, extração, mux pt-BR com verificação, original inalterado (SHA-256), não sobrescrita, detecção de vídeo recodificado, prévia, cancelamento de processo |
 | TranslationKitTests (13) | Contexto e glossário por lote, traduções existentes preservadas, queda do servidor interrompe sem multiplicar pedidos, fallback de marcadores, isolamento de fala com erro, checkpoint/retomada, cancelamento, **tradução real com a Apple Translation** |
-| StudioCoreTests (10) | **Dublagem de ponta a ponta num MKV real** (2 áudios, 2 legendas, verificação, original intacto); **legenda editada substitui a faixa antiga** num MKV real; inventário e limpeza do armazenamento; Fila em ordem, persistência, interrupção e retomada, cancelamento, redação de segredos, projetos, séries, ajustes tolerantes |
+| StudioCoreTests (10) | **Dublagem de ponta a ponta num MKV real** (2 áudios, 2 legendas, verificação, original intacto); **legenda editada substitui a faixa antiga** num MKV real; inventário e limpeza do armazenamento; redação de segredos, projetos, séries, ajustes tolerantes |
 | ASSRenderingTests (5) | libass real: `\fad` muda a opacidade, `\move` muda a posição, desenho vetorial em escala, karaokê muda a cor das sílabas, nada fora do tempo |
 | DubbingKitTests (9) | Plano de segmentos, elenco, cliente VoiceStudio contra servidor simulado, **dublagem real com voz do sistema + FFmpeg** (aceleração, cache, falas sem voz, sobreposição) |
 
@@ -130,7 +129,7 @@ cancelamento de processos; troca de faixa só apaga a tradução se o backup deu
 `project.json` ilegível é movido de lado; o Keychain atualiza antes de apagar.
 
 Pendente:
-- ✅ Trava por projeto entre a fila e o episódio aberto (`ProjectActivity`).
+- ✅ Trava por projeto: uma operação longa por vez (`ProjectActivity`).
 - ✅ Arquivos não editados com terminadores mistos voltam idênticos (bytes originais guardados); editados usam o terminador da maioria.
 - ✅ Legenda reextraída quando o vídeo é substituído no mesmo caminho (tamanho + data), com cópia da tradução anterior.
 - ✅ Arquivo quase todo UTF-8 com bytes inválidos continua UTF-8 (bytes ruins viram U+FFFD) em vez de virar Windows-1252.

@@ -39,16 +39,16 @@ struct ClonedVoiceTests {
         // A reference voice (the "original" character), ~8 s.
         let reference = dir.appendingPathComponent("ref.wav")
         try await SystemVoiceSynthesizer().synthesize("Bom dia. Hoje nós vamos atravessar a floresta e chegar ao castelo antes do anoitecer, custe o que custar.",
-                                                      voice: "Luciana", style: nil, speed: 1, to: reference)
+                                                      voice: "Luciana", to: reference)
         let output = dir.appendingPathComponent("out.wav")
         let clock = ContinuousClock()
         let start = clock.now
-        try await synthesizer.synthesize("Eu não vou deixar você machucar os meus amigos.", voice: reference.path, style: nil, speed: 1, to: output)
+        try await synthesizer.synthesize("Eu não vou deixar você machucar os meus amigos.", voice: reference.path, to: output)
         print("Chatterbox synthesis took \(clock.now - start)")
         // Warm model, same cloned voice: the cost per line of an episode.
         let warm = clock.now
         for line in ["Espera, aonde você vai?", "Precisamos chegar ao último andar, custe o que custar."] {
-            try await synthesizer.synthesize(line, voice: reference.path, style: nil, speed: 1, to: dir.appendingPathComponent("w.wav"))
+            try await synthesizer.synthesize(line, voice: reference.path, to: dir.appendingPathComponent("w.wav"))
         }
         print("Chatterbox warm, 2 lines: \(clock.now - warm)")
         let length = try await AudioMixer(tools: tools).duration(of: output)

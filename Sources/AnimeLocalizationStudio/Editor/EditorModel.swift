@@ -343,13 +343,6 @@ final class EditorModel {
         mutate("Traduzir episódio", undoManager: undoManager) { _, translation in translation = document }
     }
 
-    func startManualTranslation() {
-        guard translation == nil else { return }
-        translation = source
-        refresh()
-        scheduleSave()
-    }
-
     private func mutate(_ name: String, undoManager: UndoManager?, _ change: (inout SubtitleDocument?, inout SubtitleDocument?) -> Void) {
         let before = (source, translation)
         var newSource = source

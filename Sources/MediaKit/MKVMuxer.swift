@@ -82,7 +82,7 @@ public enum MuxError: Error, LocalizedError, Equatable {
             let f = ByteCountFormatter()
             return "Espaço insuficiente no disco de destino: são necessários \(f.string(fromByteCount: needed)) e há \(f.string(fromByteCount: available))."
         case .outputIsSource: return "O arquivo de saída não pode ser o próprio original."
-        case .missingInput(let name): return "O arquivo “\(name)” a incorporar não existe."
+        case .missingInput(let name): return "O arquivo “\(name)” que seria gravado no vídeo não existe."
         case .verificationFailed(let problems): return "O arquivo gerado não passou na verificação: " + problems.joined(separator: " ")
         }
     }

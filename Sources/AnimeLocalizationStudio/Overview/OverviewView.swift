@@ -1,5 +1,4 @@
 import MediaKit
-import StudioCore
 import SwiftUI
 
 /// First page of a video: what the file is (size, codecs, tracks), which tracks open by

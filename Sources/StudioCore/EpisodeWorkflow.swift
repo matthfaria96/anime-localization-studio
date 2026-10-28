@@ -124,7 +124,7 @@ public struct EpisodeWorkflow: Sendable {
         var project = project
         guard let translation = store.translationURL(for: project, language: settings.targetLanguage),
               FileManager.default.fileExists(atPath: translation.path) else { throw WorkflowError.noTextSubtitle }
-        progress(WorkflowStep(fraction: 0.02, message: "Preparando incorporação…"))
+        progress(WorkflowStep(fraction: 0.02, message: "Preparando a gravação…"))
         let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         let track = NewTrack(file: translation, kind: .subtitles, language: settings.targetLanguage, name: settings.trackName,
                              isDefault: settings.makeDefault)
@@ -208,18 +208,6 @@ public struct EpisodeWorkflow: Sendable {
         defer { try? FileManager.default.removeItem(at: temp) }
         _ = try await TrackExtractor(tools: tools).extractSubtitle(track, from: info, to: temp)
         return TranslationAlignment.reference(try SubtitleDocument.load(temp), for: try SubtitleDocument.load(sourceURL))
-    }
-
-    /// A text track of the file in the target language that is not the original, to link
-    /// automatically when the project has no translation yet (e.g. a file muxed earlier).
-    public func existingTranslationTrack(in info: MediaInfo, project: StudioProject) -> MediaTrack? {
-        let target = settings.targetLanguage.lowercased()
-        let base = String(target.prefix(2))
-        return info.tracks(.subtitles).first { track in
-            track.id != project.sourceTrackID && track.textSubtitleExtension != nil
-                && ((track.languageIETF ?? "").lowercased() == target || track.language.lowercased() == IntegrityVerifier.iso6392(for: target)
-                    || (track.languageIETF ?? "").lowercased().hasPrefix(base))
-        }
     }
 
     /// Sets the default audio and subtitle tracks in the file itself (instant) or in a copy.
@@ -349,7 +337,7 @@ public struct EpisodeWorkflow: Sendable {
             .filter { $0.speaker != "Desconhecido" }
             .map { OriginalVoices.Line(id: $0.id, start: $0.start, end: $0.end, speaker: $0.speaker, text: $0.text) }
         guard !lines.isEmpty else { return [] }
-        let work = store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
+        let work = dubWorkDirectory(project)
         return try await OriginalVoices(tools: tools, workDirectory: work).samples(for: lines, media: info, audioTrack: audio) { value, message in
             progress(WorkflowStep(fraction: value, message: message))
         }
@@ -413,7 +401,7 @@ public struct EpisodeWorkflow: Sendable {
     }
 
     /// Work files of the episode's dub (synthesized lines, voices, separated audio).
-    public func dubWorkDirectory(_ project: StudioProject) -> URL {
+    func dubWorkDirectory(_ project: StudioProject) -> URL {
         store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
     }
 
@@ -433,7 +421,7 @@ public struct EpisodeWorkflow: Sendable {
         let text = try await dubText(project, trackID: textTrackID, info: info)
         let language = text.language
         let segments = spokenSegments(text, project: project)
-        let work = store.directory(for: project.id).appendingPathComponent("Dub", isDirectory: true)
+        let work = dubWorkDirectory(project)
         let dubAudio = store.directory(for: project.id).appendingPathComponent("dub.\(language).m4a")
         var lineVoices: [Int: String] = [:]
         if settings.dubbingEngine == .original && settings.dubbingPerLineVoice {

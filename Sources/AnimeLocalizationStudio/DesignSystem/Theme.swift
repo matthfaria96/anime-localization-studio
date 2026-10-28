@@ -19,15 +19,11 @@ enum Theme {
         static let large: CGFloat = 14
     }
 
-    /// The brand accent comes from the asset catalog (`AccentColor`), so system controls,
-    /// selection and focus rings all share it.
-    static let accent = Color.accentColor
     static let translated = Color(red: 0.20, green: 0.70, blue: 0.48)
     static let warning = Color.orange
     static let failure = Color.red
 
     static let monoDigits = Font.system(.body, design: .monospaced).monospacedDigit()
-    static let caption = Font.system(.caption).weight(.medium)
 }
 
 // MARK: Building blocks
@@ -82,13 +78,6 @@ struct Tag: View {
             .padding(.vertical, 2)
             .foregroundStyle(filled ? Color.white : tint)
             .background(filled ? AnyShapeStyle(tint) : AnyShapeStyle(tint.opacity(0.14)), in: .capsule)
-    }
-}
-
-struct StatusDot: View {
-    let color: Color
-    var body: some View {
-        Circle().fill(color).frame(width: 7, height: 7).accessibilityHidden(true)
     }
 }
 

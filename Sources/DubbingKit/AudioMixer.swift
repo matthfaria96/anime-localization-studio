@@ -19,9 +19,10 @@ public struct AudioMixer: Sendable {
         public let overflows: Bool
     }
 
-    /// Removes leading/trailing silence, converts to 48 kHz mono and, when the speech is longer
-    /// than `slot`, speeds it up (pitch preserved by `atempo`) by at most `maxSpeedup`.
-    public func fit(_ clip: URL, slot: Int, maxSpeedup: Double, to output: URL) async throws -> FittedClip {
+    /// Removes leading/trailing silence, converts to 48 kHz mono, plays it at the character's
+    /// `speed` and, when the speech is still longer than `slot`, speeds it up further, to at
+    /// most `maxSpeedup` (pitch preserved by `atempo`).
+    public func fit(_ clip: URL, slot: Int, speed: Double = 1, maxSpeedup: Double, to output: URL) async throws -> FittedClip {
         let ffmpeg = try tools.require(.ffmpeg)
         let trimmed = output.deletingPathExtension().appendingPathExtension("trim.wav")
         defer { try? FileManager.default.removeItem(at: trimmed) }
@@ -32,8 +33,8 @@ public struct AudioMixer: Sendable {
         // Silence-only output (nothing pronounceable) leaves an empty file with no duration.
         guard let length = try? await duration(of: trimmed), length > 0 else { throw SynthesisError.failed("a voz não gerou fala audível") }
         let needed = slot > 0 ? Double(length) / Double(slot) : 1
-        let tempo = min(maxSpeedup, max(1, needed))
-        if tempo > 1.001 {
+        let tempo = max(speed, min(maxSpeedup, needed))
+        if abs(tempo - 1) > 0.001 {
             try await ProcessRunner.runChecked(ffmpeg, ["-nostdin", "-v", "error", "-y", "-i", trimmed.path,
                                                         "-af", String(format: "atempo=%.4f", tempo), "-c:a", "pcm_s16le", output.path])
         } else {

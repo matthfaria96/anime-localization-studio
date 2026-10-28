@@ -8,17 +8,13 @@ struct EditorPane: View {
     @State private var showStyles = false
     @State private var showShift = false
     @State private var showCharacter = false
-    @Environment(\.undoManager) private var undoManager
 
     var editor: EditorModel { workspace.editor }
 
     var body: some View {
         if editor.hasDocument {
             VStack(spacing: 0) {
-                EditorToolbar(editor: editor, showStyles: $showStyles, showShift: $showShift, showCharacter: $showCharacter,
-                              canIdentify: !workspace.isBusy && !workspace.audioTracks.isEmpty) {
-                    workspace.identifySpeakers(undoManager: undoManager)
-                }
+                EditorToolbar(editor: editor, showStyles: $showStyles, showShift: $showShift, showCharacter: $showCharacter)
                 Divider()
                 // A plain stack honors the width it is given; split views size by content and overflow.
                 GeometryReader { proxy in
@@ -72,8 +68,6 @@ private struct EditorToolbar: View {
     @Binding var showStyles: Bool
     @Binding var showShift: Bool
     @Binding var showCharacter: Bool
-    let canIdentify: Bool
-    let identify: () -> Void
     @Environment(\.undoManager) private var undoManager
     @State private var lastReplaceCount: Int?
     @FocusState private var searchFocused: Bool

@@ -25,7 +25,7 @@ struct SpeakerDiarizationTests {
         var parts: [URL] = []
         for (n, line) in lines.enumerated() {
             let url = dir.appendingPathComponent("\(n).wav")
-            try await SystemVoiceSynthesizer().synthesize(line.1, voice: line.0, style: nil, speed: 1, to: url)
+            try await SystemVoiceSynthesizer().synthesize(line.1, voice: line.0, to: url)
             parts.append(url)
         }
         // Concatenate with 0.6 s of silence between turns, at 16 kHz mono.

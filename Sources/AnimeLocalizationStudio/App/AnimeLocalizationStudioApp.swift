@@ -27,8 +27,7 @@ struct AnimeLocalizationStudioApp: App {
                         let synthesizer = app.settings.makeSynthesizer(paths: app.paths)
                         Task {
                             do {
-                                try await synthesizer.synthesize("Eu não vou deixar você machucar os meus amigos.", voice: reference, style: nil, speed: 1,
-                                                                 to: URL(fileURLWithPath: output))
+                                try await synthesizer.synthesize("Eu não vou deixar você machucar os meus amigos.", voice: reference, to: URL(fileURLWithPath: output))
                                 AppLog.shared.info("Teste de voz: \(output)")
                             } catch {
                                 try? error.localizedDescription.write(toFile: output + ".error", atomically: true, encoding: .utf8)
@@ -50,9 +49,9 @@ struct AnimeLocalizationStudioApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("Abrir vídeo…") { app.presentOpenPanel() }.keyboardShortcut("o")
                 Button("Fechar vídeo") { app.closeVideo() }.disabled(app.workspace == nil)
-                Button("Abrir legenda externa…") { app.workspace?.openExternalSubtitle() }
+                Button("Importar arquivo de legenda…") { app.workspace?.requestNewSubtitle(.importFile) }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
-                    .disabled(app.workspace == nil)
+                    .disabled(app.workspace == nil || app.screen != .subtitles)
             }
             CommandGroup(after: .saveItem) {
                 Button("Salvar legenda como arquivo…") {

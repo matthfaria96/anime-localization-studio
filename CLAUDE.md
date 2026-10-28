@@ -7,7 +7,7 @@
   e carimba o SDK real com `vtool` — sem isso não há Liquid Glass.
 - Interface: confira por captura da janela real com `Scripts/ui-capture.sh` (pasta pessoal
   temporária via `CFFIXED_USER_HOME`; ganchos `ALS_OPEN`, `ALS_SELECT`, `ALS_SEEK`,
-  `ALS_TRANSLATE=1`, `ALS_DUB=1|run`, `ALS_IDENTIFY=1`, `ALS_MODE=subtitles|dubbing` (sem ele abre a Visão geral),
+  `ALS_TRANSLATE=1`, `ALS_DUB=1|run`, `ALS_TRACKS=main,ref`, `ALS_DELETE=<id>`, `ALS_STYLES=1`, `ALS_MODE=subtitles|dubbing` (sem ele abre a Visão geral),
   `ALS_TASK=edit|translate`, `ALS_SIZE=LxA`, `APPEARANCE=light|dark`). Não use os dados reais do usuário.
 - Regras que não podem quebrar: o arquivo original nunca é escrito; documentos ASS não editados
   fazem round-trip byte a byte; tradução só altera o campo `Text` (`StructureCheck`); mux grava
@@ -23,7 +23,7 @@
 - Legendar: formulário único (legenda do vídeo + "Mostrar ao lado" opcional, ou legenda nova com idioma, base e tradução automática). Edições são rascunho; o único salvamento no vídeo é "Gravar no vídeo…"; sair com alterações pergunta Gravar / Rascunho / Descartar. Abas do topo: ícone + nome, atual em rosa com sublinhado (o usuário escolheu sublinhado, não cápsula). Dublar: resumo + Dublar…, histórico logo abaixo (apagar confirma e pode zerar vozes), vozes recolhidas.
 - Voz do Mac = Chatterbox Multilingual via speech-swift (revisão fixa no Package.swift) + MLX. Requer o Metal Toolchain (`xcodebuild -downloadComponent MetalToolchain`); nos testes o `default.metallib` é copiado para junto do .xctest como `mlx.metallib` (ver ClonedVoiceTests); no app, `build-app.sh` copia os bundles SwiftPM para Contents/Resources. Gancho `ALS_VOICE_TEST=<ref.wav> ALS_VOICE_OUT=<out.wav>` gera uma fala no app instalado.
 - Dublagem: dois motores apenas — ElevenLabs (`DubbingKit/ElevenLabsDubbing.swift` + `StudioCore/ElevenLabsWorkflow.swift`, chave no Keychain `api.elevenlabs.io`, `project.remoteDub` retoma sem cobrar de novo) e Voz original no Mac. O usuário mandou remover VoiceStudio e vozes do macOS da interface (`SystemVoiceSynthesizer` ficou só para os testes gerarem fala).
-- Fontes: `WorkspaceModel+Fonts.swift`; adicionadas ficam em `Projects/<id>/Fonts` e entram em todo `MuxPlan.attachments`. Estilos: `ASSStyleEditing.swift`. Dublagem "voz original" = PocketTTS no idioma de saída, referência por fala (`OriginalVoices.lineClips`) quando `dubbingPerLineVoice`.
+- Fontes: `WorkspaceModel+Fonts.swift`; adicionadas ficam em `Projects/<id>/Fonts` e entram em todo `MuxPlan.attachments`. Estilos: `ASSStyleEditing.swift`. Dublagem "voz original" = Chatterbox no idioma do texto falado, referência por fala (`OriginalVoices.lineClips`) quando `dubbingPerLineVoice`; a velocidade de cada personagem é aplicada no `AudioMixer.fit`. Renomear personagem em Dublar nunca altera legenda do vídeo (`renameCastMember`).
 - Textos: plurais com `Plural.count`, idiomas com `Languages` (`DesignSystem/Wording.swift`); nunca "UND", nunca "Incorporar" (é "Gravar no vídeo").
 - UX que o usuário rejeitou: operações longas que rodam sem perguntar o destino e sem mostrar onde gravaram (usar janela guiada: confirmar → etapas → resultado com o arquivo).
 - Também rejeitado: estrelas para faixa padrão (usar "Tornar padrão" na Visão geral) e menus que escondem qual legenda é a base (usar lista de opções). Legendar sempre separa "editar existente" de "criar tradução"; Dublar sempre diz o áudio de base, que o texto vem da legenda traduzida e o idioma do resultado.

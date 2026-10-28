@@ -16,9 +16,7 @@ public struct AppPaths: Sendable {
 
     public var projects: URL { root.appendingPathComponent("Projects", isDirectory: true) }
     public var series: URL { root.appendingPathComponent("Series", isDirectory: true) }
-    public var jobs: URL { root.appendingPathComponent("jobs.json") }
     public var settings: URL { root.appendingPathComponent("settings.json") }
-    public var library: URL { root.appendingPathComponent("library.json") }
     /// Downloaded on-device models (speaker diarization).
     public var diarizationModels: URL { root.appendingPathComponent("Models/Diarization", isDirectory: true) }
     /// On-device voice cloning model (Chatterbox Multilingual).

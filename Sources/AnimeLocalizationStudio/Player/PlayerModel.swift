@@ -87,15 +87,11 @@ final class PlayerModel {
         if player.timeControlStatus == .playing { player.pause() } else { player.play() }
     }
 
-    func pause() { player.pause() }
-
     func seek(to milliseconds: Int) {
         let target = max(0, min(milliseconds, max(0, duration)))
         currentTime = target
         player.seek(to: CMTime(value: CMTimeValue(target), timescale: 1_000), toleranceBefore: .zero, toleranceAfter: .zero)
     }
-
-    func step(by milliseconds: Int) { seek(to: currentTime + milliseconds) }
 
     /// Plays one line and pauses at its end (for reviewing timing).
     func play(from start: Int, to end: Int) {

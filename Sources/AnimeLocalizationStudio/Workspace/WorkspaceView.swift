@@ -98,8 +98,8 @@ struct WorkspaceView: View {
 
     private static let inspectorWidth: CGFloat = 320
 
-    /// Legendar after the task was chosen: a bar to go back or keep/discard changes, the video
-    /// and the lines, and the panel with everything the task needs.
+    /// Legendar: the bar with what is edited and how to save it, the video and the lines, and
+    /// the translation tools beside them while translating.
     private var subtitles: some View {
         VStack(spacing: 0) {
             SubtitleSessionBar(workspace: workspace)
@@ -160,8 +160,8 @@ struct WorkspaceView: View {
     }
 }
 
-/// Top of Legendar: back to the start form, what is being edited, the draft state and the
-/// one way to save into the video.
+/// Top of Legendar: what is being edited (and beside what), the draft state, new subtitles,
+/// translation and the one way to save into the video.
 private struct SubtitleSessionBar: View {
     @Bindable var workspace: WorkspaceModel
     @State private var confirmDiscardDraft = false
@@ -186,16 +186,11 @@ private struct SubtitleSessionBar: View {
             newMenu
             translateMenu
             if workspace.isEditingOriginal {
-                Menu {
-                    Button("Salvar como arquivo de legenda…") { workspace.exportSource() }
-                    Button("Editar séries e glossários…") { workspace.showSeries = true }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .menuStyle(.button)
-                .buttonStyle(.borderless)
-                .fixedSize()
-                .hint("Mais", "Salvar a legenda como arquivo separado (sem mexer no vídeo) e editar séries e glossários.")
+                Button("Salvar como arquivo de legenda…", systemImage: "square.and.arrow.up") { workspace.exportSource() }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .disabled(!workspace.editor.hasDocument)
+                    .hint("Salvar como arquivo (⇧⌘E)", "Salva a legenda como um arquivo ASS/SRT separado, sem mexer no vídeo.")
             }
             Button { workspace.requestWriteToVideo() } label: { Label("Gravar no vídeo…", systemImage: "square.and.arrow.down.on.square") }
                 .buttonStyle(.glassProminent)

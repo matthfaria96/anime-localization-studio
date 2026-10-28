@@ -69,8 +69,6 @@ public actor ASSRenderer {
         lastImage = nil
     }
 
-    public var isLoaded: Bool { track != nil }
-
     /// The overlay at `milliseconds` for a frame of `width × height` pixels showing a video of
     /// `videoWidth × videoHeight` (the storage size libass uses for aspect and scaling).
     /// Returns `nil` when nothing is on screen.
