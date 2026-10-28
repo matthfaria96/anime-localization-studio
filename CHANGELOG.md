@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.26.0 — 28/10/2026
+
+### Adicionado
+- **Formatação sem digitar códigos.** Acima do texto da fala: **Itálico** (⌘I), **Negrito** (⌘B), **Sublinhado** (⌘U), **Riscado**, **Cor** (9 cores) e **Tamanho** (em relação ao estilo da fala), mais **Limpar formatação**. Valem para o trecho selecionado ou, sem seleção, para a fala inteira; clicar de novo tira. Uma seleção nunca corta um código ao meio, e depois de um trecho colorido ou de outro tamanho a fala volta ao estilo. No SRT usa `<i>`, `<b>`, `<u>`, `<s>` e `<font color>` (sem tamanho). Limpar não mexe em posição, tempo, animação nem karaokê.
+- **Como fica:** abaixo do texto, a fala aparece como no vídeo (itálico, negrito, cores), sem os códigos, sempre que ela tem formatação.
+
 ## 0.25.0 — 28/10/2026
 
 Legendar reorganizado (pedido do usuário): uma legenda editada por vez e uma barra só.

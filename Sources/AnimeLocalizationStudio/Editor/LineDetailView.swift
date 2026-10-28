@@ -9,6 +9,8 @@ struct LineDetailView: View {
     @Environment(\.undoManager) private var undoManager
     @State private var startDraft = ""
     @State private var endDraft = ""
+    /// What is selected in the text, for the formatting buttons.
+    @State private var textSelection: TextSelection?
 
     var editor: EditorModel { workspace.editor }
     var index: Int? { editor.selection.count == 1 ? editor.selection.first : nil }
@@ -243,7 +245,15 @@ struct LineDetailView: View {
                         .hint("Aplicar (⌘↩)", "Grava o texto que você digitou nesta fala. Trocar de fala também aplica.")
                 }
             }
-            TextEditor(text: text)
+            FormatBar(html: editor.usesHTMLMarkup, style: editor.cue(index, side: .original).flatMap { editor.styleInfo($0.style) }) { change in
+                let raw = text.wrappedValue
+                var range: Range<String.Index>?
+                if case .selection(let selected) = textSelection?.indices, !selected.isEmpty, selected.upperBound <= raw.endIndex { range = selected }
+                text.wrappedValue = change(raw, range)
+                textSelection = nil
+                editor.commitDrafts()
+            }
+            TextEditor(text: text, selection: $textSelection)
                 .font(.system(prominent ? .body : .callout, design: .default))
                 .scrollContentBackground(.hidden)
                 .padding(Theme.Spacing.s)
@@ -251,9 +261,15 @@ struct LineDetailView: View {
                 .background(.background, in: .rect(cornerRadius: Theme.Radius.medium))
                 .overlay(RoundedRectangle(cornerRadius: Theme.Radius.medium).strokeBorder(.separator))
                 .accessibilityLabel(title)
-            let preview = ASSText.plainText(text.wrappedValue, htmlMarkup: editor.source?.usesHTMLMarkup ?? false)
-            if preview != text.wrappedValue && !preview.isEmpty {
-                Text(preview).font(.caption).foregroundStyle(.secondary).lineLimit(3)
+            let html = editor.usesHTMLMarkup
+            // Shown when the line has formatting or other tags, so it reads as it will look.
+            if ASSText.plainText(text.wrappedValue, htmlMarkup: html) != text.wrappedValue {
+                Text(FormatBar.preview(text.wrappedValue, html: html))
+                    .padding(.horizontal, Theme.Spacing.s)
+                    .padding(.vertical, Theme.Spacing.xs)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.black.opacity(0.82), in: .rect(cornerRadius: Theme.Radius.small))
+                    .hint("Como fica", "A fala como aparece no vídeo: itálico, negrito, sublinhado, riscado e cores, sem os códigos.")
             }
         }
     }

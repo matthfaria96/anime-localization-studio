@@ -319,6 +319,15 @@ final class EditorModel {
 
     // MARK: Position on screen
 
+    /// A style's look (color and size come back to it after a formatted stretch); nil in SRT.
+    func styleInfo(_ name: String) -> ASSStyleInfo? {
+        guard case .ass(let doc) = source, let record = doc.style(named: name) else { return nil }
+        return ASSStyleInfo(record: record, isSSA: doc.isSSA)
+    }
+
+    /// The subtitle uses SubRip's HTML-like markup instead of ASS tags.
+    var usesHTMLMarkup: Bool { source?.usesHTMLMarkup ?? false }
+
     /// The numpad alignment of a style (2, bottom center, when unknown or in SRT).
     func styleAlignment(_ name: String) -> Int {
         guard case .ass(let doc) = source, let record = doc.style(named: name) else { return 2 }
