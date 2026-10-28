@@ -130,9 +130,13 @@ struct LineDetailView: View {
         return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             SectionLabel("Posição na tela")
             HStack(alignment: .top, spacing: Theme.Spacing.m) {
-                PositionPad(alignment: alignment) { editor.setAlignment($0, lines: [index], undoManager: undoManager) }
+                PositionPad(alignment: row?.isInArea == false ? nil : alignment, point: row?.screenPoint) {
+                    editor.setAlignment($0, lines: [index], undoManager: undoManager)
+                }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(row?.hasExactPosition == true ? "Ponto exato, ancorada \(ScreenPosition.name(alignment).lowercased())" : ScreenPosition.name(alignment))
+                    Text(row?.isInArea == false
+                         ? "Ponto livre · \(row?.screenPoint.map { ScreenPosition.name(ScreenPosition.area(of: $0)).lowercased() } ?? "")"
+                         : ScreenPosition.name(alignment))
                         .font(.callout)
                     Text(positionSource(row, placeable: placeable)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     if row?.alignmentFromLine == true || row?.hasExactPosition == true {
@@ -159,7 +163,8 @@ struct LineDetailView: View {
     private func positionSource(_ row: EditorRow?, placeable: Bool) -> String {
         guard editor.playResolution != nil else { return "Em SRT há só as posições da grade (\\an); arrastar e ponto exato são do ASS." }
         if !placeable { return "Esta fala se move sozinha (\\move): a grade muda o lado de onde ela se ancora, e arrastar não se aplica." }
-        if row?.hasExactPosition == true { return "Definida nesta fala (\\pos)." }
+        if row?.hasExactPosition == true { return "Num ponto exato definido nesta fala (\\pos), fora das áreas da grade. Clique numa área para pô-la lá." }
+        if row?.isInArea == false { return "As margens do estilo “\(row?.style ?? "")” põem a fala fora da área \(ScreenPosition.name(row?.alignment ?? 2).lowercased())." }
         if row?.alignmentFromLine == true { return "Definida nesta fala." }
         return "Vem do estilo “\(row?.style.isEmpty == false ? row!.style : "padrão")”."
     }

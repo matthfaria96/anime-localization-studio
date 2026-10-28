@@ -35,6 +35,7 @@ struct EditorPane: View {
             .sheet(isPresented: $showShift) { ShiftTimingSheet(editor: editor) }
             // Observing the playback time here would rebuild the whole table 30 times a second.
             .background { PlaybackFollower(workspace: workspace) }
+            .modifier(KeyboardNavigation(workspace: workspace))
         } else {
             EmptyStateView(title: "Este vídeo não tem legenda de texto",
                            message: "Comece uma em branco, importe um arquivo ou deixe o app criar a legenda ouvindo o áudio, no tempo de cada fala.",
@@ -216,8 +217,10 @@ struct LinesTable: View {
                 TableColumn("#") { row in
                     HStack(spacing: 5) {
                         Text("\(row.id + 1)").monospacedDigit().foregroundStyle(.secondary)
-                        PositionGlyph(alignment: row.alignment, fromLine: row.alignmentFromLine)
-                            .hintVerbatim("Posição na tela", ScreenPosition.name(row.alignment) + (row.alignmentFromLine ? ", definida nesta fala." : ", do estilo."))
+                        PositionGlyph(alignment: row.isInArea ? row.alignment : nil, fromLine: row.alignmentFromLine, point: row.screenPoint)
+                            .hintVerbatim("Posição na tela", row.isInArea
+                                          ? ScreenPosition.name(row.alignment) + (row.alignmentFromLine ? ", definida nesta fala." : ", do estilo.")
+                                          : "Ponto livre, \(row.screenPoint.map { ScreenPosition.name(ScreenPosition.area(of: $0)).lowercased() } ?? "fora das áreas da grade").")
                     }
                 }
                 .width(min: 44, ideal: 52, max: 70)
@@ -337,6 +340,42 @@ struct SpeakerModelConsent: ViewModifier {
         } message: {
             Text("Para saber quem fala, o app usa modelos que rodam no próprio Mac (Neural Engine): \(SpeakerDiarization.modelCredits). Licença CC-BY-4.0. O download vem do Hugging Face uma única vez e fica guardado no app; o áudio nunca sai do Mac.")
         }
+    }
+}
+
+/// ↑ ↓ change line, ← → go back or forward 15 s and Space plays or pauses, wherever the focus
+/// is in Legendar, except while typing in a field (there the keys edit the text). The list
+/// alone only gets the arrows while it has the keyboard focus, which a click on the video,
+/// the text or a button takes away.
+private struct KeyboardNavigation: ViewModifier {
+    let workspace: WorkspaceModel
+    @State private var monitor: Any?
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                guard monitor == nil else { return }
+                monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in handle(event) ? nil : event }
+            }
+            .onDisappear {
+                if let monitor { NSEvent.removeMonitor(monitor) }
+                monitor = nil
+            }
+    }
+
+    private func handle(_ event: NSEvent) -> Bool {
+        guard let window = event.window, window === NSApp.mainWindow, window.attachedSheet == nil,
+              event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
+              !(window.firstResponder is NSText) else { return false }
+        switch event.keyCode {
+        case 126: workspace.moveSelection(by: -1)
+        case 125: workspace.moveSelection(by: 1)
+        case 123: workspace.player.skip(by: -15_000)
+        case 124: workspace.player.skip(by: 15_000)
+        case 49: workspace.player.togglePlay()
+        default: return false
+        }
+        return true
     }
 }
 

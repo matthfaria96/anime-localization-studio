@@ -538,6 +538,17 @@ final class WorkspaceModel {
         select(rows[next].id, seek: true)
     }
 
+    /// The line above or below in the list as shown (with its filter and search), selected and
+    /// with the video taken to it.
+    func moveSelection(by delta: Int) {
+        let rows = editor.visibleRows
+        guard !rows.isEmpty else { return }
+        let current = editor.selection.count == 1 ? editor.selection.first : (delta > 0 ? editor.selection.max() : editor.selection.min())
+        let position = current.flatMap { id in rows.firstIndex { $0.id == id } }
+        let next = position.map { min(max(0, $0 + delta), rows.count - 1) } ?? (delta > 0 ? 0 : rows.count - 1)
+        select(rows[next].id, seek: true)
+    }
+
     func select(_ id: Int, seek: Bool) {
         editor.selection = [id]
         if seek, let row = editor.rows.first(where: { $0.id == id }) { player.seek(to: row.start) }

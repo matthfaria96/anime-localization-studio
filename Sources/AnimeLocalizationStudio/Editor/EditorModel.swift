@@ -42,6 +42,11 @@ struct EditorRow: Identifiable, Hashable {
     var alignmentFromLine = false
     /// The line is placed at an exact point (`\pos`).
     var hasExactPosition = false
+    /// Where the line really is, as a fraction of the frame (0…1 across, 0…1 down); ASS only.
+    var screenPoint: CGPoint?
+    /// The line sits in the area its alignment names (not at a free point elsewhere): only
+    /// then the grid marks that area.
+    var isInArea = true
 }
 
 /// The two working documents (original and translation) and every edit made to them.
@@ -473,6 +478,7 @@ final class EditorModel {
         sourceCues = source?.cues ?? []
         translationCues = translation?.cues ?? []
         guard let source else { rows = []; return }
+        let ass: ASSDocument? = if case .ass(let doc) = source { doc } else { nil }
         rows = sourceCues.map { cue in
             let translated = translationCues.indices.contains(cue.id) ? translationCues[cue.id] : nil
             let translatedText = translated?.plainText ?? ""
@@ -487,6 +493,12 @@ final class EditorModel {
             row.alignment = inline ?? styleAlignment(cue.style)
             row.alignmentFromLine = inline != nil
             row.hasExactPosition = ASSText.positionOverride(in: cue.rawText) != nil
+            if let ass, cue.id < ass.eventCount {
+                let frame = ass.playResolution
+                let anchor = ass.anchor(ofEvent: cue.id)
+                row.screenPoint = CGPoint(x: anchor.x / frame.width, y: anchor.y / frame.height)
+                row.isInArea = !row.hasExactPosition && !ASSText.hasMovement(cue.rawText) && ASSText.area(of: anchor, in: frame) == row.alignment
+            }
             return row
         }
     }

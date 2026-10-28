@@ -164,16 +164,19 @@ public enum ASSText {
         return Int(block[range].dropFirst(2))
     }
 
-    /// The first `\anN` in the line (ASS numpad alignment), if any.
+    /// The line's alignment override as an ASS numpad value: the first `\anN`, or SSA's legacy
+    /// `\aN` (1–3 bottom, 5–7 top, 9–11 middle), which libass still honors.
     public static func alignmentOverride(in text: String) -> Int? {
-        guard let range = text.range(of: #"\\an([1-9])"#, options: .regularExpression) else { return nil }
-        return Int(text[range].dropFirst(3))
+        if let range = text.range(of: #"\\an([1-9])"#, options: .regularExpression) { return Int(text[range].dropFirst(3)) }
+        guard let range = text.range(of: #"\\a([0-9]+)"#, options: .regularExpression), let legacy = Int(text[range].dropFirst(2)),
+              [1, 2, 3, 5, 6, 7, 9, 10, 11].contains(legacy) else { return nil }
+        return ASSStyleInfo.numpad(fromSSA: legacy)
     }
 
     /// The line with its position set to numpad `alignment` (`{\anN}`), or with every `\an`
     /// removed when nil (back to the style's position). Nothing else in the text changes.
     public static func settingAlignment(_ alignment: Int?, in text: String) -> String {
-        var result = text.replacingOccurrences(of: #"\\an[1-9]"#, with: "", options: .regularExpression)
+        var result = text.replacingOccurrences(of: #"\\an[1-9]|\\a[0-9]+"#, with: "", options: .regularExpression)
         result = result.replacingOccurrences(of: "{}", with: "")
         guard let alignment, (1...9).contains(alignment) else { return result }
         if result.hasPrefix("{") { return "{\\an\(alignment)" + result.dropFirst() }

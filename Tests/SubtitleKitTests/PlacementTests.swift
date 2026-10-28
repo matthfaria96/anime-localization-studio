@@ -62,4 +62,25 @@ struct PlacementTests {
         #expect(doc.event(at: 0).text == #"{\pos(940,1030)}Hello"#)
         #expect(doc.anchor(ofEvent: 0) == anchor)
     }
+
+    @Test func legacyAlignmentTagsCount() {
+        // SSA's \aN (1–3 bottom, 5–7 top, 9–11 middle) still used by old fansubs.
+        #expect(ASSText.alignmentOverride(in: #"{\a5}Top left"#) == 7)
+        #expect(ASSText.alignmentOverride(in: #"{\a10}Middle"#) == 5)
+        #expect(ASSText.alignmentOverride(in: #"{\alpha&H80&}Not an alignment"#) == nil)
+        #expect(ASSText.settingAlignment(nil, in: #"{\a6\i1}Hi"#) == #"{\i1}Hi"#)
+        #expect(ASSText.settingAlignment(8, in: #"{\a6}Hi"#) == #"{\an8}Hi"#)
+    }
+
+    @Test func aMovingLineStartsWhereItsMoveStarts() throws {
+        let doc = try document("Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,{\\move(100,200,900,200)}Sliding")
+        #expect(doc.anchor(ofEvent: 0) == ASSPoint(x: 100, y: 200))
+    }
+
+    @Test func theAreaOfAPointIsTheThirdOfTheScreenItIsIn() {
+        let frame = (width: 1920.0, height: 1080.0)
+        #expect(ASSText.area(of: ASSPoint(x: 200, y: 540), in: frame) == 4, "middle left")
+        #expect(ASSText.area(of: ASSPoint(x: 940, y: 1030), in: frame) == 2, "bottom center")
+        #expect(ASSText.area(of: ASSPoint(x: 1800, y: 40), in: frame) == 9, "top right")
+    }
 }

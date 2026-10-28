@@ -93,6 +93,9 @@ final class PlayerModel {
         player.seek(to: CMTime(value: CMTimeValue(target), timescale: 1_000), toleranceBefore: .zero, toleranceAfter: .zero)
     }
 
+    /// Goes back (negative) or forward by `milliseconds`.
+    func skip(by milliseconds: Int) { seek(to: currentTime + milliseconds) }
+
     /// Plays one line and pauses at its end (for reviewing timing).
     func play(from start: Int, to end: Int) {
         clearBoundary()

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.24.0 — 28/10/2026
+
+### Corrigido
+- **Posição marcada errada.** A grade pintava o lado de ancoragem (que vem do estilo, quase sempre "embaixo, no centro") e não onde a fala aparece: uma fala com ponto exato no meio da tela, à esquerda, saía marcada como embaixo. Agora o app calcula o ponto real de cada fala (`\pos`, início do `\move`, ou alinhamento + margens + resolução do script) e só pinta uma área quando a fala está mesmo nela; fala num ponto livre fica sem área pintada e ganha um pontinho no lugar real, na grade do painel e no mini-ícone da lista.
+- A tag de alinhamento antiga do SSA (`\a5`, `\a10`…), que o libass ainda respeita, era ignorada.
+
+### Adicionado
+- Teclado em Legendar, com o foco em qualquer lugar menos num campo de texto: **↑ ↓** trocam de fala (seguindo o filtro e a busca da lista) e levam o vídeo até ela, **← →** voltam e avançam 15 s, **Espaço** reproduz ou pausa. Antes as setas só funcionavam com a lista em foco, que um clique no vídeo, no texto ou num botão tirava.
+- Player: botões **−15 s** e **+15 s**.
+
 ## 0.23.0 — 27/10/2026
 
 ### Adicionado

@@ -34,6 +34,20 @@ extension ASSText {
         text.range(of: #"\\move\("#, options: .regularExpression) != nil
     }
 
+    /// The starting point of a `\move(x1,y1,x2,y2…)`.
+    public static func movementStart(in text: String) -> (x: Double, y: Double)? {
+        guard let range = text.range(of: #"\\move\(\s*-?[\d.]+\s*,\s*-?[\d.]+"#, options: .regularExpression) else { return nil }
+        let numbers = text[range].dropFirst(6).split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+        return numbers.count == 2 ? (numbers[0], numbers[1]) : nil
+    }
+
+    /// The numpad area (1–9) a point falls in, by thirds of the frame (7 8 9 top … 1 2 3 bottom).
+    public static func area(of point: ASSPoint, in frame: (width: Double, height: Double)) -> Int {
+        let column = min(2, max(0, Int(point.x / max(1, frame.width) * 3)))
+        let row = min(2, max(0, Int(point.y / max(1, frame.height) * 3)))
+        return (2 - row) * 3 + column + 1
+    }
+
     /// Whole numbers without decimals, others with one (`\pos(640,360.5)`).
     static func number(_ value: Double) -> String {
         let rounded = (value * 10).rounded() / 10
@@ -42,12 +56,12 @@ extension ASSText {
 }
 
 extension ASSDocument {
-    /// Where an event is anchored on screen, in script coordinates: its `\pos`, or the point
-    /// libass places it at from the alignment (the line's `\an` or its style's) and the margins
-    /// (the line's own when not zero, else the style's).
+    /// Where an event is anchored on screen, in script coordinates: its `\pos` (or where its
+    /// `\move` starts), or the point libass places it at from the alignment (the line's `\an`
+    /// or its style's) and the margins (the line's own when not zero, else the style's).
     public func anchor(ofEvent index: Int) -> ASSPoint {
         let event = event(at: index)
-        if let pos = ASSText.positionOverride(in: event.text) { return ASSPoint(x: pos.x, y: pos.y) }
+        if let pos = ASSText.positionOverride(in: event.text) ?? ASSText.movementStart(in: event.text) { return ASSPoint(x: pos.x, y: pos.y) }
         let style = style(named: event.styleName).map { ASSStyleInfo(record: $0, isSSA: isSSA) } ?? ASSStyleInfo.fallback
         let alignment = ASSText.alignmentOverride(in: event.text) ?? style.alignment
         func margin(_ name: String, _ fallback: Double) -> Double {

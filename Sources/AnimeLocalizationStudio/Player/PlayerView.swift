@@ -140,15 +140,19 @@ private struct TransportBar: View {
             HStack(spacing: Theme.Spacing.xs) {
                 Button("Fala anterior", systemImage: "backward.end.fill") { workspace.jumpLine(by: -1) }
                     .keyboardShortcut(.upArrow, modifiers: [.option])
-                    .hint("Fala anterior (⌥↑)", "Seleciona a fala anterior e leva o vídeo até ela.")
+                    .hint("Fala anterior (↑)", "Seleciona a fala anterior e leva o vídeo até ela.")
+                Button("Voltar 15 segundos", systemImage: "gobackward.15") { player.skip(by: -15_000) }
+                    .hint("Voltar 15 s (←)", "Volta o vídeo 15 segundos.")
                 Button(player.isPlaying ? "Pausar" : "Reproduzir", systemImage: player.isPlaying ? "pause.fill" : "play.fill") { player.togglePlay() }
                     .keyboardShortcut(.space, modifiers: [.option])
-                    .hint("Reproduzir ou pausar (⌥Espaço)", "Toca ou pausa o vídeo. Clicar no vídeo também funciona.")
+                    .hint("Reproduzir ou pausar (Espaço)", "Toca ou pausa o vídeo. Clicar no vídeo também funciona.")
                     .font(.title3)
                     .frame(width: 30)
+                Button("Avançar 15 segundos", systemImage: "goforward.15") { player.skip(by: 15_000) }
+                    .hint("Avançar 15 s (→)", "Avança o vídeo 15 segundos.")
                 Button("Próxima fala", systemImage: "forward.end.fill") { workspace.jumpLine(by: 1) }
                     .keyboardShortcut(.downArrow, modifiers: [.option])
-                    .hint("Próxima fala (⌥↓)", "Seleciona a próxima fala e leva o vídeo até ela.")
+                    .hint("Próxima fala (↓)", "Seleciona a próxima fala e leva o vídeo até ela.")
             }
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
