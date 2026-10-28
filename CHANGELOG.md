@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.23.0 — 27/10/2026
+
+### Adicionado
+- **Mover a legenda no vídeo.** Com uma fala selecionada, o vídeo pausado e a fala na tela, aparece uma alça rosa no ponto onde ela se ancora: arraste e a fala vai para lá (`\pos(x,y)` no ASS). Enquanto arrasta, uma linha tracejada e as coordenadas mostram o destino. ⌘Z desfaz.
+- No painel da fala, **Posição na tela** ganhou setas ← ↑ ↓ → (1% da tela por clique; com ⌥, 1 ponto) e campos **X** e **Y** para o ponto exato.
+- Selecionar uma fala com o vídeo pausado leva o vídeo até ela, para você ver e mover o que está editando.
+
+### Mudou
+- A grade 3×3 agora põe a fala de fato naquela área da tela também quando ela tinha um ponto exato (`\pos` é retirado). Antes, nessas falas, a grade só mudava o lado de ancoragem e a fala parecia não sair do lugar. "Usar a do estilo" tira `\an` e `\pos`.
+- Falas que se movem sozinhas (`\move`) mantêm a animação: arrastar e as setas não se aplicam a elas, e o painel diz por quê. Em SRT, que não tem ponto exato, só a grade.
+
 ## 0.22.0 — 27/10/2026
 
 ### Corrigido

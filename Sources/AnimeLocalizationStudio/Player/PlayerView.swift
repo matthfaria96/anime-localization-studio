@@ -29,6 +29,9 @@ struct PlayerView: View {
                     Color.black
                     PlayerLayerView(player: player.player)
                     overlays(rect: rect)
+                    if workspace.overlayMode == .original || workspace.overlayMode == .translation {
+                        PositionHandle(workspace: workspace, rect: rect)
+                    }
                     stateOverlay
                 }
                 .clipShape(.rect(cornerRadius: Theme.Radius.medium))

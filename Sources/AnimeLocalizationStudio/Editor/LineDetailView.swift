@@ -121,29 +121,73 @@ struct LineDetailView: View {
         }
     }
 
-    /// Where the line shows on screen, from the line itself or from its style, and the grid to change it.
+    /// Where the line shows on screen and the ways to change it: the grid (an area of the
+    /// screen), arrows and X/Y (an exact point, `\pos`), dragging on the video, and back to the style.
     private func position(index: Int) -> some View {
         let row = editor.rows.first { $0.id == index }
         let alignment = row?.alignment ?? 2
-        return HStack(alignment: .top, spacing: Theme.Spacing.m) {
-            PositionPad(alignment: alignment) { editor.setAlignment($0, lines: [index], undoManager: undoManager) }
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Posição na tela").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text(ScreenPosition.name(alignment)).font(.callout)
-                Text(row?.alignmentFromLine == true ? "Definida nesta fala." : "Vem do estilo “\(row?.style.isEmpty == false ? row!.style : "padrão")”.")
-                    .font(.caption).foregroundStyle(.secondary)
-                if row?.hasExactPosition == true {
-                    Text("Esta fala tem um ponto exato na tela (\\pos); a grade muda o lado de onde ela se ancora.")
-                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }
-                if row?.alignmentFromLine == true {
-                    Button("Usar a do estilo") { editor.setAlignment(nil, lines: [index], undoManager: undoManager) }
-                        .buttonStyle(.link).font(.caption)
-                        .hint("Usar a posição do estilo", "Tira a posição própria desta fala; ela volta a seguir o estilo.")
+        let placeable = editor.canPlace(index)
+        return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            SectionLabel("Posição na tela")
+            HStack(alignment: .top, spacing: Theme.Spacing.m) {
+                PositionPad(alignment: alignment) { editor.setAlignment($0, lines: [index], undoManager: undoManager) }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(row?.hasExactPosition == true ? "Ponto exato, ancorada \(ScreenPosition.name(alignment).lowercased())" : ScreenPosition.name(alignment))
+                        .font(.callout)
+                    Text(positionSource(row, placeable: placeable)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if row?.alignmentFromLine == true || row?.hasExactPosition == true {
+                        Button("Usar a do estilo") { editor.setAlignment(nil, lines: [index], undoManager: undoManager) }
+                            .buttonStyle(.link).font(.caption)
+                            .hint("Usar a posição do estilo", "Tira a posição própria desta fala (\\an e \\pos); ela volta a seguir o estilo.")
+                    }
                 }
             }
+            if placeable, let anchor = editor.anchor(of: index), let frame = editor.playResolution {
+                HStack(spacing: Theme.Spacing.s) {
+                    arrows(index: index, frame: frame)
+                    Spacer(minLength: 0)
+                    coordinate("X", anchor.x) { editor.setPosition(ASSPoint(x: $0, y: anchor.y), line: index, undoManager: undoManager) }
+                    coordinate("Y", anchor.y) { editor.setPosition(ASSPoint(x: anchor.x, y: $0), line: index, undoManager: undoManager) }
+                }
+                .controlSize(.small)
+                Text("Ou arraste a fala no vídeo (com ela na tela e o vídeo pausado).").font(.caption).foregroundStyle(.tertiary)
+            }
         }
-        .hint("Posição na tela", "Onde esta fala aparece no vídeo. Clique num quadrado para mudar só esta fala (a legenda ganha {\\anN} no início). Para mudar todas as falas de um estilo, use “Estilos e fontes…”.")
+        .hint("Posição na tela", "A grade põe a fala numa área da tela (em cima, no meio, embaixo…). As setas, X e Y e arrastar no vídeo põem num ponto exato. ⌘Z desfaz.")
+    }
+
+    private func positionSource(_ row: EditorRow?, placeable: Bool) -> String {
+        guard editor.playResolution != nil else { return "Em SRT há só as posições da grade (\\an); arrastar e ponto exato são do ASS." }
+        if !placeable { return "Esta fala se move sozinha (\\move): a grade muda o lado de onde ela se ancora, e arrastar não se aplica." }
+        if row?.hasExactPosition == true { return "Definida nesta fala (\\pos)." }
+        if row?.alignmentFromLine == true { return "Definida nesta fala." }
+        return "Vem do estilo “\(row?.style.isEmpty == false ? row!.style : "padrão")”."
+    }
+
+    /// ↑ ↓ ← →: 1% of the frame per click, 1 script pixel with ⌥.
+    private func arrows(index: Int, frame: CGSize) -> some View {
+        HStack(spacing: 2) {
+            ForEach([("arrow.left", -1.0, 0.0, "esquerda"), ("arrow.up", 0, -1, "cima"), ("arrow.down", 0, 1, "baixo"), ("arrow.right", 1, 0, "direita")],
+                    id: \.0) { icon, dx, dy, name in
+                Button("Mover para \(name)", systemImage: icon) {
+                    let step = NSEvent.modifierFlags.contains(.option) ? 1 : max(1, (frame.height / 100).rounded())
+                    editor.nudge(index, dx: dx * step, dy: dy * step, undoManager: undoManager)
+                }
+                .labelStyle(.iconOnly)
+                .hintVerbatim("Mover para \(name)", "Move a fala um pouco para \(name) (1% da tela; com ⌥, 1 ponto). Ela passa a ter um ponto exato (\\pos).")
+            }
+        }
+    }
+
+    private func coordinate(_ name: String, _ value: Double, set: @escaping (Double) -> Void) -> some View {
+        HStack(spacing: 3) {
+            Text(name).foregroundStyle(.secondary)
+            TextField(name, value: Binding(get: { value }, set: set), format: .number.precision(.fractionLength(0...1)))
+                .textFieldStyle(.roundedBorder)
+                .monospacedDigit()
+                .frame(width: 54)
+                .hintVerbatim("Posição \(name)", "\(name == "X" ? "Distância da esquerda" : "Distância do topo") em pontos do script (\(name == "X" ? "PlayResX" : "PlayResY")). Digite e aperte Return.")
+        }
     }
 
     @ViewBuilder

@@ -282,6 +282,11 @@ struct LinesTable: View {
             .onChange(of: editor.selection) { _, selection in
                 // After the table's own update pass, never inside it (NSTableView reentrancy).
                 if let id = selection.first { Task { @MainActor in withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) } } }
+                // Paused, one line picked: the video goes to it, so it can be seen and moved on screen.
+                if selection.count == 1, let id = selection.first, !workspace.player.isPlaying,
+                   let row = editor.rows.first(where: { $0.id == id }), !(row.start..<row.end).contains(workspace.player.currentTime) {
+                    workspace.player.seek(to: row.start)
+                }
             }
         }
     }

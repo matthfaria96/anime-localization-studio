@@ -320,15 +320,56 @@ final class EditorModel {
         return ASSStyleInfo(record: record, isSSA: doc.isSSA).alignment
     }
 
-    /// Puts the lines at `alignment` (`{\anN}` in the line), or back to their style's position when nil.
+    /// Puts the lines in that area of the screen (`{\anN}`, and any exact point `\pos` taken
+    /// out, so the line really goes there), or back to their style's position when nil.
+    /// Lines that move on their own (`\move`) keep their animation.
     func setAlignment(_ alignment: Int?, lines: Set<Int>, undoManager: UndoManager?) {
         guard !lines.isEmpty else { return }
+        func place(_ raw: String) -> String {
+            let aligned = ASSText.settingAlignment(alignment, in: raw)
+            return ASSText.hasMovement(raw) ? aligned : ASSText.settingPosition(nil, in: aligned)
+        }
         mutate(alignment == nil ? "Usar a posição do estilo" : "Mudar a posição", undoManager: undoManager) { source, translation in
             for index in lines {
-                if let raw = source?.rawText(at: index) { source?.setRawText(ASSText.settingAlignment(alignment, in: raw), at: index) }
-                if let raw = translation?.rawText(at: index) { translation?.setRawText(ASSText.settingAlignment(alignment, in: raw), at: index) }
+                if let raw = source?.rawText(at: index) { source?.setRawText(place(raw), at: index) }
+                if let raw = translation?.rawText(at: index) { translation?.setRawText(place(raw), at: index) }
             }
         }
+    }
+
+    /// The script's coordinate space (`PlayResX` × `PlayResY`); nil for SRT, which has no exact points.
+    var playResolution: CGSize? {
+        guard case .ass(let doc) = source else { return nil }
+        let (width, height) = doc.playResolution
+        return CGSize(width: width, height: height)
+    }
+
+    /// Where the line is anchored on screen, in script coordinates (ASS only).
+    func anchor(of index: Int) -> ASSPoint? {
+        guard case .ass(let doc) = source, index >= 0, index < doc.eventCount else { return nil }
+        return doc.anchor(ofEvent: index)
+    }
+
+    /// The line can be put at an exact point: ASS, and not already animated with `\move`.
+    func canPlace(_ index: Int) -> Bool {
+        guard case .ass(let doc) = source, index >= 0, index < doc.eventCount else { return false }
+        return !ASSText.hasMovement(doc.event(at: index).text)
+    }
+
+    /// Puts the line at an exact point (`\pos`), kept inside the frame.
+    func setPosition(_ point: ASSPoint, line index: Int, undoManager: UndoManager?) {
+        guard canPlace(index), let frame = playResolution else { return }
+        let x = min(max(0, point.x), frame.width), y = min(max(0, point.y), frame.height)
+        mutate("Mover a fala", undoManager: undoManager) { source, translation in
+            if let raw = source?.rawText(at: index) { source?.setRawText(ASSText.settingPosition((x, y), in: raw), at: index) }
+            if let raw = translation?.rawText(at: index) { translation?.setRawText(ASSText.settingPosition((x, y), in: raw), at: index) }
+        }
+    }
+
+    /// Moves the line by a few script pixels from where it is now.
+    func nudge(_ index: Int, dx: Double, dy: Double, undoManager: UndoManager?) {
+        guard let anchor = anchor(of: index) else { return }
+        setPosition(ASSPoint(x: anchor.x + dx, y: anchor.y + dy), line: index, undoManager: undoManager)
     }
 
     func updateStyle(_ info: ASSStyleInfo, at styleIndex: Int, undoManager: UndoManager?) {
