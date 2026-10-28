@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.28.0 — 28/10/2026
+
+### Adicionado
+- **Atualizações dentro do app** (Sparkle, como nos outros apps do witchmymac): o app verifica sozinho uma vez por dia e pergunta antes de instalar; *Verificar atualizações…* no menu do app e em Ajustes › Sobre. As versões são assinadas (EdDSA) e o feed fica em witchmymac.com/appcast/animelocalizationstudio.xml.
+- **Ajustes › Sobre** no padrão do MacDash: versão e build, o que o app faz, licença GPL-3.0, witchmymac.com, *Código-fonte* (GitHub) e **Licenças e créditos** (bibliotecas dentro do app, modelos baixados, programas e serviços usados, com a licença de cada um).
+
+### Corrigido
+- Ao avançar ou voltar o vídeo (← →, linha do tempo) com ele pausado, a lista agora seleciona a fala daquele tempo, ou a mais próxima, sem levar o vídeo de volta para o início dela.
+- **Espaço** toca e pausa de novo: as teclas de Legendar passaram a valer para a própria janela de Legendar (antes dependiam de ela ser a "janela principal" do macOS). Em campos de texto, Espaço continua escrevendo um espaço.
+- **Limpar formatação** também tira o karaokê (`\k`, `\kf`, `\ko`), na fala inteira ou no trecho selecionado.
+
 ## 0.27.0 — 28/10/2026
 
 ### Adicionado

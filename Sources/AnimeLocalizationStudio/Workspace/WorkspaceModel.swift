@@ -206,6 +206,8 @@ final class WorkspaceModel {
     var trackToDelete: MediaTrack?
     /// Where the person wanted to go when Legendar had unsaved changes (asks save or discard).
     var pendingLeave: LeaveTarget?
+    /// The selection just followed the video (after a jump): the list does not move the video back.
+    @ObservationIgnored var selectionFollowedVideo = false
     /// The subtitle beside, whose timing is offered to an empty subtitle (asks yes or no).
     var pendingTimingOffer: MediaTrack?
     /// The subtitle beside as read from the video, to copy its timing from.

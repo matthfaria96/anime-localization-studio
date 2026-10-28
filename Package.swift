@@ -14,7 +14,9 @@ let package = Package(
         .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.17.7", traits: []),
         // On-device voice cloning: Chatterbox Multilingual (Resemble AI, MIT; 23 languages) on MLX,
         // from speech-swift (Apache-2.0). Pinned: the project has no recent release tag.
-        .package(url: "https://github.com/soniqo/speech-swift", revision: "9ce78eaec038b4dc8b519a8b01ecb4059549cfec")
+        .package(url: "https://github.com/soniqo/speech-swift", revision: "9ce78eaec038b4dc8b519a8b01ecb4059549cfec"),
+        // In-app updates (MIT), the same as every witchmymac app: feed on witchmymac.com, EdDSA-signed.
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.10.0")
     ],
     targets: [
         // Pure Swift: ASS/SSA/SRT parsing, preservation-first serialization, override tags, timing.
@@ -31,11 +33,12 @@ let package = Package(
         .systemLibrary(name: "CLibass", pkgConfig: "libass", providers: [.brew(["libass"])]),
         // Faithful ASS rendering (animations, karaoke, drawings, embedded fonts) for the preview.
         .target(name: "ASSRendering", dependencies: ["CLibass"]),
-        // Persistence, settings, secrets, job queue, log redaction.
+        // Persistence, settings, secrets, log redaction.
         .target(name: "StudioCore", dependencies: ["SubtitleKit", "MediaKit", "TranslationKit", "DubbingKit"]),
         .executableTarget(
             name: "AnimeLocalizationStudio",
-            dependencies: ["SubtitleKit", "MediaKit", "TranslationKit", "DubbingKit", "StudioCore", "ASSRendering"],
+            dependencies: ["SubtitleKit", "MediaKit", "TranslationKit", "DubbingKit", "StudioCore", "ASSRendering",
+                           .product(name: "Sparkle", package: "Sparkle")],
             resources: [.process("Resources")],
             swiftSettings: [.defaultIsolation(MainActor.self)]
         ),

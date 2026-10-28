@@ -303,7 +303,9 @@ struct LinesTable: View {
             .onChange(of: editor.selection) { _, selection in
                 // After the table's own update pass, never inside it (NSTableView reentrancy).
                 if let id = selection.first { Task { @MainActor in withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) } } }
-                // Paused, one line picked: the video goes to it, so it can be seen and moved on screen.
+                // Paused, one line picked: the video goes to it, so it can be seen and moved on screen
+                // (not when the selection itself followed the video).
+                if workspace.selectionFollowedVideo { workspace.selectionFollowedVideo = false; return }
                 if selection.count == 1, let id = selection.first, !workspace.player.isPlaying,
                    let row = editor.rows.first(where: { $0.id == id }), !(row.start..<row.end).contains(workspace.player.currentTime) {
                     workspace.player.seek(to: row.start)
@@ -367,12 +369,15 @@ struct SpeakerModelConsent: ViewModifier {
 private struct KeyboardNavigation: ViewModifier {
     let workspace: WorkspaceModel
     @State private var monitor: Any?
+    /// The window Legendar is in: only its keys are taken (not Ajustes, sheets or popovers).
+    @State private var host = WindowBox()
 
     func body(content: Content) -> some View {
         content
+            .background { WindowReader(box: host) }
             .onAppear {
                 guard monitor == nil else { return }
-                monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in handle(event) ? nil : event }
+                monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [host] event in handle(event, host: host) ? nil : event }
             }
             .onDisappear {
                 if let monitor { NSEvent.removeMonitor(monitor) }
@@ -380,8 +385,8 @@ private struct KeyboardNavigation: ViewModifier {
             }
     }
 
-    private func handle(_ event: NSEvent) -> Bool {
-        guard let window = event.window, window === NSApp.mainWindow, window.attachedSheet == nil,
+    private func handle(_ event: NSEvent, host: WindowBox) -> Bool {
+        guard let window = event.window, window === host.window, window.attachedSheet == nil,
               event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
               (window.firstResponder as? NSTextView)?.isEditable != true else { return false }
         switch event.keyCode {
@@ -396,8 +401,36 @@ private struct KeyboardNavigation: ViewModifier {
     }
 }
 
-/// Selects the line being played. Lives in its own view so only it re-renders with the clock,
-/// and the selection change is deferred out of the table's update pass.
+/// Holds the window a view is in (weakly).
+final class WindowBox {
+    weak var window: NSWindow?
+}
+
+/// Finds the window it is placed in.
+private struct WindowReader: NSViewRepresentable {
+    let box: WindowBox
+
+    func makeNSView(context: Context) -> NSView {
+        let view = ReaderView()
+        view.box = box
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) { box.window = view.window }
+
+    private final class ReaderView: NSView {
+        weak var box: WindowBox?
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            box?.window = window
+        }
+    }
+}
+
+/// Keeps the list on the video: while playing, the line on screen; after a jump (arrows,
+/// timeline) while paused, the line at that time or the nearest one. Lives in its own view so
+/// only it re-renders with the clock, and the selection change is deferred out of the table's
+/// update pass.
 private struct PlaybackFollower: View {
     let workspace: WorkspaceModel
 
@@ -405,8 +438,20 @@ private struct PlaybackFollower: View {
         Color.clear
             .onChange(of: workspace.player.currentTime) { _, time in
                 let editor = workspace.editor
-                guard editor.followPlayback, workspace.player.isPlaying, let line = editor.line(at: time), !editor.selection.contains(line) else { return }
-                Task { @MainActor in editor.selection = [line] }
+                guard editor.followPlayback else { return }
+                if workspace.player.isPlaying {
+                    guard let line = editor.line(at: time), !editor.selection.contains(line) else { return }
+                    Task { @MainActor in editor.selection = [line] }
+                    return
+                }
+                // Paused: a jump. Leave a selection that already shows this time (or several lines) alone.
+                guard editor.selection.count <= 1,
+                      !(editor.selection.first.flatMap { id in editor.rows.first { $0.id == id } }.map { ($0.start..<$0.end).contains(time) } ?? false),
+                      let line = editor.nearestLine(to: time), !editor.selection.contains(line) else { return }
+                Task { @MainActor in
+                    workspace.selectionFollowedVideo = true
+                    editor.selection = [line]
+                }
             }
     }
 }

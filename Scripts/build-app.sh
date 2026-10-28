@@ -137,6 +137,12 @@ done
 fribidi_copying="$(brew --prefix fribidi 2>/dev/null)/COPYING"
 [[ -f "$fribidi_copying" ]] && cp "$fribidi_copying" "$APP/Contents/Resources/Licenses/glib-LGPL-2.1.txt"
 
+# Sparkle (in-app updates) is the one dynamic framework from the Swift packages.
+[[ -d "$BIN_DIR/Sparkle.framework" ]] || fail "Sparkle.framework was not built"
+rm -rf "$FW/Sparkle.framework"
+ditto "$BIN_DIR/Sparkle.framework" "$FW/Sparkle.framework"
+for f in .build/checkouts/Sparkle/LICENSE*(N); do cp "$f" "$APP/Contents/Resources/Licenses/Sparkle-${f:t}"; done
+
 for lib in "$FW"/*.dylib(N); do codesign --force --sign "$SIGN_IDENTITY" "$lib"; done
 if [[ "$SIGN_IDENTITY" == "-" ]]; then
   codesign --force --deep --sign - "$APP"

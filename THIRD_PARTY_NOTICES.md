@@ -45,6 +45,7 @@ parte do macOS e não são redistribuídos.
 | Pacote | Versão | Licença | Uso |
 |---|---|---|---|
 | FluidAudio — Fluid Inference | 0.17.x | Apache-2.0 | Diarização (quem fala) no Neural Engine. Só o pipeline offline é usado; o binário opcional NemoTextProcessing está desligado (`traits: []`). O texto da licença e os avisos do código que ele porta de outros projetos (fastcluster, BSD-2-Clause; VBx, Apache-2.0; e os demais da pasta `ThirdPartyLicenses` do FluidAudio) vão em `Contents/Resources/Licenses` |
+| Sparkle — Andy Matuschak e colaboradores | 2.10.x | MIT | Atualizações dentro do app (feed em witchmymac.com, versões assinadas com EdDSA). `Sparkle.framework` vai em `Contents/Frameworks` e a licença em `Contents/Resources/Licenses` |
 
 ## Modelos baixados pelo aplicativo (com confirmação)
 

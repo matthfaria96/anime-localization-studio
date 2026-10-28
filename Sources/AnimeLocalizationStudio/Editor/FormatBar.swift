@@ -72,7 +72,7 @@ struct FormatBar: View {
             Spacer(minLength: 0)
             Button("Limpar formatação", systemImage: "eraser") { apply { ASSFormatting.clear(in: $0, range: $1, html: html) } }
                 .labelStyle(.iconOnly)
-                .hint("Limpar formatação", "Tira itálico, negrito, cores, tamanho e fonte do trecho selecionado (ou da fala inteira). Posição, tempo e animações ficam.")
+                .hint("Limpar formatação", "Tira itálico, negrito, cores, tamanho, fonte e karaokê do trecho selecionado (ou da fala inteira). Posição, tempo e animações ficam.")
         }
         .buttonStyle(.borderless)
         .controlSize(.small)

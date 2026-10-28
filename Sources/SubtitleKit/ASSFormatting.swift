@@ -72,8 +72,8 @@ public enum ASSFormatting {
     }
 
     /// Takes the look out of `range` (the whole line when nil): italic, bold, underline,
-    /// strikeout, colors, transparency, size, font, outline and shadow. Position, timing,
-    /// animation and karaoke tags stay.
+    /// strikeout, colors, transparency, size, font, outline, shadow and karaoke. Position,
+    /// timing and animation tags stay.
     public static func clear(in text: String, range: Range<String.Index>?, html: Bool = false) -> String {
         let range = range.map { safe($0, in: text, html: html) } ?? text.startIndex..<text.endIndex
         let part = String(text[range])
@@ -82,7 +82,8 @@ public enum ASSFormatting {
             cleaned = part.replacingOccurrences(of: #"</?(?:i|b|u|s|font)(?:\s[^>]*)?>"#, with: "", options: [.regularExpression, .caseInsensitive])
         } else {
             let look = [#"\\[ibus][0-9]+"#, #"\\[1-4]?c(?![a-z])(?:&H[0-9A-Fa-f]+&?)?"#, #"\\(?:[1-4]a|alpha)&H[0-9A-Fa-f]+&?"#,
-                        #"\\fs[0-9.]+"#, #"\\fn[^\\}]*"#, #"\\(?:bord|shad|blur|be|fscx|fscy|fsp)-?[0-9.]+"#].joined(separator: "|")
+                        #"\\fs[0-9.]+"#, #"\\fn[^\\}]*"#, #"\\(?:bord|shad|blur|be|fscx|fscy|fsp)-?[0-9.]+"#,
+                        #"\\(?:kf|ko|kt|k|K)[0-9]+"#].joined(separator: "|")
             cleaned = part.replacingOccurrences(of: look, with: "", options: .regularExpression).replacingOccurrences(of: "{}", with: "")
         }
         return text.replacingCharacters(in: range, with: cleaned)

@@ -1,5 +1,6 @@
 # Notas para agentes
 
+- Atualizações: Sparkle (como os outros apps witchmymac), feed `https://witchmymac.com/appcast/animelocalizationstudio.xml` no repositório do site (`appcast/animelocalizationstudio.xml`). Publicar: `Scripts/install.sh` → `~/Documents/witchmymac-release/sign-app.sh "dist/Anime Localization Studio.app"` → `make-dmg.sh … AnimeLocalizationStudio-<versão>` → release no GitHub → `APP_NAME="Anime Localization Studio" make-appcast-item.sh …` no topo do appcast (build = `git rev-list --count HEAD`, mínimo macOS 27.0). Só publicar quando o usuário pedir.
 - Build e testes só com `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (as Command
   Line Tools não expandem as macros do SwiftUI/FoundationModels). Trabalhe pelo caminho real
   `/Volumes/MacMiniDev/Moved/VSCode Temp/Anime Localization Studio`.

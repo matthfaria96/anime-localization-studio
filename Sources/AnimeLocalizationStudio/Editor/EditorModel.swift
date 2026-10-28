@@ -167,6 +167,14 @@ final class EditorModel {
         rows.last { !$0.isComment && $0.start <= time && time < $0.end }?.id
     }
 
+    /// The line on screen at `time`, or else the one closest to it (of the lines the list shows).
+    func nearestLine(to time: Int) -> Int? {
+        if let id = line(at: time), visibleRows.contains(where: { $0.id == id }) { return id }
+        return visibleRows.filter { !$0.isComment }.min { distance($0, time) < distance($1, time) }?.id
+    }
+
+    private func distance(_ row: EditorRow, _ time: Int) -> Int { time < row.start ? row.start - time : max(0, time - row.end) }
+
     // MARK: Edits (all undoable)
 
     func setText(_ raw: String, side: DocumentSide, index: Int, undoManager: UndoManager?) {

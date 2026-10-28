@@ -48,6 +48,7 @@ struct AnimeLocalizationStudioApp: App {
         // The window cannot get smaller than its content needs, so nothing is clipped.
         .windowResizability(.contentMinSize)
         .commands {
+            CommandGroup(after: .appInfo) { CheckForUpdatesButton() }
             CommandGroup(replacing: .newItem) {
                 Button("Abrir vídeo…") { app.presentOpenPanel() }.keyboardShortcut("o")
                 Button("Fechar vídeo") { app.closeVideo() }.disabled(app.workspace == nil)
@@ -91,6 +92,10 @@ struct AnimeLocalizationStudioApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var app: AppModel?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        AppUpdater.shared.start()
+    }
 
     func application(_ application: NSApplication, open urls: [URL]) {
         _ = app?.openDropped(urls)

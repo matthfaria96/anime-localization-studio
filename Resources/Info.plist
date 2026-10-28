@@ -19,11 +19,17 @@
 	<key>LSApplicationCategoryType</key><string>public.app-category.video</string>
 	<key>LSMinimumSystemVersion</key><string>27.0</string>
 	<key>NSAccentColorName</key><string>AccentColor</string>
+	<!-- In-app updates (Sparkle): witchmymac feed, EdDSA public key, daily check. -->
+	<key>SUFeedURL</key><string>https://witchmymac.com/appcast/animelocalizationstudio.xml</string>
+	<key>SUPublicEDKey</key><string>yhoDaYLDki5BV0c44pefouDhxbliuGqLKxXKXXK1Pb0=</string>
+	<key>SUEnableAutomaticChecks</key><true/>
+	<key>SUScheduledCheckInterval</key><integer>86400</integer>
+	<key>SUAutomaticallyUpdate</key><false/>
 	<key>NSHighResolutionCapable</key><true/>
 	<key>NSPrincipalClass</key><string>NSApplication</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- Local AI servers (Ollama, LM Studio, VoiceStudio) speak plain HTTP on the loopback. -->
+		<!-- Local AI servers (Ollama, LM Studio) speak plain HTTP on the loopback. -->
 		<key>NSAllowsLocalNetworking</key><true/>
 	</dict>
 	<key>CFBundleDocumentTypes</key>

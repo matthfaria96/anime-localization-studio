@@ -41,6 +41,10 @@ struct FormattingTests {
     @Test func clearingTakesOutLookButKeepsPositionAndTiming() {
         let text = #"{\an8\pos(10,20)\fad(200,0)\i1\c&H00FFFF&\fs60}Hi {\b1}there{\b0}"#
         #expect(ASSFormatting.clear(in: text, range: nil) == #"{\an8\pos(10,20)\fad(200,0)}Hi there"#)
+        // Karaoke goes too, for the whole line or a selected stretch.
+        #expect(ASSFormatting.clear(in: #"{\an8\kf60}sa{\kf60}ka{\k30}ra"#, range: nil) == #"{\an8}sakara"#)
+        let karaoke = #"{\kf60}sa{\kf60}ka{\k30}ra"#
+        #expect(ASSFormatting.clear(in: karaoke, range: karaoke.range(of: "ka{\\k30}ra")!) == #"{\kf60}sa{\kf60}kara"#)
     }
 
     @Test func srtUsesItsOwnMarkup() {
