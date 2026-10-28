@@ -10,6 +10,8 @@ struct EditorPane: View {
     @State private var showCharacter = false
     /// Width of the line panel chosen by dragging its edge (0 = the minimum).
     @AppStorage("lineDetailWidth") private var detailWidth: Double = 0
+    /// The line panel is pinned to the whole right side of Legendar (then it is not here).
+    @AppStorage("linePanelDocked") private var docked = false
 
     var editor: EditorModel { workspace.editor }
 
@@ -20,15 +22,18 @@ struct EditorPane: View {
                 Divider()
                 // A plain stack honors the width it is given; split views size by content and overflow.
                 GeometryReader { proxy in
-                    let minimum: CGFloat = proxy.size.width >= 900 ? 360 : 300
-                    let maximum = max(minimum, proxy.size.width * 0.6)
-                    let panel = min(max(minimum, detailWidth), maximum)
-                    HStack(spacing: 0) {
-                        LinesTable(workspace: workspace, width: proxy.size.width - panel - 1)
-                            .frame(maxWidth: .infinity)
-                        PanelEdge(width: $detailWidth, current: panel, range: minimum...maximum)
-                        LineDetailView(workspace: workspace)
-                            .frame(width: panel)
+                    if docked {
+                        LinesTable(workspace: workspace, width: proxy.size.width)
+                    } else {
+                        let range = LinePanelWidth.range(for: proxy.size.width)
+                        let panel = LinePanelWidth.clamp(detailWidth, to: range)
+                        HStack(spacing: 0) {
+                            LinesTable(workspace: workspace, width: proxy.size.width - panel - 1)
+                                .frame(maxWidth: .infinity)
+                            PanelEdge(width: $detailWidth, current: panel, range: range)
+                            LineDetailView(workspace: workspace)
+                                .frame(width: panel)
+                        }
                     }
                 }
             }
@@ -211,14 +216,16 @@ struct LinesTable: View {
     @Environment(\.undoManager) private var undoManager
     var editor: EditorModel { workspace.editor }
 
-    private static let numberWidth: CGFloat = 56, timeWidth: CGFloat = 70, characterWidth: CGFloat = 120
+    private static let numberWidth: CGFloat = 56, timeWidth: CGFloat = 70
+    /// Narrower in a narrow list, so the two text columns keep room.
+    private var characterWidth: CGFloat { width < 760 ? 90 : 120 }
     /// Insets, cell spacing and the scroller of the table (kept generous: a column wider than
     /// the room left makes the table scroll sideways).
     private static let chrome: CGFloat = 110
 
     private var hasBeside: Bool { !editor.editsOriginal || editor.referenceTitle != nil }
     private var textWidth: CGFloat {
-        let free = max(160, width - Self.numberWidth - Self.timeWidth - Self.characterWidth - Self.chrome)
+        let free = max(120, width - Self.numberWidth - Self.timeWidth - characterWidth - Self.chrome)
         return hasBeside ? floor(free / 2) : free
     }
 
@@ -251,7 +258,15 @@ struct LinesTable: View {
                         if !row.style.isEmpty { Text("estilo \(row.style)").font(.caption2).foregroundStyle(.tertiary).lineLimit(1) }
                     }
                 }
-                .width(Self.characterWidth)
+                .width(characterWidth)
+                if hasBeside {
+                    TableColumn(LocalizedStringKey(editor.referenceTitle.map { "Ao lado · \($0)" } ?? "Ao lado")) { row in
+                        Text((editor.editsOriginal ? editor.reference[row.id] : row.original)?.replacingOccurrences(of: "\n", with: " ⏎ ") ?? "—")
+                            .lineLimit(2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .width(textWidth)
+                }
                 TableColumn("Texto") { row in
                     if editor.editsOriginal {
                         Text(row.original.replacingOccurrences(of: "\n", with: " ⏎ "))
@@ -263,14 +278,6 @@ struct LinesTable: View {
                     }
                 }
                 .width(textWidth)
-                if hasBeside {
-                    TableColumn(LocalizedStringKey(editor.referenceTitle.map { "Ao lado · \($0)" } ?? "Ao lado")) { row in
-                        Text((editor.editsOriginal ? editor.reference[row.id] : row.original)?.replacingOccurrences(of: "\n", with: " ⏎ ") ?? "—")
-                            .lineLimit(2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .width(textWidth)
-                }
             }
             .tableStyle(.inset(alternatesRowBackgrounds: true))
             .contextMenu(forSelectionType: Int.self) { ids in
@@ -354,8 +361,8 @@ struct SpeakerModelConsent: ViewModifier {
     }
 }
 
-/// ↑ ↓ change line and Space plays or pauses, wherever the focus is in Legendar, except while
-/// typing in a field (there the keys edit the text). The list alone only gets the arrows while
+/// ↑ ↓ change line, ← → go back or forward 15 s and Space plays or pauses, wherever the focus
+/// is in Legendar, except while typing in a field (there the keys edit the text). The list alone only gets the arrows while
 /// it has the keyboard focus, which a click on the video, the text or a button takes away.
 private struct KeyboardNavigation: ViewModifier {
     let workspace: WorkspaceModel
@@ -380,6 +387,8 @@ private struct KeyboardNavigation: ViewModifier {
         switch event.keyCode {
         case 126: workspace.moveSelection(by: -1)
         case 125: workspace.moveSelection(by: 1)
+        case 123: workspace.player.skip(by: -15_000)
+        case 124: workspace.player.skip(by: 15_000)
         case 49: workspace.player.togglePlay()
         default: return false
         }
@@ -402,9 +411,19 @@ private struct PlaybackFollower: View {
     }
 }
 
-/// The edge between the list and the line panel: drag it to widen the panel (never narrower
-/// than its minimum).
-private struct PanelEdge: View {
+/// How wide the line panel may be: a fixed minimum, at most 60% of the room.
+enum LinePanelWidth {
+    static func range(for room: CGFloat) -> ClosedRange<CGFloat> {
+        let minimum: CGFloat = room >= 900 ? 360 : 300
+        return minimum...max(minimum, room * 0.6)
+    }
+
+    static func clamp(_ width: Double, to range: ClosedRange<CGFloat>) -> CGFloat { min(max(range.lowerBound, width), range.upperBound) }
+}
+
+/// The edge between the list (or the video) and the line panel: drag it to widen the panel
+/// (never narrower than its minimum).
+struct PanelEdge: View {
     @Binding var width: Double
     let current: CGFloat
     let range: ClosedRange<CGFloat>

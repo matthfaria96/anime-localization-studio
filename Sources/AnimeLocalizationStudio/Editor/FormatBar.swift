@@ -9,6 +9,8 @@ struct FormatBar: View {
     let html: Bool
     /// The line's style, which color and size come back to after a stretch.
     let style: ASSStyleInfo?
+    /// How long the line lasts, to spread a new karaoke over it (ASS only).
+    let lineDuration: Int?
     /// Applies a change to the raw text and the selected range (nil = whole line).
     let apply: (@escaping (String, Range<String.Index>?) -> String) -> Void
 
@@ -54,6 +56,18 @@ struct FormatBar: View {
                 .menuIndicator(.hidden)
                 .fixedSize()
                 .hint("Tamanho", "Aumenta ou diminui a letra do trecho selecionado (ou da fala inteira), em relação ao estilo “\(style.name)” (\(Int(style.fontSize))).")
+            }
+            if !html, let lineDuration {
+                Menu {
+                    Button("Karaokê por sílaba") { apply { raw, _ in KaraokeLine.make(from: raw, duration: lineDuration, by: .syllable, kind: .fill).text } }
+                    Button("Karaokê por palavra") { apply { raw, _ in KaraokeLine.make(from: raw, duration: lineDuration, by: .word, kind: .fill).text } }
+                } label: {
+                    Image(systemName: "music.mic")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .hint("Karaokê", "Transforma a fala em karaokê: as sílabas (romaji: sa·ka·ra·u) ou as palavras acendem no tempo, com o tempo da fala repartido entre elas. Depois ajuste cada sílaba ou marque no tempo, logo abaixo do texto.")
             }
             Spacer(minLength: 0)
             Button("Limpar formatação", systemImage: "eraser") { apply { ASSFormatting.clear(in: $0, range: $1, html: html) } }

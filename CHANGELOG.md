@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.27.0 — 28/10/2026
+
+### Adicionado
+- **Karaokê.** No painel da fala (ASS): o botão de microfone na barra de formatação transforma a fala em karaokê **por sílaba** (romaji separado do jeito japonês: sa·ka·ra·u, consoante dobrada e n final à parte; kana e kanji um por caractere) ou **por palavra**, com o tempo da fala repartido pelas letras. A seção **Karaokê** mostra cada sílaba com o seu tempo (− e + de 0,05 s), o jeito de acender (**Troca de cor** `\k`, **Preenche** `\kf`, **Contorno** `\ko`), se as sílabas somam o tempo da fala, e **Distribuir pela fala**, **Marcar no tempo…** (a fala toca e você aperta Return quando cada sílaba começa, como no Aegisub) e **Remover**. A pré-visualização no vídeo já mostrava o karaokê acendendo (libass).
+- **Tempos da legenda ao lado.** Quando a legenda editada está vazia e a de Ao lado tem outros tempos, o app pergunta, sem opção de pular: *Usar os tempos de “English” nesta legenda?* **Sim** cria as mesmas falas, nos mesmos tempos, estilos, personagens e posições, em branco (⌘Z desfaz); **Não** volta Ao lado para Nenhuma. Uma legenda com texto nunca é perguntada: continua casando as falas pelo tempo. *Novo › Legenda…* abre a nova com a legenda que você editava ao lado.
+- **Painel da fala fixo na lateral.** O ícone no canto do painel faz ele ocupar toda a lateral direita, ao lado do vídeo e da lista; clicar de novo o devolve para junto da lista. A largura arrastada vale nos dois jeitos.
+
+### Mudou
+- **← →** voltam e avançam 15 s de novo (só pelo teclado, sem botões no player).
+- Com Ao lado preenchido, a legenda editada fica na coluna da **direita** e a de consulta à esquerda. A coluna Personagem estreita quando a lista é estreita.
+
 ## 0.26.0 — 28/10/2026
 
 ### Adicionado

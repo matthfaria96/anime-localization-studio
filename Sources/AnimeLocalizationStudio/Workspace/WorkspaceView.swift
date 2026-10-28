@@ -5,6 +5,9 @@ struct WorkspaceView: View {
     @Bindable var workspace: WorkspaceModel
     let screen: EpisodeScreen
     @Environment(AppModel.self) private var app
+    /// The line panel pinned to the whole right side, next to the video and the list.
+    @AppStorage("linePanelDocked") private var docked = false
+    @AppStorage("lineDetailWidth") private var detailWidth: Double = 0
 
     var body: some View {
         Group {
@@ -41,6 +44,13 @@ struct WorkspaceView: View {
             }
         } message: {
             Text("O macOS precisa baixar o modelo de reconhecimento de fala para este idioma. O download é feito e gerenciado pelo sistema (modelo da Apple, uso no dispositivo) e fica disponível para outros apps.")
+        }
+        .alert("Usar os tempos de “\(workspace.pendingTimingOffer.map { $0.name ?? $0.codec } ?? "")” nesta legenda?",
+               isPresented: Binding(get: { workspace.pendingTimingOffer != nil }, set: { if !$0 && workspace.pendingTimingOffer != nil { workspace.declineReferenceTiming() } })) {
+            Button("Sim, usar os tempos") { workspace.useReferenceTiming() }.keyboardShortcut(.defaultAction)
+            Button("Não", role: .cancel) { workspace.declineReferenceTiming() }
+        } message: {
+            Text("A legenda que você edita está vazia e a do lado tem outros tempos.\nSim: ela ganha as mesmas falas, nos mesmos tempos, estilos e posições, em branco para você escrever ao lado.\nNão: “Ao lado” volta para Nenhuma.")
         }
         .sheet(isPresented: $workspace.showWriteSheet) { WriteToVideoSheet(workspace: workspace) }
         .sheet(item: $workspace.translateSheet) { start in TranslateSheet(workspace: workspace, start: start) }
@@ -86,15 +96,33 @@ struct WorkspaceView: View {
                 .padding(.bottom, Theme.Spacing.s)
             }
             Divider()
-            VSplitView {
-                PlayerView(workspace: workspace)
-                    .padding(Theme.Spacing.l)
-                    .frame(minHeight: 200, idealHeight: 420, maxHeight: .infinity)
-                EditorPane(workspace: workspace)
-                    .frame(minHeight: 200, idealHeight: 360)
+            if docked {
+                GeometryReader { proxy in
+                    let range = LinePanelWidth.range(for: proxy.size.width)
+                    let panel = LinePanelWidth.clamp(detailWidth, to: range)
+                    HStack(spacing: 0) {
+                        videoAndLines.frame(maxWidth: .infinity)
+                        PanelEdge(width: $detailWidth, current: panel, range: range)
+                        LineDetailView(workspace: workspace).frame(width: panel)
+                    }
+                }
+                .transition(.opacity)
+            } else {
+                videoAndLines
             }
         }
+        .animation(.smooth(duration: 0.25), value: docked)
         .paneBackground()
+    }
+
+    private var videoAndLines: some View {
+        VSplitView {
+            PlayerView(workspace: workspace)
+                .padding(Theme.Spacing.l)
+                .frame(minHeight: 200, idealHeight: 420, maxHeight: .infinity)
+            EditorPane(workspace: workspace)
+                .frame(minHeight: 200, idealHeight: 360)
+        }
     }
 
     /// The only thing at the top of the window: the three pages of the video.

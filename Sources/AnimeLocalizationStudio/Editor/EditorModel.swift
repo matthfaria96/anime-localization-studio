@@ -393,6 +393,13 @@ final class EditorModel {
         }
     }
 
+    /// Replaces the edited subtitle with another document (its lines and timing), undoably.
+    func replaceSource(_ document: SubtitleDocument, undoManager: UndoManager?) {
+        selection = []
+        draftIndex = nil
+        mutate("Usar os tempos da legenda ao lado", undoManager: undoManager) { source, _ in source = document }
+    }
+
     /// Replaces the whole translation (after “Traduzir episódio inteiro”), undoably.
     func applyTranslation(_ document: SubtitleDocument, undoManager: UndoManager?) {
         mutate("Traduzir episódio", undoManager: undoManager) { _, translation in translation = document }

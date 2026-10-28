@@ -11,6 +11,7 @@ struct LineDetailView: View {
     @State private var endDraft = ""
     /// What is selected in the text, for the formatting buttons.
     @State private var textSelection: TextSelection?
+    @AppStorage("linePanelDocked") private var docked = false
 
     var editor: EditorModel { workspace.editor }
     var index: Int? { editor.selection.count == 1 ? editor.selection.first : nil }
@@ -62,6 +63,7 @@ struct LineDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .topTrailing) { dockButton.padding(Theme.Spacing.l) }
             }
         }
         .paneBackground()
@@ -79,7 +81,21 @@ struct LineDetailView: View {
                 .buttonStyle(.borderless)
                 .font(.title3)
                 .hint("Reproduzir esta fala", "Toca o vídeo do início ao fim desta fala e pausa, para conferir o tempo e o texto.")
+            dockButton
         }
+    }
+
+    /// Pins the panel to the whole right side of Legendar, or puts it back beside the list.
+    private var dockButton: some View {
+        Button(docked ? "Voltar para junto da lista" : "Fixar na lateral", systemImage: docked ? "rectangle.bottomhalf.inset.filled" : "sidebar.trailing") {
+            docked.toggle()
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.borderless)
+        .font(.title3)
+        .hint(docked ? "Voltar para junto da lista" : "Fixar na lateral",
+              docked ? "O painel da fala volta para baixo, ao lado da lista de falas."
+                     : "O painel da fala cresce e ocupa toda a lateral direita, ao lado do vídeo e da lista. Clique de novo para voltar.")
     }
 
     private func timing(_ cue: SubtitleCue, index: Int) -> some View {
@@ -245,7 +261,8 @@ struct LineDetailView: View {
                         .hint("Aplicar (⌘↩)", "Grava o texto que você digitou nesta fala. Trocar de fala também aplica.")
                 }
             }
-            FormatBar(html: editor.usesHTMLMarkup, style: editor.cue(index, side: .original).flatMap { editor.styleInfo($0.style) }) { change in
+            FormatBar(html: editor.usesHTMLMarkup, style: editor.cue(index, side: .original).flatMap { editor.styleInfo($0.style) },
+                      lineDuration: editor.cue(index, side: .original)?.duration) { change in
                 let raw = text.wrappedValue
                 var range: Range<String.Index>?
                 if case .selection(let selected) = textSelection?.indices, !selected.isEmpty, selected.upperBound <= raw.endIndex { range = selected }
@@ -270,6 +287,9 @@ struct LineDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(.black.opacity(0.82), in: .rect(cornerRadius: Theme.Radius.small))
                     .hint("Como fica", "A fala como aparece no vídeo: itálico, negrito, sublinhado, riscado e cores, sem os códigos.")
+            }
+            if let cue = editor.cue(index, side: .original), !editor.usesHTMLMarkup {
+                KaraokeSection(text: text, workspace: workspace, start: cue.start, end: cue.end) { editor.commitDrafts() }
             }
         }
     }

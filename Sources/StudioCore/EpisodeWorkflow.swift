@@ -180,12 +180,20 @@ public struct EpisodeWorkflow: Sendable {
 
     /// Another subtitle track shown beside the one being edited, matched by time. Nothing is saved.
     public func referenceLines(_ project: StudioProject, track: MediaTrack) async throws -> [Int: String] {
-        let (project, info, sourceURL) = try await prepareSource(project)
+        let (project, _, sourceURL) = try await prepareSource(project)
+        return TranslationAlignment.reference(try await referenceDocument(project, track: track), for: try SubtitleDocument.load(sourceURL))
+    }
+
+    /// A subtitle track of the video, read without saving it anywhere.
+    public func referenceDocument(_ project: StudioProject, track: MediaTrack) async throws -> SubtitleDocument {
+        let info = try await MediaInspector(tools: tools).inspect(project.mediaURL)
         guard let ext = track.textSubtitleExtension else { throw WorkflowError.noTextSubtitle }
-        let temp = store.directory(for: project.id).appendingPathComponent(".reference-\(UUID().uuidString.prefix(6)).\(ext)")
+        let directory = store.directory(for: project.id)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let temp = directory.appendingPathComponent(".reference-\(UUID().uuidString.prefix(6)).\(ext)")
         defer { try? FileManager.default.removeItem(at: temp) }
         _ = try await TrackExtractor(tools: tools).extractSubtitle(track, from: info, to: temp)
-        return TranslationAlignment.reference(try SubtitleDocument.load(temp), for: try SubtitleDocument.load(sourceURL))
+        return try SubtitleDocument.load(temp)
     }
 
     /// Sets the default audio and subtitle tracks in the file itself (instant) or in a copy.

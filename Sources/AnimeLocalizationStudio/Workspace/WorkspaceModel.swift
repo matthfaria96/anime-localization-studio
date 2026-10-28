@@ -206,6 +206,10 @@ final class WorkspaceModel {
     var trackToDelete: MediaTrack?
     /// Where the person wanted to go when Legendar had unsaved changes (asks save or discard).
     var pendingLeave: LeaveTarget?
+    /// The subtitle beside, whose timing is offered to an empty subtitle (asks yes or no).
+    var pendingTimingOffer: MediaTrack?
+    /// The subtitle beside as read from the video, to copy its timing from.
+    @ObservationIgnored var referenceDocument: SubtitleDocument?
     /// Asks “this file or a copy?” before writing default-track changes.
     var askDefaultsDestination = false
     /// Optional button shown with the notice (e.g. open the file just created).

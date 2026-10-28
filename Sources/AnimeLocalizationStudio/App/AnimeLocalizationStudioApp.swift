@@ -20,6 +20,8 @@ struct AnimeLocalizationStudioApp: App {
                     case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
                     default: break
                     }
+                    // Test hook for captures: ALS_DOCKED=1 opens Legendar with the line panel pinned to the side.
+                    if ProcessInfo.processInfo.environment["ALS_DOCKED"] == "1" { UserDefaults.standard.set(true, forKey: "linePanelDocked") }
                     if let path = ProcessInfo.processInfo.environment["ALS_OPEN"] { app.open(URL(fileURLWithPath: path)) }
                     // Test hook: ALS_VOICE_TEST=<reference.wav> speaks one line with the Mac's voice into ALS_VOICE_OUT.
                     if let reference = ProcessInfo.processInfo.environment["ALS_VOICE_TEST"],

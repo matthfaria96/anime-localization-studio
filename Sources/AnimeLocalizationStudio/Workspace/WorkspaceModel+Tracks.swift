@@ -55,8 +55,11 @@ extension WorkspaceModel {
         let project = project
         Task {
             do {
+                // The subtitle being edited goes beside the new one (and its timing is offered).
+                let beside = project.externalSubtitlePath == nil && project.subtitleTask == .edit ? project.sourceTrackID : project.referenceTrackID
                 var updated = try await workflow.startBlankSubtitle(project, language: language, name: name)
                 updated.subtitleTask = .edit
+                updated.referenceTrackID = beside
                 self.project = updated
                 try store.save(updated)
                 chooseSubtitleTask(.edit)
@@ -122,9 +125,13 @@ extension WorkspaceModel {
             return
         }
         do {
-            referenceLines = try await workflow().referenceLines(project, track: track)
+            let document = try await workflow().referenceDocument(project, track: track)
+            referenceDocument = document
+            referenceLines = editor.source.map { TranslationAlignment.reference(document, for: $0) } ?? [:]
             editor.reference = referenceLines
             editor.referenceTitle = "\(track.name ?? track.codec) · \(Languages.display(track.displayLanguage))"
+            // An empty subtitle beside one with other timings: ask whether to write over that timing.
+            if let source = editor.source, source.isBlank, document.differsInTiming(from: source) { pendingTimingOffer = track }
         } catch {
             referenceLines = [:]
             notice = (.warning, "A referência não pôde ser carregada: \(LogRedactor.redact(error.localizedDescription))")
@@ -149,6 +156,27 @@ extension WorkspaceModel {
     func swapEditedAndReference() {
         guard let reference = project.referenceTrackID, let main = project.sourceTrackID else { return }
         requestTracks(main: reference, reference: main)
+    }
+
+    /// “Sim”: the empty subtitle gets the lines of the one beside, same times, styles,
+    /// characters and places on screen, with no text (⌘Z undoes).
+    func useReferenceTiming() {
+        pendingTimingOffer = nil
+        guard let document = referenceDocument else { return }
+        let video = info?.tracks(.video).first
+        let copy = document.timingCopy(playResX: video?.width ?? 1920, playResY: video?.height ?? 1080)
+        editor.replaceSource(copy, undoManager: editor.undoManager)
+        project.sourceFormat = copy.format
+        editor.flush()
+        referenceLines = TranslationAlignment.reference(document, for: copy)
+        editor.reference = referenceLines
+        notice = (.success, "\(Plural.count(copy.count, "fala criada", "falas criadas")) com os tempos da legenda ao lado, em branco para você escrever.")
+    }
+
+    /// “Não”: nothing beside.
+    func declineReferenceTiming() {
+        pendingTimingOffer = nil
+        setReference(nil)
     }
 
     func setReference(_ id: Int?) {
